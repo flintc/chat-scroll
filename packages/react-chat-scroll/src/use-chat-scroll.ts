@@ -26,7 +26,7 @@ export interface UseChatScrollOptions extends ChatScrollOptions {
   streaming?: boolean
 }
 
-export interface UseChatScrollResult {
+export interface UseChatScrollReturn {
   /** Reactive state — updates trigger re-renders. */
   state: ChatScrollState
 
@@ -74,7 +74,7 @@ export interface UseChatScrollResult {
  */
 export function useChatScroll(
   opts: UseChatScrollOptions = {},
-): UseChatScrollResult {
+): UseChatScrollReturn {
   // Single instance for the lifetime of the component.
   const instanceRef = useRef<ChatScrollInstance | null>(null)
   if (instanceRef.current === null) {
@@ -107,9 +107,6 @@ export function useChatScroll(
     if (opts.streaming === undefined) return
     instance.setStreaming(opts.streaming)
   }, [instance, opts.streaming])
-
-  // Tear down on unmount.
-  useEffect(() => () => instance.destroy(), [instance])
 
   // Reactive state via useSyncExternalStore.
   const subscribe = useCallback(
@@ -145,8 +142,18 @@ export function useChatScroll(
     [tryMount],
   )
 
+  // Tear down on unmount. The setup half re-mounts from the stored refs:
+  // under React 18's StrictMode the simulated unmount runs `destroy()`
+  // but callback refs are NOT re-invoked on the simulated remount, so
+  // without this the instance would stay dead (no listeners, no gutter)
+  // for the component's real lifetime.
+  useEffect(() => {
+    tryMount()
+    return () => instance.destroy()
+  }, [instance, tryMount])
+
   // Bind methods so they stay stable.
-  return useMemo<UseChatScrollResult>(
+  return useMemo<UseChatScrollReturn>(
     () => ({
       state,
       containerRef,

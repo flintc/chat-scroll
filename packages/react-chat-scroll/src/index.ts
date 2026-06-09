@@ -1,6 +1,6 @@
 export {
   useChatScroll,
   type UseChatScrollOptions,
-  type UseChatScrollResult,
+  type UseChatScrollReturn,
 } from './use-chat-scroll'
 export * from '@chat-scroll/core'

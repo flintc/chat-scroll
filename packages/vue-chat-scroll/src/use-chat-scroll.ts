@@ -1,5 +1,6 @@
 import {
   getCurrentInstance,
+  isRef,
   onBeforeUnmount,
   readonly,
   ref,
@@ -178,12 +179,4 @@ export function useChatScroll(
     savePosition: instance.savePosition,
     restorePosition: instance.restorePosition,
   }
-}
-
-function isRef<T>(v: T | Ref<T>): v is Ref<T> {
-  return (
-    v !== null &&
-    typeof v === 'object' &&
-    '__v_isRef' in (v as Record<string, unknown>)
-  )
 }

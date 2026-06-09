@@ -1,4 +1,5 @@
 import { act, render, renderHook } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { useChatScroll } from '../src/use-chat-scroll'
@@ -119,6 +120,46 @@ describe('useChatScroll (React)', () => {
     expect(typeof result.current.pinMessage).toBe('function')
     expect(typeof result.current.pinLatest).toBe('function')
     expect(typeof result.current.pinRelative).toBe('function')
+  })
+
+  it('does not clobber defaulted options via the option-sync effect', () => {
+    // The sync effect passes every option key on every render, with
+    // `undefined` for the ones the consumer never set. The core must
+    // keep its resolved defaults (a regression here breaks at-bottom
+    // detection and makes pinnedY NaN).
+    const { result } = renderHook(() =>
+      useChatScroll({ strategy: 'pin-to-top' }),
+    )
+    expect(result.current.instance.options.bottomThreshold).toBe(40)
+    expect(result.current.instance.options.scrollMargin).toBe(12)
+    expect(result.current.instance.options.scrollBehavior).toBe('auto')
+    expect(result.current.instance.options.scrollDurationMs).toBe(320)
+  })
+
+  it('survives React StrictMode (simulated unmount/remount keeps the instance live)', () => {
+    // StrictMode runs effect setup → cleanup → setup. The cleanup calls
+    // instance.destroy(); under React 18 callback refs are NOT
+    // re-invoked on the simulated remount, so the mount effect's setup
+    // half must re-mount from the stored refs. Without it the gutter,
+    // listeners, and observer stay dead for the component's real life.
+    function Chat() {
+      const scroll = useChatScroll()
+      return (
+        <div data-testid="container" ref={scroll.containerRef}>
+          <div ref={scroll.contentRef} />
+        </div>
+      )
+    }
+    const { getByTestId } = render(
+      <StrictMode>
+        <Chat />
+      </StrictMode>,
+    )
+    const container = getByTestId('container') as HTMLElement
+    // Styles + gutter present ⇒ the instance is mounted after the
+    // StrictMode double-invoke cycle.
+    expect(container.style.display).toBe('flex')
+    expect(container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
   })
 
   it('destroys the instance on unmount', () => {
