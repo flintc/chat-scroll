@@ -1,0 +1,22 @@
+{
+  "name": "@chat-scroll/example-solid",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3111 --host 0.0.0.0 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 3111 --host 0.0.0.0 --strictPort"
+  },
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*",
+    "@chat-scroll/example-shared": "workspace:*",
+    "@chat-scroll/solid": "workspace:*",
+    "solid-js": "^1.9.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^5.4.11",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

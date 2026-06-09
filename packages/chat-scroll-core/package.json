@@ -1,0 +1,41 @@
+{
+  "name": "@chat-scroll/core",
+  "version": "0.1.0",
+  "description": "Headless scroll management for chat UIs — framework-agnostic core",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "chat",
+    "scroll",
+    "headless",
+    "pin-to-top",
+    "stick-to-bottom",
+    "ai-chat",
+    "streaming"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

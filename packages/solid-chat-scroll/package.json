@@ -1,0 +1,42 @@
+{
+  "name": "@chat-scroll/solid",
+  "version": "0.1.0",
+  "description": "Solid adapter for @chat-scroll/core",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.8.0"
+  },
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
+    "solid-js": "^1.9.4"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

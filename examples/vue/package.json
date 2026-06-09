@@ -1,0 +1,23 @@
+{
+  "name": "@chat-scroll/example-vue",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3112 --host 0.0.0.0 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 3112 --host 0.0.0.0 --strictPort"
+  },
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*",
+    "@chat-scroll/example-shared": "workspace:*",
+    "@chat-scroll/vue": "workspace:*",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.11",
+    "vue-tsc": "^2.2.0"
+  }
+}

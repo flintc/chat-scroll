@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.log
+.DS_Store
+# Patterns with mid-string slashes are relative to this .gitignore's
+# directory unless prefixed with `**/`. The vitepress dirs live under
+# `docs/`, so without the prefix git would only match a top-level
+# `.vitepress/` (which doesn't exist) and the real one would stay tracked.
+**/.vitepress/cache/
+**/.vitepress/dist/
+.vscode/
+.idea/
+
+# Playwright e2e — raw artifacts. Promoted videos under docs/public/videos
+# are committed; the rest is regenerated per run.
+e2e/test-results/
+e2e/playwright-report/
+e2e/videos/
+e2e/.cache/
+
+# Playwright MCP scratch (per-session snapshots/console dumps)
+.playwright-mcp/

@@ -1,0 +1,17 @@
+{
+  "name": "@chat-scroll/example-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./style.css": "./src/style.css"
+  },
+  "files": ["src"],
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

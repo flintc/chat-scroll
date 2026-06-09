@@ -1,0 +1,475 @@
+/* Demo styles — intentionally simple. The video frames the chat surface
+   (the .chat element); chrome above is for navigating between scenarios
+   when not running under Playwright. */
+:root {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --user: #e0f2fe;
+  --user-fg: #075985;
+  --bot: #ffffff;
+  --bot-fg: #0f172a;
+  --border: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+
+#app { display: flex; flex-direction: column; }
+
+header.demo-bar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  font-size: 13px;
+}
+header.demo-bar a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
+
+/* The chat surface — sized for clean video framing (16:10-ish). */
+.chat {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.chat__scroll {
+  flex: 1 1 auto;
+  /* `min-height: auto` (the flex default) would lock the scroll
+     container at its content's intrinsic height. With a tall message
+     list, that pushes the column out of shape and the sibling .status
+     row gets shrunk below its natural height — the bottom of the text
+     ends up clipped by .status's `overflow: hidden`. */
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px;
+  /* No CSS scroll-behavior — the controller picks instant vs smooth per
+     call, and a CSS-level smooth fights with `lock`'s programmatic
+     scroll-to-bottom (intermediate positions look "scrolled up" to the
+     scroll listener, breaking the lock mid-animation). */
+}
+
+.chat__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Realistic consumer styling: visual breathing room below the last
+     bubble. The controller MUST subtract this from `scrollHeight` when
+     sizing the gutter, otherwise the user can scroll `padding-bottom`
+     pixels past the last line. The `gutter-bottom-padding` spec
+     verifies this — keep this padding non-zero. */
+  padding-bottom: 12px;
+}
+
+.msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.msg--user {
+  align-self: flex-end;
+  background: var(--user);
+  color: var(--user-fg);
+  border-bottom-right-radius: 4px;
+}
+.msg--bot {
+  align-self: flex-start;
+  background: var(--bot);
+  color: var(--bot-fg);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Expandable block inside a bot message — thinking / tool call.
+   Animates open/close with CSS grid: `grid-template-rows` goes from
+   `0fr` to `1fr` over 220ms. ResizeObserver fires on every animation
+   frame, so the controller's "re-anchor pinned message" logic is
+   exercised many times across the transition. */
+.block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 13px;
+  overflow: hidden;
+}
+.block__summary {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  user-select: none;
+}
+.block__icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.block__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+.block__args {
+  color: var(--muted);
+  font-weight: 400;
+}
+.block__chev {
+  font-size: 11px;
+  transition: transform 220ms;
+}
+.block[data-open='true'] .block__chev { transform: rotate(180deg); }
+.block__wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+.block[data-open='true'] .block__wrap {
+  grid-template-rows: 1fr;
+}
+.block__body {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 12px;
+  border-top: 1px dashed transparent;
+  color: var(--fg);
+  line-height: 1.5;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.block[data-open='true'] .block__body {
+  padding: 10px 12px 12px;
+  border-top-color: var(--border);
+}
+.block--thinking .block__body { color: var(--muted); font-style: italic; }
+.block__pre {
+  margin: 0;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg);
+  white-space: pre;
+  overflow-x: auto;
+}
+.msg__text { white-space: pre-wrap; }
+
+/* Inline composer — autogrowing textarea + send button. Sits between
+   .chat__scroll and .controls inside the chat's flex column. As the
+   textarea grows it shrinks the scroll container's border-box, which
+   the controller's ResizeObserver picks up and recalcs the gutter —
+   pinned messages should hold their position.
+   Capped via max-height so the textarea scrolls internally past the
+   cap instead of consuming the whole chat surface. */
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 0 0;
+}
+.composer__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 200px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  font: inherit;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+  /* Prevent the textarea's own scroll from bubbling up and clearing
+     pinAnchored on the chat container when the user wheels inside it. */
+  overscroll-behavior: contain;
+}
+.composer__input:focus {
+  outline: 2px solid var(--user-fg);
+  outline-offset: -2px;
+}
+.composer__send {
+  font: inherit;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--user-fg);
+  background: var(--user-fg);
+  color: #fff;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.composer__send:hover { filter: brightness(1.08); }
+
+.controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0;
+  flex-wrap: wrap;
+}
+.controls button {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  cursor: pointer;
+}
+.controls button:hover { background: #f1f5f9; }
+.controls button[data-test='auto-tick'][data-running='true'] {
+  background: var(--user);
+  color: var(--user-fg);
+  border-color: var(--user);
+}
+/* Playback group anchors to the right; behaviour select sits next to it. */
+.controls .playback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.controls .playback input[type='number'] {
+  width: 5.5rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font: inherit;
+  background: #fff;
+  color: var(--fg);
+}
+.controls .behavior {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.controls .behavior select {
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+}
+.controls .duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.controls .duration input[type='number'] {
+  width: 5.5rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font: inherit;
+  background: #fff;
+  color: var(--fg);
+}
+.controls .gutter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.controls .gutter-toggle input[type='checkbox'] {
+  cursor: pointer;
+}
+
+.threads {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 0;
+  flex-wrap: wrap;
+}
+.threads button {
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+.threads button.active { background: var(--user); color: var(--user-fg); border-color: var(--user); }
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 4px 0;
+  font-variant-numeric: tabular-nums;
+  /* Belt-and-braces: even with .chat__scroll's `min-height: 0`, never
+     let this row shrink — the line-height-plus-padding total is small,
+     and any vertical squeeze clips the text via `overflow: hidden`. */
+  flex-shrink: 0;
+  /* Lock to a single line — wrapping into two rows would shrink the
+     scroll container below; the container ResizeObserver picks that up
+     now, but we still want the demo's status to stay
+     glanceable on one line. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* User-action cue — pill that flashes over the chat to label what the
+   user just did (scrolled up, clicked the FAB, etc). Helps viewers of
+   recorded videos connect a state change to its trigger. */
+.cue {
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms, transform 200ms;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+/* Global cue is fixed to the top of the viewport so it sits above the
+   demo-bar — visible regardless of which scenario is mounted. */
+.cue--global {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+}
+.cue--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Scroll-to-bottom FAB — appears when state.atBottom is false. The
+   `--visible` class is toggled by the demo based on chat-scroll state. */
+.fab {
+  position: absolute;
+  right: 24px;
+  bottom: 80px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--user-fg);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 200ms, transform 200ms;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.fab--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Side-by-side scenario only — two chat surfaces, one per strategy.
+   Uses grid so the controls strip can span both columns underneath
+   the panels (instead of fighting for horizontal space alongside them
+   as it would in a flex row). */
+[data-scenario='side-by-side'] {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 16px;
+  max-width: 100% !important;
+  padding: 8px 16px;
+  position: relative;
+}
+[data-scenario='side-by-side'] .controls {
+  grid-column: 1 / -1;
+}
+[data-scenario='side-by-side'] .panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* Anchor the FAB to its OWN panel — without this, position:absolute
+     resolves all the way up to the body and both FABs land in the same
+     corner. */
+  position: relative;
+}
+/* Side-by-side panels have no controls strip below the chat, so the
+   default `bottom: 80px` would float the FAB awkwardly high. Pull it
+   closer to the panel's bottom edge. */
+[data-scenario='side-by-side'] .fab {
+  bottom: 16px;
+}
+[data-scenario='side-by-side'] .panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 4px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+[data-scenario='side-by-side'] .chat__scroll {
+  padding: 12px;
+}
+
+/* Gutter overlay — surfaces the synthetic gutter element so viewers
+   can see it shrink as the response grows. Toggled per-scenario via
+   the "show gutter" checkbox in the playback bar, which adds the
+   `chat--show-gutter` class. */
+.chat--show-gutter [data-chat-scroll-gutter] {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(14, 165, 233, 0.12),
+    rgba(14, 165, 233, 0.12) 8px,
+    rgba(14, 165, 233, 0.04) 8px,
+    rgba(14, 165, 233, 0.04) 16px
+  );
+  border-top: 1px dashed rgba(14, 165, 233, 0.5);
+}

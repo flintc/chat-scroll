@@ -1,0 +1,19 @@
+{
+  "name": "@chat-scroll/example-vanilla",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3110 --host 0.0.0.0 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 3110 --host 0.0.0.0 --strictPort"
+  },
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*",
+    "@chat-scroll/example-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^5.4.11"
+  }
+}
