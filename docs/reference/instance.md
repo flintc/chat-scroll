@@ -42,7 +42,9 @@ different elements tears down the previous mount before re-mounting.
 
 ### `setOptions(partial)`
 
-Merge new options into the instance. Switching `strategy` will reset the
+Merge new options into the instance. Keys whose value is `undefined` are
+ignored (they keep their current value), so adapters can safely pass
+every key on every render. Switching `strategy` will reset the
 prior strategy's transient state (clearing pins / releasing locks).
 
 ```ts
@@ -113,7 +115,19 @@ the last `pinRelative` are picked up immediately.
 ### `scrollToBottom()`
 
 Imperatively scroll the container to the bottom, using the resolved
-`scrollBehavior` (which respects `prefers-reduced-motion`).
+`scrollBehavior` (which respects `prefers-reduced-motion`). The target
+is re-read every animation frame, so content streaming in mid-scroll
+doesn't leave you short of the real bottom.
+
+Strategy-aware side effects:
+
+- `pin-to-top`: clears `pinAnchored` — jumping to the bottom is the
+  user's explicit "move away from the pin" affordance, so subsequent
+  resizes won't yank them back.
+- `stick-to-bottom`: re-engages the lock once the scroll completes
+  (skipped if the user aborts the animation with a wheel/touch). A FAB
+  wired to `scrollToBottom()` therefore resumes following the stream —
+  no separate `lock()` call needed.
 
 ### `lock()` / `unlock()`
 
@@ -158,5 +172,7 @@ const off = instance.subscribe((state) => {
 Tear down everything: scroll listener, ResizeObserver, gutter element,
 container styles, pending animation frames, all subscribers.
 
-The instance is unusable after `destroy()`. Create a new one if you need
-to remount.
+Subscribers are dropped, so re-subscribe if you need state updates
+afterwards. Calling `mount()` again rewires the DOM bindings — the
+React adapter uses this to survive StrictMode's simulated
+unmount/remount cycle.

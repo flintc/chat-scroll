@@ -3,7 +3,7 @@
 The classic chat scroll behavior: stay glued to the bottom as new messages
 arrive, but get out of the way when the user scrolls up to read history.
 
-<DemoVideo name="vanilla__stick-to-bottom" caption="Auto-follow on append. Scrolling up releases the lock — new content no longer disturbs scroll. Re-lock snaps back to the bottom." />
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — auto-follow on append. Scrolling up releases the lock; the ↓ button (or a new send) re-engages it." />
 
 ## When to use it
 
@@ -102,6 +102,14 @@ Use `state.atBottom` to drive a button:
 )}
 ```
 
+`scrollToBottom()` re-engages the lock once the scroll completes, so a
+mid-stream click resumes following the stream — you don't need a
+separate `lock()` call in the click handler. (If the user aborts the
+animation with a wheel or touch, the lock stays released — their intent
+wins.) Note that manually *scrolling* back to the bottom does **not**
+re-lock; only the explicit affordances do (`scrollToBottom()`, `lock()`,
+`reset()`).
+
 The threshold for "at bottom" is configurable:
 
 ```ts
@@ -126,5 +134,5 @@ the broader `overflow-anchor` story that applies to both strategies.
 | Anchor reference      | User message            | Bottom of content          |
 | Gutter usage          | Yes — bounds scroll     | None                       |
 | User scroll-up        | Free                    | Releases lock              |
-| Re-engagement         | New `pinMessage()` call | `lock()` (typically on send) |
+| Re-engagement         | New `pinMessage()` call | `lock()` on send, or the FAB's `scrollToBottom()` |
 | Default for           | AI chat                 | Group / traditional chat   |

@@ -90,6 +90,7 @@ export default defineConfig({
               link: '/guide/lower-level-utilities',
             },
             { text: 'SSR', link: '/guide/ssr' },
+            { text: 'Troubleshooting', link: '/guide/troubleshooting' },
           ],
         },
       ],

@@ -4,7 +4,7 @@ A pin-to-top chat with a streaming response and bulk-load handling.
 This is the closest match to how `chat-scroll` is meant to be used in
 a real product.
 
-<DemoVideo name="vanilla__pin-to-top" caption="The end shape. Send pins the user message; the response streams below; the gutter shrinks as it fills." />
+<LiveDemo scenario="pin-to-top" caption="Live demo — the end shape. Send pins the user message; the response streams below; the gutter shrinks as it fills." />
 
 ## The simple version
 

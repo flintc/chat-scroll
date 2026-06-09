@@ -42,7 +42,7 @@ features:
 
 <div style="max-width: 960px; margin: 3rem auto 0;">
 
-<DemoVideo name="vanilla__side-by-side" caption="Pin-to-top (left) vs stick-to-bottom (right). Same prior chitchat, same prompt, same response chunks — fundamentally different scroll behavior. The striped band beneath pin-to-top is the dynamic gutter shrinking as the response fills space." />
+<LiveDemo scenario="side-by-side" gutter caption="Live demo — pin-to-top (left) vs stick-to-bottom (right). Same prompt, same response chunks, fundamentally different scroll behavior. The striped band beneath pin-to-top is the dynamic gutter shrinking as the response fills space. Try scrolling mid-stream." />
 
 </div>
 

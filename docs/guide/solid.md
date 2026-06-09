@@ -4,7 +4,7 @@
 pnpm add @chat-scroll/solid
 ```
 
-<DemoVideo name="solid__pin-to-top" caption="The Solid adapter driving pin-to-top — same behavior as the vanilla core, with reactive state via Solid signals." />
+<LiveDemo scenario="pin-to-top" caption="Live demo of pin-to-top. The Solid adapter wraps the exact same core — reactive state arrives as Solid signals instead." />
 
 `createChatScroll` is the Solid entry point. It owns a single
 `ChatScrollInstance` per owner scope, exposes state as a signal

@@ -3,7 +3,7 @@
 A floating action button that appears when the user has scrolled away
 from the bottom. Works with both strategies.
 
-<DemoVideo name="vanilla__fab-button" caption="The FAB appears on scroll-up; clicking it snaps back. Fades in/out on the `atBottom` state transition." />
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — scroll up mid-stream and the FAB fades in; clicking it returns to the bottom and re-engages the follow. Driven by the `atBottom` state transition." />
 
 ```tsx
 import { useChatScroll } from '@chat-scroll/react'
@@ -31,6 +31,13 @@ export function ChatWithFab({ messages }: { messages: Message[] }) {
 
 The pattern is identical for `stick-to-bottom` — `state.atBottom`
 fires the same way for both strategies.
+
+The click also does the right strategy-specific thing:
+
+- **pin-to-top** — clears `pinAnchored`, so the next content resize
+  doesn't yank the user back up to the pin.
+- **stick-to-bottom** — re-engages the lock once the scroll completes,
+  so a mid-stream click resumes following the stream.
 
 ## CSS
 

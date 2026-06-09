@@ -2,8 +2,29 @@
 
 ## Unreleased
 
-### Changed (semantics, low risk)
+### Added
 
+- **React example app** (`examples/react`) mirroring the vanilla / Vue /
+  Solid demos, plus a `react` Playwright project running the shared e2e
+  specs against it.
+- **[Troubleshooting guide](/guide/troubleshooting)** — symptom-first
+  pitfalls page (container sizing, scrollbar gutter, keyboard focus,
+  transforms, scroll chaining, restore timing).
+- **Three new fields on `ChatScrollState`:** `pinAnchored`,
+  `scrollInFlight`, `pinnedY`. Previously internal-only; promoted
+  to the public surface so consumers can build UI on top (e.g. show a
+  "jump to pin" affordance only while `pinActive && !pinAnchored`).
+  See [`ChatScrollState`](/reference/state).
+
+### Changed
+
+- **Docs demos are live.** Every recorded `.webm` demo in the docs has
+  been replaced by an interactive in-page demo driven by the real
+  library (via `@chat-scroll/vue`) — stream, scroll, expand blocks, and
+  switch threads yourself. The e2e video pipeline (`pnpm e2e:promote`)
+  still exists for recorded captures.
+- **`UseChatScrollResult` (React) renamed to `UseChatScrollReturn`**
+  for consistency with the Vue adapter.
 - **`stick-to-bottom` now gates auto-snap on `state.streaming`.** Previously
   the strategy snapped `scrollTop` to `scrollHeight` on every content resize
   whenever `state.locked` was true. That fought users tapping to expand a
@@ -17,6 +38,50 @@
 
 ### Fixed
 
+- **`setOptions` no longer clobbers defaults with `undefined`.** The
+  framework adapters sync options by passing every key on every render,
+  with `undefined` for options the consumer never set. Spreading those
+  verbatim erased the resolved defaults: `bottomThreshold` became
+  `undefined` (breaking at-bottom detection and the stick lock for every
+  React consumer using defaults) and `scrollMargin: undefined` made the
+  next `pinMessage()` compute `pinnedY = NaN`. Keys passed as
+  `undefined` are now ignored.
+- **`restorePosition` restores the reading position from the top.** The
+  docs always said non-at-bottom restoration "measures from the top of
+  content", but the implementation measured from the *bottom* — so any
+  messages that arrived while away shifted the restored position by
+  their combined height. Restoration now uses the saved `scrollTop`
+  (at-bottom restoration still re-snaps to the new bottom).
+- **React adapter survives StrictMode.** Under React 18's StrictMode,
+  the simulated unmount ran `destroy()` but callback refs are not
+  re-invoked on the simulated remount, leaving the instance dead (no
+  listeners, no gutter) for the component's real lifetime. The mount
+  effect now re-mounts from the stored refs on its setup phase.
+- **Consumer scroll *below* the pin now clears `pinAnchored` too.** The
+  away-from-pin detection only covered upward scrolls
+  (`scrollTo({top: 0})`); a `scrollIntoView()` of a message below the
+  pin left `pinAnchored` armed and the next resize yanked the user back
+  up. The check is now symmetric.
+- **`scrollToBottom()` re-engages the stick-to-bottom lock.** A FAB
+  wired to `scrollToBottom()` now resumes following the stream once the
+  scroll completes (skipped if the user aborts mid-animation). It also
+  tracks live `scrollHeight` per-frame, so content streaming in during
+  the animation no longer leaves the scroll short of the real bottom.
+- **Aborted pin animations catch up smoothly from every input path.**
+  Wheel/touch/scroll-key events absorbed by a nested scrollable (e.g. a
+  horizontal pan over a wide code block) aborted an in-flight pin
+  animation without flagging it, so the next resize teleported instead
+  of animating the catch-up like the pointerdown path does. All
+  pin-preserving input paths now flag the interruption.
+- **Nested instances keep their own gutters.** `createGutter`'s
+  HMR-reuse lookup used `querySelector`, which could adopt a *nested*
+  chat instance's gutter (a chat preview embedded in a message). Only
+  direct children are considered now.
+- **CI runs on a clean checkout.** The workflow ran `typecheck` and
+  `test` before `build`, but the adapters resolve `@chat-scroll/core`
+  through its `dist` — both steps failed without it. CI now builds
+  first, and a vitest alias resolves the core *source* in unit tests so
+  `pnpm test` works without a build locally too.
 - **Consumer programmatic `container.scrollTo()` no longer snaps back
   to the pin.** When the host application scrolls the container
   itself (deep-link to top, focus a search hit, "scroll to top"
@@ -81,13 +146,14 @@
   for the one remaining edge case (`overflow-y: auto` scrollbar
   toggling).
 
-### Added
+### Removed
 
-- **Three new fields on `ChatScrollState`:** `pinAnchored`,
-  `scrollInFlight`, `pinnedY`. Previously internal-only; promoted
-  to the public surface so consumers can build UI on top (e.g. show a
-  "jump to pin" affordance only while `pinActive && !pinAnchored`).
-  See [`ChatScrollState`](/reference/state).
+- **`createChatScrollInstance`** — pre-release alias of
+  `createChatScroll`; use the canonical name.
+- **`UseChatScrollResult`** (React) — renamed to `UseChatScrollReturn`
+  (see Changed); the old name is gone, not deprecated.
+- **`ScrollPosition.scrollFromBottom`** — unused after the
+  `restorePosition` fix; the token is now `{ scrollTop, wasAtBottom }`.
 
 ### Changed (breaking, low-level only)
 

@@ -3,7 +3,7 @@
 Traditional chat: stay glued to the bottom by default; release when
 the user scrolls up to read history; re-engage on send.
 
-<DemoVideo name="vanilla__stick-to-bottom" caption="Stick-to-bottom in action. Auto-follow on append, release on scroll-up, snap back on re-lock." />
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — auto-follow on append, release on scroll-up, snap back via the ↓ button." />
 
 ```tsx
 import { useEffect } from 'react'

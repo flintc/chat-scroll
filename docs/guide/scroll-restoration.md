@@ -3,7 +3,7 @@
 When the user navigates between threads, switches tabs, or re-mounts the
 component, you usually want their scroll position preserved.
 
-<DemoVideo name="vanilla__thread-switch" caption="Per-thread scroll positions. Scroll mid-thread, switch away, switch back — your spot is where you left it." />
+<LiveDemo scenario="thread-switch" caption="Live demo — scroll mid-thread, switch away, switch back: your spot is where you left it." />
 
 ## API
 
@@ -17,7 +17,6 @@ scroll.restorePosition(pos)
 ```ts
 interface ScrollPosition {
   scrollTop: number
-  scrollFromBottom: number
   wasAtBottom: boolean
 }
 ```

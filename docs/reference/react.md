@@ -11,7 +11,7 @@ Re-exports everything from `@chat-scroll/core`, plus:
 ```ts
 function useChatScroll(
   options?: UseChatScrollOptions,
-): UseChatScrollResult
+): UseChatScrollReturn
 ```
 
 ```ts
@@ -29,7 +29,7 @@ interface UseChatScrollOptions extends ChatScrollOptions {
 ```
 
 ```ts
-interface UseChatScrollResult {
+interface UseChatScrollReturn {
   state: ChatScrollState
   containerRef: (el: HTMLElement | null) => void
   contentRef: (el: HTMLElement | null) => void

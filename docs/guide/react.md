@@ -66,11 +66,11 @@ interface UseChatScrollOptions extends ChatScrollOptions {
   streaming?: boolean
 }
 
-function useChatScroll(opts?: UseChatScrollOptions): UseChatScrollResult
+function useChatScroll(opts?: UseChatScrollOptions): UseChatScrollReturn
 ```
 
 ```ts
-interface UseChatScrollResult {
+interface UseChatScrollReturn {
   state: ChatScrollState // plain object, accessed directly
 
   containerRef: (el: HTMLElement | null) => void

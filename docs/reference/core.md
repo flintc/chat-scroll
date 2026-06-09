@@ -12,7 +12,6 @@ function createChatScroll(
 ): ChatScrollInstance
 ```
 
-Also exported as `createChatScrollInstance` (alias).
 
 ### Example
 

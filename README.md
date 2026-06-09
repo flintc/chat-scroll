@@ -30,18 +30,18 @@ pnpm add @chat-scroll/react   # or /vue, /solid, /core
 ```
 
 ```tsx
-import { useEffect } from 'react'
 import { useChatScroll } from '@chat-scroll/react'
 
-function Chat({ messages, loading }) {
-  const scroll = useChatScroll({ strategy: 'pin-to-top' })
+function Chat({ messages, loading, sendMessage }) {
+  const scroll = useChatScroll({
+    strategy: 'pin-to-top',
+    streaming: loading, // reactive — mirrors your loading flag
+  })
 
-  useEffect(() => scroll.setStreaming(loading), [loading])
-  useEffect(() => {
-    if (messages.at(-1)?.role === 'user') {
-      scroll.pinLatest('[data-role="user"]')
-    }
-  }, [messages.length])
+  function handleSend(text) {
+    sendMessage(text)
+    scroll.pinLatest('[data-role="user"]') // pin the turn you just sent
+  }
 
   return (
     <div ref={scroll.containerRef}>
@@ -79,7 +79,8 @@ chat-scroll/
 │   ├── vue-chat-scroll/         # @chat-scroll/vue
 │   └── solid-chat-scroll/       # @chat-scroll/solid
 ├── docs/                        # VitePress docs site (GH Pages)
-└── examples/                    # End-to-end demos (planned)
+├── examples/                    # Demo apps (vanilla, React, Vue, Solid)
+└── e2e/                         # Playwright suite driving the examples
 ```
 
 ## Development
@@ -89,13 +90,13 @@ chat-scroll/
 pnpm install
 
 # Build all packages
-pnpm -r build
+pnpm build
 
 # Run tests (vitest)
 pnpm test
 
 # Typecheck
-pnpm -r typecheck
+pnpm typecheck
 
 # Run docs site locally
 pnpm docs:dev

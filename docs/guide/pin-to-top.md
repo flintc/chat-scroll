@@ -4,7 +4,7 @@ The pattern made popular by ChatGPT, Claude, and Gemini: when the user sends
 a message, it pins to the top of the viewport so the assistant's response
 streams in directly below.
 
-<DemoVideo name="vanilla__pin-to-top" caption="Pin-to-top streaming. The user message anchors at the top while the response streams in below." />
+<LiveDemo scenario="pin-to-top" caption="Live demo — send a message: it pins to the top while the response streams in below. Toggle the reasoning block mid-stream and the pin holds." />
 
 ## When to use it
 
@@ -66,7 +66,7 @@ streams in directly below.
    shrinks toward zero. Eventually it reaches zero and the conversation
    scrolls naturally.
 
-<DemoVideo name="vanilla__gutter-shrink" caption="The synthetic gutter (striped band below the response) shrinks as the assistant fills space. When it reaches zero, natural scrolling takes over." />
+<LiveDemo scenario="pin-to-top" gutter caption="Live demo — the synthetic gutter (striped band below the response) shrinks as the assistant fills space. When it reaches zero, natural scrolling takes over." />
 
 ## Wiring
 

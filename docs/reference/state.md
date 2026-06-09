@@ -44,8 +44,11 @@ currently *at* the pin — see [`pinAnchored`](#pinanchored) for that.
 `true` while the user is still sitting at the pinned message — i.e. the
 controller will re-anchor `scrollTop` to `pinnedY` on the next content
 resize. Cleared by *scroll-driving* user input (`wheel`, `touchmove`,
-ArrowUp/Down, PageUp/Down, Home/End, Space) and by programmatic
-`scrollToBottom()`. Not cleared by `pointerdown` / `touchstart` / Tab /
+ArrowUp/Down, PageUp/Down, Home/End, Space), by programmatic
+`scrollToBottom()`, and by a consumer scroll that moves the viewport
+away from the pin in either direction (`container.scrollTo()`,
+`scrollBy()`, `scrollIntoView()` — detected via the scroll listener).
+Not cleared by `pointerdown` / `touchstart` / Tab /
 Enter / letter keys — those are interaction events, not scroll events,
 and clearing on them would drop the pin when the user taps a thinking /
 tool block in the response.
