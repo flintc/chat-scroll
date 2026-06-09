@@ -32,7 +32,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Build the workspace packages so docs example imports resolve.
-      - run: pnpm -r build --filter "./packages/*"
+      - run: pnpm -r --filter "./packages/*" build
 
       # The base path is `/<repo-name>/` for project-pages deployments.
       # Adjust if you serve from a custom domain (use `/`) or user-pages.
