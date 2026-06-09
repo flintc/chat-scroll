@@ -8,6 +8,7 @@ import {
   PROMPTS,
   seedAltThread,
   seedConversation,
+  seedLongConversation,
   type DemoMsg,
 } from './data'
 import { useDemoChat } from './useDemoChat'
@@ -21,7 +22,7 @@ const props = withDefaults(
     /** Start with the gutter visualization on (pin scenarios). */
     gutter?: boolean
   }>(),
-  { height: 340, gutter: false },
+  { height: 480, gutter: false },
 )
 
 type PaneHandle = InstanceType<typeof ChatPane> | null
@@ -34,7 +35,7 @@ const promptIdx = ref(0)
 // ── Per-scenario chat state ───────────────────────────────────────
 let threadSeedId = 5000
 const threadA: DemoMsg[] = [
-  ...seedConversation(),
+  ...seedLongConversation(),
   { id: ++threadSeedId, role: 'user', text: PROMPTS[0] },
   { id: ++threadSeedId, role: 'assistant', text: ASSISTANT_CHUNKS.join('') },
 ]
@@ -43,7 +44,12 @@ const isPin = computed(
   () => props.scenario === 'pin-to-top' || props.scenario === 'side-by-side',
 )
 const chatA = useDemoChat({
-  initial: props.scenario === 'thread-switch' ? threadA : seedConversation(),
+  initial:
+    props.scenario === 'thread-switch'
+      ? threadA
+      : props.scenario === 'pin-to-top'
+        ? seedLongConversation()
+        : seedConversation(),
   withBlocks: props.scenario === 'pin-to-top',
 })
 // Second chat: the stick pane of side-by-side, or thread B.
@@ -113,6 +119,22 @@ function finish(): void {
   chatB.stop()
 }
 
+// ── Prev / next turn navigation (pin-to-top) ──────────────────────
+// `pinRelative` hops the pin between user turns relative to the
+// currently pinned message. It needs a current pin as the reference
+// point, so the first nav click pins the latest seeded turn and
+// subsequent clicks navigate from there — visitors can try it without
+// sending anything first.
+function navTurn(direction: -1 | 1): void {
+  const sc = paneA.value?.scroll
+  if (!sc) return
+  if (!sc.state.value.pinActive) {
+    sc.pinLatest('[data-role="user"]')
+    return
+  }
+  sc.pinRelative('[data-role="user"]', direction)
+}
+
 function reset(): void {
   chatA.reset()
   chatB.reset()
@@ -165,6 +187,29 @@ function reset(): void {
       >
         Finish stream
       </button>
+      <div
+        v-if="scenario === 'pin-to-top'"
+        class="live-demo__nav"
+        role="group"
+        aria-label="Navigate between user turns"
+      >
+        <button
+          type="button"
+          class="live-demo__btn"
+          title="Pin the previous user turn (pinRelative -1)"
+          @click="navTurn(-1)"
+        >
+          ‹ Prev turn
+        </button>
+        <button
+          type="button"
+          class="live-demo__btn"
+          title="Pin the next user turn (pinRelative +1)"
+          @click="navTurn(1)"
+        >
+          Next turn ›
+        </button>
+      </div>
       <span class="live-demo__spacer" />
       <label v-if="isPin" class="live-demo__toggle">
         <input v-model="showGutter" type="checkbox" />
@@ -248,6 +293,10 @@ function reset(): void {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
+.live-demo__nav {
+  display: flex;
+  gap: 0.25rem;
+}
 .live-demo__tabs {
   display: flex;
   gap: 0.25rem;
@@ -292,7 +341,7 @@ function reset(): void {
     height: auto !important;
   }
   .live-demo__panes > * {
-    height: 280px;
+    height: 380px;
   }
 }
 </style>

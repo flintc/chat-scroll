@@ -4,6 +4,8 @@
 for long threads where scrolling between exchanges is tedious. Works
 with `pin-to-top` only.
 
+<LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev turn / Next turn › drive pinRelative(): each click pins the adjacent user turn to the top. The first click pins the latest turn as the starting point." />
+
 ```tsx
 import { useEffect } from 'react'
 import { useChatScroll } from '@chat-scroll/react'
