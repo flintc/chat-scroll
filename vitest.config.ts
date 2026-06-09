@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
@@ -9,6 +10,14 @@ export default defineConfig({
     // `development`, Node's export condition wins and we load `dist/server.js`,
     // where `createEffect` is a no-op.
     conditions: ['browser', 'development'],
+    alias: {
+      // Run adapter tests against the core *source*, not its dist —
+      // `pnpm test` then works on a clean checkout without a build, and
+      // coverage attributes core lines exercised via adapters correctly.
+      '@chat-scroll/core': fileURLToPath(
+        new URL('./packages/chat-scroll-core/src/index.ts', import.meta.url),
+      ),
+    },
   },
   test: {
     environment: 'jsdom',

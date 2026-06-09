@@ -22,6 +22,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Build first: the adapters resolve `@chat-scroll/core` types through
+      # its dist (exports map), so `typecheck` fails on a clean checkout
+      # without it. Unit tests resolve core source via a vitest alias.
+      - run: pnpm -r build
       - run: pnpm -r typecheck
       - run: pnpm test
-      - run: pnpm -r build

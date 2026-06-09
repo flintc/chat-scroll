@@ -37,5 +37,12 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flintc/chat-scroll.git",
+    "directory": "packages/chat-scroll-core"
+  },
+  "homepage": "https://flintc.github.io/chat-scroll/",
+  "bugs": "https://github.com/flintc/chat-scroll/issues"
 }
