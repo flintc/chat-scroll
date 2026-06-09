@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@chat-scroll/core": ["../../packages/chat-scroll-core/src/index.ts"],
+      "@chat-scroll/react": ["../../packages/react-chat-scroll/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

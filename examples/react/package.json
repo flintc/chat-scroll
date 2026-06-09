@@ -1,0 +1,27 @@
+{
+  "name": "@chat-scroll/example-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3113 --host 0.0.0.0 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 3113 --host 0.0.0.0 --strictPort",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chat-scroll/core": "workspace:*",
+    "@chat-scroll/example-shared": "workspace:*",
+    "@chat-scroll/react": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.11"
+  }
+}

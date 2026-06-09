@@ -69,6 +69,15 @@ export default defineConfig({
         viewport: { width: 960, height: 600 },
       },
     },
+    {
+      name: 'react',
+      testMatch: /specs\/react\/.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3113',
+        viewport: { width: 960, height: 600 },
+      },
+    },
     /**
      * WebKit project — exercises the iOS Safari smooth-scroll path that
      * shipped broken on 2026-04-28 in main commit 19c2d14, AND the
@@ -127,6 +136,15 @@ export default defineConfig({
       command: 'pnpm --filter @chat-scroll/example-vue dev',
       cwd: ROOT,
       url: 'http://localhost:3112',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'pnpm --filter @chat-scroll/example-react dev',
+      cwd: ROOT,
+      url: 'http://localhost:3113',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       stdout: 'pipe',

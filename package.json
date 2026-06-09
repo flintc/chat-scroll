@@ -18,6 +18,7 @@
     "examples:vanilla": "pnpm --filter @chat-scroll/example-vanilla dev",
     "examples:solid": "pnpm --filter @chat-scroll/example-solid dev",
     "examples:vue": "pnpm --filter @chat-scroll/example-vue dev",
+    "examples:react": "pnpm --filter @chat-scroll/example-react dev",
     "e2e": "pnpm --filter @chat-scroll/e2e run test",
     "e2e:headed": "pnpm --filter @chat-scroll/e2e run test:headed",
     "e2e:ui": "pnpm --filter @chat-scroll/e2e run test:ui",
