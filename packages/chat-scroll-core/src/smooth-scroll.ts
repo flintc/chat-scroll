@@ -120,7 +120,14 @@ export function animateScrollTo(
       const liveTarget = clampTarget(liveTargetNum, el)
       el.scrollTop = start + (liveTarget - start) * eased
 
-      if (t >= 1) {
+      // Done when the clock runs out OR we've effectively arrived. The
+      // arrival check matters for moving targets: every target change
+      // re-anchors `startTime`, so a target that moves with a stream
+      // (scrollToBottom chasing scrollHeight) would otherwise keep the
+      // animation "in flight" until the stream ends. Within a pixel,
+      // remaining easeOutExpo motion is sub-pixel — finishing here is
+      // visually indistinguishable and lets `scrollInFlight` clear.
+      if (t >= 1 || Math.abs(el.scrollTop - liveTarget) < 1) {
         signal?.removeEventListener('abort', onAbort)
         resolve()
         return

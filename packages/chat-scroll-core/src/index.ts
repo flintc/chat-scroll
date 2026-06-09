@@ -1,7 +1,4 @@
-export {
-  createChatScroll,
-  createChatScrollInstance,
-} from './chat-scroll'
+export { createChatScroll } from './chat-scroll'
 export type {
   ChatScrollBehavior,
   ChatScrollInstance,

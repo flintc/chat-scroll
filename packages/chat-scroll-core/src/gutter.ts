@@ -50,10 +50,14 @@ const GUTTER_DATA_ATTR = 'data-chat-scroll-gutter'
 
 export function createGutter(container: HTMLElement): HTMLElement {
   // Reuse an existing gutter if a previous mount left one behind (HMR, etc).
-  const existing = container.querySelector<HTMLElement>(
-    `[${GUTTER_DATA_ATTR}]`,
-  )
-  if (existing) return existing
+  // Only direct children count — a descendant match could be a *nested*
+  // chat instance's gutter (e.g. a chat preview embedded in a message),
+  // and adopting it would hijack that instance's layout.
+  for (const child of Array.from(container.children)) {
+    if (child.hasAttribute(GUTTER_DATA_ATTR)) {
+      return child as HTMLElement
+    }
+  }
 
   const el = container.ownerDocument.createElement('div')
   el.setAttribute(GUTTER_DATA_ATTR, '')

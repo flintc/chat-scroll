@@ -61,6 +61,27 @@ describe('createChatScroll', () => {
       expect(s.options.bottomThreshold).toBe(80)
       expect(s.options.strategy).toBe('stick-to-bottom')
     })
+
+    it('setOptions ignores keys passed as undefined', () => {
+      // Adapters sync options by passing EVERY key on every render, with
+      // `undefined` for options the consumer never set. Those must not
+      // clobber resolved defaults (bottomThreshold: undefined would break
+      // at-bottom detection; scrollMargin: undefined would make pinnedY
+      // NaN on the next pinMessage).
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.setOptions({
+        strategy: 'pin-to-top',
+        bottomThreshold: undefined,
+        scrollMargin: undefined,
+        scrollBehavior: undefined,
+        scrollDurationMs: undefined,
+      })
+      expect(s.options.strategy).toBe('pin-to-top')
+      expect(s.options.bottomThreshold).toBe(40)
+      expect(s.options.scrollMargin).toBe(12)
+      expect(s.options.scrollBehavior).toBe('auto')
+      expect(s.options.scrollDurationMs).toBe(320)
+    })
   })
 
   describe('mount + style application', () => {
@@ -951,6 +972,47 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('consumer programmatic scroll below the pin clears pinAnchored', () => {
+      // Mirror of the above-the-pin case: a host-app `scrollIntoView`
+      // of a message BELOW the pin (deep-link, search-result jump) also
+      // bypasses the user-input cancellers. The away-from-pin check is
+      // symmetric, so the next resize must not yank the user back up.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop, flushScroll, setContentHeight } =
+        buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 800,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(788)
+      expect(s.state.pinAnchored).toBe(true)
+
+      // Consumer scrolls DOWN past the pin (e.g. scrollIntoView of a
+      // later message). scrollHeight is unchanged → external scroll.
+      setScrollTop(888)
+      flushScroll()
+      expect(s.state.pinAnchored).toBe(false)
+
+      // Subsequent resize leaves the user where they navigated to.
+      setMsgDocY(msg, 950, 888)
+      setContentHeight(1650)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(888)
+      s.destroy()
+    })
+
     it('scroll listener leaves pinAnchored alone when scrollTop tracks pinnedY (no false-positive on legitimate clamp)', () => {
       // After a controller-driven re-anchor (recalcGutter writes
       // scrollTop = pinnedY), the resulting scroll event must NOT
@@ -1128,6 +1190,57 @@ describe('createChatScroll', () => {
       expect(s.state.scrollInFlight).toBe(true)
       // The catch-up animation hasn't ticked, so scrollTop is still
       // where the user's pointerdown left it — NOT teleported to 938.
+      expect(container.scrollTop).toBe(400)
+      s.destroy()
+    })
+
+    it('wheel on inner scrollable mid-pin-animation flags pinAnimationInterrupted', () => {
+      // Same family as the pointerdown case: a horizontal pan over a
+      // wide code block aborts the in-flight pin animation but
+      // preserves the pin. The next resize must take the ANIMATED
+      // catch-up branch — a synchronous write would teleport the user
+      // from wherever the abort left them.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight, setScrollTop } =
+        buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 800,
+      })
+      const wide = document.createElement('pre')
+      wide.style.overflowX = 'auto'
+      Object.defineProperty(wide, 'scrollWidth', { configurable: true, value: 2000 })
+      Object.defineProperty(wide, 'clientWidth', { configurable: true, value: 400 })
+      content.appendChild(wide)
+
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'smooth',
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames() // pinMessage rAF — schedules the animation
+      expect(s.state.scrollInFlight).toBe(true)
+      setScrollTop(400) // abort lands mid-flight
+
+      // Horizontal wheel on the inner pre — absorbed by the descendant
+      // scrollable, so the pin is preserved, but the animation aborted.
+      wide.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: 0, deltaX: 80, bubbles: true }),
+      )
+      expect(s.state.scrollInFlight).toBe(false)
+      expect(s.state.pinAnchored).toBe(true)
+
+      // Resize → animated catch-up, not a teleport.
+      setMsgDocY(msg, 950, 400)
+      setContentHeight(1650)
+      ro.triggerResize()
+      expect(s.state.scrollInFlight).toBe(true)
       expect(container.scrollTop).toBe(400)
       s.destroy()
     })
@@ -1376,6 +1489,100 @@ describe('createChatScroll', () => {
       expect(container.scrollTop).toBe(900)
       s.destroy()
     })
+
+    it('tracks content growth during the smooth animation (lands at the live bottom)', () => {
+      // Content can stream in during the ~320ms animation. A target
+      // captured at call time would land short of the real bottom; the
+      // getter form re-reads scrollHeight every frame.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      let fakeNow = 0
+      const nowSpy = vi
+        .spyOn(performance, 'now')
+        .mockImplementation(() => fakeNow)
+      cleanup.push(() => nowSpy.mockRestore())
+
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 500,
+      })
+      const s = createChatScroll({
+        scrollBehavior: 'smooth',
+        scrollDurationMs: 100,
+      })
+      s.mount(container, content)
+      s.scrollToBottom() // target read now: scrollHeight = 500
+      expect(s.state.scrollInFlight).toBe(true)
+
+      setContentHeight(800) // a stream chunk lands mid-animation
+
+      fakeNow = 50
+      raf.flushFrames() // target moved → interpolation re-anchors
+      fakeNow = 250
+      raf.flushFrames() // past duration → animation completes
+
+      // Live bottom: 800 - 100 = 700. A stale captured target would
+      // have stopped at 500.
+      expect(container.scrollTop).toBe(700)
+      s.destroy()
+    })
+
+    it('re-engages the stick-to-bottom lock when the scroll completes', async () => {
+      // The FAB / "↓ New messages" affordance wires scrollToBottom().
+      // Reaching the bottom that way means "follow the latest again" —
+      // without re-locking, the very next stream chunk drifts the user
+      // away and the FAB reappears.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, flushScroll, setContentHeight } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll({ scrollBehavior: 'instant' })
+      s.mount(container, content)
+      s.setStreaming(true)
+
+      // User scrolls up mid-stream → lock releases.
+      setScrollTop(100)
+      flushScroll()
+      expect(s.state.locked).toBe(false)
+
+      s.scrollToBottom()
+      expect(container.scrollTop).toBe(900)
+      await new Promise((r) => setTimeout(r, 0)) // settle epilogue
+      expect(s.state.locked).toBe(true)
+
+      // Next chunk while streaming sticks to the bottom again.
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1100)
+      s.destroy()
+    })
+
+    it('does NOT re-lock when the user aborts the scroll animation', async () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ scrollBehavior: 'smooth' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(100)
+      flushScroll()
+      expect(s.state.locked).toBe(false)
+
+      s.scrollToBottom() // rAF animation in flight
+      expect(s.state.scrollInFlight).toBe(true)
+      // User wheels mid-animation — their intent wins, no re-lock.
+      container.dispatchEvent(new WheelEvent('wheel', { deltaY: -50, bubbles: true }))
+      await new Promise((r) => setTimeout(r, 0))
+      expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
   })
 
   describe('savePosition / restorePosition', () => {
@@ -1393,6 +1600,27 @@ describe('createChatScroll', () => {
       expect(pos.scrollTop).toBe(300)
       expect(pos.wasAtBottom).toBe(false)
 
+      setScrollTop(0)
+      s.restorePosition(pos)
+      expect(container.scrollTop).toBe(300)
+      s.destroy()
+    })
+
+    it('restores the reading position from the top when content grew while away', () => {
+      // New messages append BELOW, so the content the user was reading
+      // keeps its offset-from-top. Restoring from the bottom would
+      // shift their spot down by everything that arrived while away.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, setContentHeight } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll()
+      s.mount(container, content)
+      setScrollTop(300)
+      const pos = s.savePosition()
+      expect(pos.wasAtBottom).toBe(false)
+
+      setContentHeight(1600) // 600px of new messages while away
       setScrollTop(0)
       s.restorePosition(pos)
       expect(container.scrollTop).toBe(300)
@@ -1423,7 +1651,6 @@ describe('createChatScroll', () => {
       const pos = s.savePosition()
       expect(pos).toEqual({
         scrollTop: 0,
-        scrollFromBottom: 0,
         wasAtBottom: true,
       })
     })

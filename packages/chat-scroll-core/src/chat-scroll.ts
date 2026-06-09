@@ -239,14 +239,18 @@ export function createChatScroll(
       internal.scrollInFlight = false
       return wasInFlight
     }
-    const abortOnly = (): void => {
-      const wasInFlight = abortAnim()
-      // If the abort cut a pin animation short, the resize that follows
-      // must animate the catch-up rather than teleport. The flag is
-      // consumed by the strategy on the next `recalcGutter`.
+    // If an abort cut a pin animation short while the pin is being
+    // preserved, the resize that follows must animate the catch-up
+    // rather than teleport. The flag is consumed by the strategy on the
+    // next `recalcGutter`. Every "preserve the pin" path below that
+    // aborted an in-flight animation goes through this.
+    const flagInterruptedPinAnimation = (wasInFlight: boolean): void => {
       if (wasInFlight && internal.pinAnchored) {
         ctx.pinAnimationInterrupted = true
       }
+    }
+    const abortOnly = (): void => {
+      flagInterruptedPinAnimation(abortAnim())
       commit()
     }
 
@@ -294,7 +298,7 @@ export function createChatScroll(
     }
 
     const onWheel = (ev: Event): void => {
-      abortAnim()
+      const wasInFlight = abortAnim()
       const we = ev as WheelEvent
       const dx = typeof we.deltaX === 'number' ? we.deltaX : 0
       const dy = typeof we.deltaY === 'number' ? we.deltaY : 0
@@ -303,6 +307,7 @@ export function createChatScroll(
       // horizontal delta — that path through findDescendantScrollable
       // does it without a separate special case.
       if (findDescendantScrollable(ev.target, dx, dy)) {
+        flagInterruptedPinAnimation(wasInFlight)
         commit()
         return
       }
@@ -310,6 +315,7 @@ export function createChatScroll(
       // vertical delta, the chat itself won't move — treat as a non-
       // scroll-driving event so the pin stays.
       if (dy === 0) {
+        flagInterruptedPinAnimation(wasInFlight)
         commit()
         return
       }
@@ -317,7 +323,7 @@ export function createChatScroll(
       commit()
     }
     const onTouchmove = (ev: Event): void => {
-      abortAnim()
+      const wasInFlight = abortAnim()
       // Touchmove doesn't carry per-event delta in a friendly form
       // (it's tracked across `touchstart` + cumulative positions). Use
       // a conservative descendant check: if the target is *inside* any
@@ -325,6 +331,7 @@ export function createChatScroll(
       // gesture. Pass `Infinity` for both axes so any
       // scrollable ancestor matches regardless of orientation.
       if (findDescendantScrollable(ev.target, Infinity, Infinity)) {
+        flagInterruptedPinAnimation(wasInFlight)
         commit()
         return
       }
@@ -346,9 +353,7 @@ export function createChatScroll(
         // Tab / Enter / letter keys: same semantics as pointerdown —
         // an interaction event, not a scroll event. Preserve the pin
         // and flag mid-animation interruption for an animated catch-up.
-        if (wasInFlight && internal.pinAnchored) {
-          ctx.pinAnimationInterrupted = true
-        }
+        flagInterruptedPinAnimation(wasInFlight)
         commit()
         return
       }
@@ -356,6 +361,7 @@ export function createChatScroll(
       // (e.g. an inner panel), the key targets that scrollable, not
       // the chat — preserve the pin.
       if (findDescendantScrollable(ev.target, Infinity, Infinity)) {
+        flagInterruptedPinAnimation(wasInFlight)
         commit()
         return
       }
@@ -377,7 +383,10 @@ export function createChatScroll(
     bind('keydown', onKeydown)
   }
 
-  function startAnimatedScroll(target: number | (() => number)): void {
+  function startAnimatedScroll(
+    target: number | (() => number),
+    onComplete?: () => void,
+  ): void {
     if (!ctx.container) return
     activeScrollAbort?.abort()
     activeScrollAbort = new AbortController()
@@ -404,6 +413,10 @@ export function createChatScroll(
       // must emit so subscribers see `scrollInFlight: false`.
       if (activeScrollAbort?.signal === signal) {
         internal.scrollInFlight = false
+        // `onComplete` only fires when the animation ran to its end —
+        // an abort (user wheel/touch, superseding scroll) means the
+        // user took over and the caller's intent no longer stands.
+        if (!signal.aborted) onComplete?.()
         commit()
       }
     })
@@ -463,14 +476,20 @@ export function createChatScroll(
       // collapse-driven clamps land 40+ px below the previous
       // scrollTop in a single frame even when the per-frame layout
       // delta is much smaller.
+      //
+      // The check is symmetric: a consumer can scroll away in EITHER
+      // direction (scrollTo(0) toward the top, or scrollIntoView of a
+      // message below the pin). Clamps only ever *decrease* scrollTop
+      // and always change scrollHeight in the same frame, so (c)
+      // protects both directions equally.
       if (
         options.strategy === 'pin-to-top' &&
         internal.pinAnchored &&
         !internal.scrollInFlight &&
         !ctx.pinAnimationInterrupted &&
         internal.pinnedY >= 0 &&
-        lastSeenScrollTop > internal.pinnedY - PIN_AWAY_THRESHOLD &&
-        now < internal.pinnedY - PIN_AWAY_THRESHOLD &&
+        Math.abs(lastSeenScrollTop - internal.pinnedY) < PIN_AWAY_THRESHOLD &&
+        Math.abs(now - internal.pinnedY) >= PIN_AWAY_THRESHOLD &&
         sh === lastSeenScrollHeight
       ) {
         internal.pinAnchored = false
@@ -515,9 +534,17 @@ export function createChatScroll(
 
   function setOptions(next: Partial<ChatScrollOptions>): void {
     const prevStrategy = options.strategy
+    // Ignore keys whose value is `undefined` — adapters sync options by
+    // passing every key on every render, with `undefined` for options
+    // the consumer never set. Spreading those verbatim would clobber
+    // resolved defaults (`bottomThreshold: undefined` breaks at-bottom
+    // detection; `scrollMargin: undefined` makes `pinnedY` NaN).
+    const defined = Object.fromEntries(
+      Object.entries(next).filter(([, v]) => v !== undefined),
+    ) as Partial<ChatScrollOptions>
     options = {
       ...options,
-      ...next,
+      ...defined,
     }
     ctx.options.bottomThreshold = options.bottomThreshold
     ctx.options.scrollMargin = options.scrollMargin
@@ -642,7 +669,22 @@ export function createChatScroll(
     // shortcut / deep-link / notification jump has the same problem.
     internal.pinAnchored = false
     ctx.pinAnimationInterrupted = false
-    startAnimatedScroll(ctx.container.scrollHeight)
+    // Live getter, not a captured number: content may stream in during
+    // the ~320ms animation, and a stale target would land short of the
+    // real bottom. The rAF loop re-reads and re-clamps every frame.
+    const container = ctx.container
+    startAnimatedScroll(
+      () => container.scrollHeight,
+      // Reaching the bottom via this affordance is the user's intent to
+      // FOLLOW the latest content again — re-engage the stick lock so a
+      // mid-stream FAB click doesn't immediately drift away on the next
+      // chunk. Skipped on abort (the user wheeled away mid-animation).
+      () => {
+        if (options.strategy === 'stick-to-bottom') {
+          internal.locked = true
+        }
+      },
+    )
     // startAnimatedScroll defers its prologue commit to the caller;
     // emit so subscribers see `pinAnchored: false` + `scrollInFlight:
     // true` while it runs.
@@ -683,12 +725,11 @@ export function createChatScroll(
 
   function savePosition(): ScrollPosition {
     if (!ctx.container) {
-      return { scrollTop: 0, scrollFromBottom: 0, wasAtBottom: true }
+      return { scrollTop: 0, wasAtBottom: true }
     }
     const c = ctx.container
     return {
       scrollTop: c.scrollTop,
-      scrollFromBottom: c.scrollHeight - c.scrollTop - c.clientHeight,
       wasAtBottom: isAtBottom(c, options.bottomThreshold),
     }
   }
@@ -699,8 +740,11 @@ export function createChatScroll(
     if (pos.wasAtBottom) {
       c.scrollTop = c.scrollHeight
     } else {
-      const target = c.scrollHeight - c.clientHeight - pos.scrollFromBottom
-      c.scrollTop = Math.max(0, target)
+      // Measure from the TOP: messages append below, so the content the
+      // user was reading keeps its offset-from-top. Restoring from the
+      // bottom would shift their spot by however much content arrived
+      // since the save. The browser clamps if content shrank.
+      c.scrollTop = Math.max(0, pos.scrollTop)
     }
   }
 
@@ -761,6 +805,3 @@ function statesEqual(a: ChatScrollState, b: ChatScrollState): boolean {
     a.pinnedY === b.pinnedY
   )
 }
-
-/** Backward-compatible alias matching the handoff name. */
-export const createChatScrollInstance = createChatScroll

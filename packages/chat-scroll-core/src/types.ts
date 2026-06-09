@@ -71,9 +71,11 @@ export interface ChatScrollState {
    * True while the user is still sitting at the pinned message — i.e.
    * the controller will re-anchor `scrollTop` to `pinnedY` on the next
    * content resize. Cleared by *scroll-driving* user input
-   * (wheel, touchmove, ArrowUp/Down, PageUp/Down, Home/End, Space) and
+   * (wheel, touchmove, ArrowUp/Down, PageUp/Down, Home/End, Space),
    * by programmatic `scrollToBottom()` (the consumer's explicit "move
-   * away from the pin" affordance). Not cleared by pointerdown /
+   * away from the pin" affordance), and by a consumer scroll that moves
+   * the viewport away from the pin in either direction (scrollTo /
+   * scrollBy / scrollIntoView). Not cleared by pointerdown /
    * touchstart / Tab / Enter / letters — those are interaction events,
    * not scroll events.
    */
@@ -101,11 +103,9 @@ export interface ChatScrollState {
  * into `restorePosition(token)` to recover scroll state across navigation.
  */
 export interface ScrollPosition {
-  /** Distance from the top of the content. */
+  /** Distance from the top of the content. Used when `wasAtBottom` is false. */
   scrollTop: number
-  /** Distance from the bottom — preserved when `atBottom` was true. */
-  scrollFromBottom: number
-  /** True when the saved position was at-bottom. Restoration prefers this. */
+  /** True when the saved position was at-bottom — restoration re-snaps to the (new) bottom. */
   wasAtBottom: boolean
 }
 
@@ -125,7 +125,11 @@ export interface ChatScrollInstance {
    */
   mount: (container: HTMLElement, content: HTMLElement) => void
 
-  /** Update options at any time. Partial — unspecified keys retain values. */
+  /**
+   * Update options at any time. Partial — unspecified keys retain their
+   * values, and keys explicitly passed as `undefined` are ignored too
+   * (so adapters can pass every key on every render).
+   */
   setOptions: (opts: Partial<ChatScrollOptions>) => void
 
   /**
@@ -153,7 +157,14 @@ export interface ChatScrollInstance {
    */
   pinRelative: (selector: string, direction: -1 | 1) => void
 
-  /** Imperatively scroll to the bottom. Uses resolved scroll behavior. */
+  /**
+   * Imperatively scroll to the bottom. Uses resolved scroll behavior;
+   * the target tracks live `scrollHeight`, so content streaming in
+   * mid-animation doesn't leave the scroll short of the real bottom.
+   * Side effects: clears `pinAnchored` (pin-to-top); re-engages the
+   * lock once the scroll completes un-aborted (stick-to-bottom), so a
+   * FAB wired to this resumes following the stream.
+   */
   scrollToBottom: () => void
 
   /** Engage the stick-to-bottom lock. No-op when strategy is `'pin-to-top'`. */

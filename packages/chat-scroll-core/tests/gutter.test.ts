@@ -33,6 +33,25 @@ describe('gutter', () => {
     expect(g1).toBe(g2)
   })
 
+  it("createGutter does not adopt a NESTED instance's gutter", () => {
+    // A chat preview embedded inside a message has its own container +
+    // gutter. The outer container must create its own gutter rather
+    // than hijacking the descendant one (only direct children count
+    // for the idempotency check).
+    const outer = document.createElement('div')
+    const message = document.createElement('div')
+    const innerChat = document.createElement('div')
+    outer.appendChild(message)
+    message.appendChild(innerChat)
+    document.body.appendChild(outer)
+
+    const innerGutter = createGutter(innerChat)
+    const outerGutter = createGutter(outer)
+    expect(outerGutter).not.toBe(innerGutter)
+    expect(outerGutter.parentElement).toBe(outer)
+    expect(innerGutter.parentElement).toBe(innerChat)
+  })
+
   it('setGutterHeight clamps negatives to 0', () => {
     const g = document.createElement('div')
     setGutterHeight(g, -50)
