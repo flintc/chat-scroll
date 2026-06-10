@@ -62,6 +62,10 @@ const virtualizer = useVirtualizer(
       getScrollElement: () => chatEl.value,
       estimateSize: () => 60,
       overscan: 8,
+      // The list opens at the latest message (initialPosition:
+      // 'bottom') — tell the virtualizer, so its init doesn't write
+      // offset 0 over the controller's snap.
+      initialOffset: chat.messages.value.length * 60,
       rangeExtractor: (range: {
         startIndex: number
         endIndex: number

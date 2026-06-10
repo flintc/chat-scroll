@@ -628,7 +628,16 @@ export function createChatScroll(
       ctx.scrollDelta = now - lastSeenScrollTop
       // Scrollbar drags emit no wheel/touch/key events; an upward
       // move is still the user taking over from the initial anchoring.
-      if (initialAnchoring && ctx.scrollDelta < 0) {
+      // Gated on scrollHeight being unchanged, like the consumer-
+      // scroll detector above: layout-driven clamps (a virtualizer
+      // re-measuring rows, content shrinking) produce a negative
+      // delta TOGETHER with a scrollHeight change in the same frame,
+      // and those must not end the anchoring.
+      if (
+        initialAnchoring &&
+        ctx.scrollDelta < 0 &&
+        sh === lastSeenScrollHeight
+      ) {
         initialAnchoring = false
       }
       lastSeenScrollTop = now

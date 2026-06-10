@@ -43,6 +43,9 @@ export function VirtualChat({ messages, isStreaming }: Props) {
     getScrollElement: () => containerEl.current,
     estimateSize: () => 60,
     overscan: 8,
+    // Opening at the latest message? Tell the virtualizer too, so its
+    // init doesn't write offset 0 over the initial bottom position.
+    initialOffset: messages.length * 60,
   })
 
   return (

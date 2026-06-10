@@ -2469,6 +2469,30 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('a shrink-clamp (negative delta WITH scrollHeight change) does not stop it', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setContentHeight, flushScroll } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        initialPosition: 'bottom',
+      })
+      s.mount(container, content)
+      expect(container.scrollTop).toBe(900)
+      // A virtualizer re-measuring rows: content shrinks, the browser
+      // clamps scrollTop down, and the scroll event carries a negative
+      // delta — but scrollHeight changed in the same frame, so this is
+      // layout, not the user.
+      setContentHeight(800)
+      container.scrollTop = container.scrollTop // clamp to new max (700)
+      flushScroll()
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1100) // anchoring survived
+      s.destroy()
+    })
+
     it("default 'none' leaves the initial position alone", () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
