@@ -30,9 +30,17 @@ The lifecycle:
 2. **Consumer starts a stream.** Call `scroll.setStreaming(true)`. Now any
    ResizeObserver fire while locked snaps to bottom — perfect for the new
    tokens arriving from the model.
-3. **User scrolls up mid-stream.** Scroll handler detects we're no longer
-   within `bottomThreshold` and sets `locked = false`. Subsequent content
-   growth no longer disturbs scroll.
+3. **User scrolls up mid-stream.** The lock releases the moment the
+   *input* arrives — a wheel-up, a downward touch pan, ArrowUp /
+   PageUp / Home — and subsequent content growth no longer disturbs
+   scroll. Releasing on input rather than on the resulting scroll
+   position matters mid-stream: the strategy re-snaps to the bottom on
+   every chunk, which cancels the browser's in-progress scroll before
+   it can observably leave the bottom. A position-based release alone
+   would lose that race and the chat would "swallow" upward scrolls.
+   (A position check still backs this up for inputs that emit no
+   wheel/touch/key events, like scrollbar drags — it releases when the
+   viewport *moves up* past `bottomThreshold`.)
 4. **Consumer ends the stream.** Call `scroll.setStreaming(false)`. The lock
    may still be `true` (if the user never scrolled away), but the resize
    handler is now inert. The user can interact with completed content — tap
@@ -68,8 +76,8 @@ function handleSend(text: string) {
 }
 ```
 
-You typically don't call `unlock()` yourself — the scroll handler
-releases the lock automatically when the user scrolls up.
+You typically don't call `unlock()` yourself — the controller releases
+the lock automatically on upward scroll input.
 
 ### Why call `lock()` on send?
 

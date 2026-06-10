@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createChatScroll } from '../src/chat-scroll'
+import { recalcGutter } from '../src/strategies/pin-to-top'
+import type { StrategyContext } from '../src/strategies/types'
 import type { ChatScrollState } from '../src/types'
 
 import {
@@ -223,11 +225,14 @@ describe('createChatScroll', () => {
       const s = createChatScroll({ onScrollChange: cb })
       s.mount(container, content)
       cb.mockClear()
+      setScrollTop(900)
+      flushScroll() // reach the bottom — atBottom flips true
       setScrollTop(500)
-      flushScroll()
+      flushScroll() // scroll up — atBottom flips back, lock releases
       expect(cb).toHaveBeenCalled()
       const next = cb.mock.calls.at(-1)?.[0] as ChatScrollState
       expect(next.atBottom).toBe(false)
+      expect(next.locked).toBe(false)
       s.destroy()
     })
 
@@ -259,12 +264,12 @@ describe('createChatScroll', () => {
       const s = createChatScroll()
       s.mount(container, content)
       const off = s.subscribe(cb)
-      setScrollTop(500)
-      flushScroll()
+      setScrollTop(900)
+      flushScroll() // atBottom flips → one emit
       expect(cb).toHaveBeenCalledTimes(1)
       off()
-      setScrollTop(900)
-      flushScroll()
+      setScrollTop(500)
+      flushScroll() // atBottom + locked flip, but unsubscribed
       expect(cb).toHaveBeenCalledTimes(1)
       s.destroy()
     })
@@ -437,11 +442,21 @@ describe('createChatScroll', () => {
         return { s, container, content, m1, m2, m3, raf }
       }
 
-      it('no-ops when no message is currently pinned', () => {
+      it('navigates from the viewport when no message is pinned', () => {
+        // No pin → viewport-relative reference. At scrollTop 0 every
+        // match is below the viewport top, so +1 pins the first one.
+        const { s, container, raf } = buildThree()
+        expect(s.pinRelative('[data-role="user"]', 1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(88) // m1: 100 - 12
+        expect(s.state.pinActive).toBe(true)
+        s.destroy()
+      })
+
+      it('no-ops on -1 when no pin exists and nothing is above the viewport', () => {
         const { s, container, raf } = buildThree()
         const before = container.scrollTop
-        s.pinRelative('[data-role="user"]', 1)
-        raf.flushFrames()
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(false)
         raf.flushFrames()
         expect(container.scrollTop).toBe(before)
         expect(s.state.pinActive).toBe(false)
@@ -508,7 +523,7 @@ describe('createChatScroll', () => {
         s.destroy()
       })
 
-      it('no-ops when the current pin is not in the matched set', () => {
+      it('falls back to the viewport reference when the current pin is not in the matched set', () => {
         const ro = installFakeResizeObserver()
         cleanup.push(ro.uninstall)
         const raf = installFakeRaf()
@@ -518,7 +533,9 @@ describe('createChatScroll', () => {
           contentHeight: 1000,
         })
         // The pinned element is an assistant; navigation selector
-        // targets user messages → no reference position.
+        // targets user messages. The pin can't serve as the reference,
+        // so navigation resolves geometrically: the user message below
+        // the viewport top is the +1 target.
         const assistant = appendMessage(container, content, {
           role: 'assistant',
           height: 40,
@@ -536,11 +553,100 @@ describe('createChatScroll', () => {
         s.mount(container, content)
         s.pinMessage(assistant)
         raf.flushFrames()
-        const before = container.scrollTop
-        s.pinRelative('[data-role="user"]', 1)
+        expect(container.scrollTop).toBe(88) // assistant: 100 - 12
+        expect(s.pinRelative('[data-role="user"]', 1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(488) // user: 500 - 12
+        s.destroy()
+      })
+
+      it('rapid back-to-back calls accumulate (pendingPinEl, not the settled pin)', () => {
+        // Two quick "prev" clicks within the same frame must move TWO
+        // turns. pinMessage defers its measurement, so the second call
+        // resolves against the pending element, not the settled pin.
+        const { s, container, m3, raf } = buildThree()
+        s.pinMessage(m3)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(888)
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(true)
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(88) // m1 — two hops
+        s.destroy()
+      })
+
+      it('navigates from the viewport after the user scrolls away', () => {
+        const { s, container, m3, raf } = buildThree()
+        s.pinMessage(m3)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(888)
+        // User wheels away from the pin (clears pinAnchored) and reads
+        // mid-way through m2's reply.
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+        )
+        container.scrollTop = 520
+        expect(s.state.pinAnchored).toBe(false)
+        // -1 first snaps to the turn being read (m2)…
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(488)
+        // …then walks upward from the (re-anchored) pin.
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(88)
+        s.destroy()
+      })
+
+      it('+1 from a scrolled-away viewport pins the next turn below', () => {
+        const { s, container, m3, raf } = buildThree()
+        s.pinMessage(m3)
+        raf.flushFrames()
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+        )
+        container.scrollTop = 520 // reading m2's reply
+        expect(s.pinRelative('[data-role="user"]', 1)).toBe(true)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(888) // m3
+        s.destroy()
+      })
+
+      it('getPinnedElement reflects pending and settled pins', () => {
+        const { s, m2, raf } = buildThree()
+        expect(s.getPinnedElement()).toBe(null)
+        s.pinMessage(m2)
+        expect(s.getPinnedElement()).toBe(m2) // pending — frame not run yet
+        raf.flushFrames()
+        expect(s.getPinnedElement()).toBe(m2) // settled
+        s.reset()
+        expect(s.getPinnedElement()).toBe(null)
+        s.destroy()
+      })
+
+      it('a newer pinRelative supersedes a pending pinLatest (last call wins)', () => {
+        const { s, container, m2, raf } = buildThree()
+        s.pinMessage(m2)
+        raf.flushFrames()
+        expect(container.scrollTop).toBe(488)
+        s.pinLatest('[data-role="user"]')
+        expect(s.pinRelative('[data-role="user"]', -1)).toBe(true)
         raf.flushFrames()
         raf.flushFrames()
-        expect(container.scrollTop).toBe(before)
+        // m1 won — the stale pinLatest frame aborted instead of
+        // clobbering the navigation with m3.
+        expect(container.scrollTop).toBe(88)
+        s.destroy()
+      })
+
+      it('reset() cancels a pin still waiting on its frame', () => {
+        const { s, container, m2, raf } = buildThree()
+        s.pinMessage(m2)
+        s.reset()
+        raf.flushFrames()
+        raf.flushFrames()
+        expect(s.state.pinActive).toBe(false)
+        expect(container.scrollTop).toBe(0)
         s.destroy()
       })
 
@@ -583,7 +689,12 @@ describe('createChatScroll', () => {
         height: 40,
         y: 200,
       })
-      const s = createChatScroll({ strategy: 'pin-to-top' })
+      // `instant` so no animation is in flight — the in-flight gutter
+      // floor (no-shrink during animations) has its own tests below.
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
       s.mount(container, content)
       s.pinMessage(msg)
       raf.flushFrames()
@@ -599,6 +710,60 @@ describe('createChatScroll', () => {
       // gutter = 600 + 188 - 2000 → clamped to 0
       expect(g.style.height).toBe('0px')
       s.destroy()
+    })
+
+    it('gutter never shrinks while a scroll animation is in flight', () => {
+      // Regression for pinRelative() to an EARLIER turn teleporting
+      // instead of animating: the outgoing pin's gutter is tall, the
+      // incoming pin's tight height is 0, and shrinking synchronously
+      // drops scrollHeight below the current scrollTop — the browser
+      // clamps and the user jumps. While `scrollInFlight` the gutter
+      // must hold a no-shrink floor; once the animation completes the
+      // tight-pin contract is restored.
+      const { container, content, mountGutter } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 700,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const gutter = mountGutter()
+      // State left by pinning a LATER turn: tall gutter, user near the
+      // old max-scroll, now animating toward m1 (pinnedY = 88).
+      gutter.style.height = '388px'
+      container.scrollTop = 450
+      const ctx: StrategyContext = {
+        container,
+        content,
+        gutter,
+        pinnedEl: m1,
+        pinnedMargin: 12,
+        state: {
+          atBottom: false,
+          pinActive: true,
+          pinAnchored: true,
+          streaming: false,
+          locked: false,
+          scrollInFlight: true,
+          pinnedY: 88,
+        },
+        options: { bottomThreshold: 40, scrollMargin: 12 },
+        pinAnimationInterrupted: false,
+        scrollDelta: 0,
+      }
+      recalcGutter(ctx)
+      // Tight height for m1 is 0 (88 + 600 - 700 < 0), but the floor
+      // holds and the user's mid-animation position survives unclamped.
+      expect(gutter.style.height).toBe('388px')
+      expect(container.scrollTop).toBe(450)
+
+      // Animation completed — tighten back to the contract.
+      ctx.state.scrollInFlight = false
+      recalcGutter(ctx)
+      expect(gutter.style.height).toBe('0px')
+      expect(container.scrollTop).toBe(88) // re-anchored at the pin
     })
 
     // `getBoundingClientRect` in our test stubs returns viewport-relative
@@ -1384,12 +1549,40 @@ describe('createChatScroll', () => {
       const s = createChatScroll({ strategy: 'stick-to-bottom' })
       s.mount(container, content)
       s.setStreaming(true)
+      setScrollTop(900)
+      flushScroll() // at the bottom
       setScrollTop(200)
       flushScroll() // user scroll-up breaks the lock
       expect(s.state.locked).toBe(false)
       setContentHeight(2000)
       ro.triggerResize()
       expect(container.scrollTop).toBe(200)
+      s.destroy()
+    })
+
+    it('growth-race scroll events with non-negative delta do NOT break the lock', () => {
+      // Regression: on send, the new user message can render BETWEEN
+      // the lock() snap write and that write's scroll event, so the
+      // event observes a gap beyond the threshold without the viewport
+      // ever moving up. That event must not release the lock — only an
+      // upward movement (negative scrollTop delta) is a user leaving.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, setContentHeight, flushScroll } =
+        buildScrollDom({
+          clientHeight: 100,
+          contentHeight: 1000,
+        })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      setScrollTop(900)
+      flushScroll()
+      expect(s.state.locked).toBe(true)
+      // Content grows (new message), then a scroll event fires at the
+      // same scrollTop — gap is now 100px but delta is 0.
+      setContentHeight(1100)
+      flushScroll()
+      expect(s.state.locked).toBe(true)
       s.destroy()
     })
 
@@ -1422,6 +1615,8 @@ describe('createChatScroll', () => {
       })
       const s = createChatScroll({ strategy: 'stick-to-bottom' })
       s.mount(container, content)
+      setScrollTop(900)
+      flushScroll()
       setScrollTop(200)
       flushScroll()
       expect(s.state.locked).toBe(false)
@@ -1455,6 +1650,127 @@ describe('createChatScroll', () => {
       s.unlock()
       expect(s.state.locked).toBe(false)
       s.destroy()
+    })
+
+    describe('input-driven lock release', () => {
+      // Regression: during a stream the strategy re-snaps scrollTop to
+      // the bottom on every content tick, which cancels the user's
+      // in-progress wheel/touch scroll before it produces a scroll
+      // event that leaves the bottom — so a position-based release
+      // alone never fires and the chat "swallows" upward scrolls
+      // mid-stream. The lock must release on the INPUT itself.
+      function buildLocked(): {
+        s: ReturnType<typeof createChatScroll>
+        container: HTMLElement
+        setScrollTop: (t: number) => void
+      } {
+        const ro = installFakeResizeObserver()
+        cleanup.push(ro.uninstall)
+        const { container, content, setScrollTop } = buildScrollDom({
+          clientHeight: 100,
+          contentHeight: 1000,
+        })
+        const s = createChatScroll({ strategy: 'stick-to-bottom' })
+        s.mount(container, content)
+        s.setStreaming(true)
+        setScrollTop(900) // at the bottom, lock engaged
+        expect(s.state.locked).toBe(true)
+        return { s, container, setScrollTop }
+      }
+
+      const touchEvent = (type: string, clientY: number): Event => {
+        const ev = new Event(type, { bubbles: true })
+        Object.defineProperty(ev, 'touches', {
+          value: [{ clientY }],
+        })
+        return ev
+      }
+
+      it('wheel-up releases the lock at input time', () => {
+        const { s, container } = buildLocked()
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+        )
+        expect(s.state.locked).toBe(false)
+        s.destroy()
+      })
+
+      it('wheel-down does NOT release the lock', () => {
+        const { s, container } = buildLocked()
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: 50, bubbles: true }),
+        )
+        expect(s.state.locked).toBe(true)
+        s.destroy()
+      })
+
+      it('wheel-up before the content overflows does NOT release the lock', () => {
+        const ro = installFakeResizeObserver()
+        cleanup.push(ro.uninstall)
+        // Content shorter than the viewport — scrollTop is pinned at 0
+        // and a wheel-up can't scroll; the lock must survive so the
+        // chat still follows once the content DOES overflow.
+        const { container, content } = buildScrollDom({
+          clientHeight: 600,
+          contentHeight: 300,
+        })
+        const s = createChatScroll({ strategy: 'stick-to-bottom' })
+        s.mount(container, content)
+        container.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+        )
+        expect(s.state.locked).toBe(true)
+        s.destroy()
+      })
+
+      it('wheel-up absorbed by a nested scrollable does NOT release the lock', () => {
+        const { s, container } = buildLocked()
+        const inner = document.createElement('div')
+        inner.style.overflowY = 'auto'
+        Object.defineProperty(inner, 'scrollHeight', { value: 500 })
+        Object.defineProperty(inner, 'clientHeight', { value: 100 })
+        container.appendChild(inner)
+        inner.dispatchEvent(
+          new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+        )
+        expect(s.state.locked).toBe(true)
+        s.destroy()
+      })
+
+      it('touch pan toward older messages releases the lock', () => {
+        const { s, container } = buildLocked()
+        container.dispatchEvent(touchEvent('touchstart', 300))
+        // Finger moves DOWN the screen → content pans up.
+        container.dispatchEvent(touchEvent('touchmove', 330))
+        expect(s.state.locked).toBe(false)
+        s.destroy()
+      })
+
+      it('touch pan toward the bottom does NOT release the lock', () => {
+        const { s, container } = buildLocked()
+        container.dispatchEvent(touchEvent('touchstart', 300))
+        // Finger moves UP the screen → content pans down (toward bottom).
+        container.dispatchEvent(touchEvent('touchmove', 270))
+        expect(s.state.locked).toBe(true)
+        s.destroy()
+      })
+
+      it('ArrowUp / PageUp / Home release the lock; ArrowDown does not', () => {
+        for (const key of ['ArrowUp', 'PageUp', 'Home']) {
+          const { s, container } = buildLocked()
+          container.dispatchEvent(
+            new KeyboardEvent('keydown', { key, bubbles: true }),
+          )
+          expect(s.state.locked, key).toBe(false)
+          s.destroy()
+        }
+        const { s, container } = buildLocked()
+        container.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+        )
+        expect(s.state.locked).toBe(true)
+        s.destroy()
+      })
     })
   })
 
@@ -1543,6 +1859,8 @@ describe('createChatScroll', () => {
       s.setStreaming(true)
 
       // User scrolls up mid-stream → lock releases.
+      setScrollTop(900)
+      flushScroll()
       setScrollTop(100)
       flushScroll()
       expect(s.state.locked).toBe(false)
@@ -1571,6 +1889,8 @@ describe('createChatScroll', () => {
       const s = createChatScroll({ scrollBehavior: 'smooth' })
       s.mount(container, content)
       s.setStreaming(true)
+      setScrollTop(900)
+      flushScroll()
       setScrollTop(100)
       flushScroll()
       expect(s.state.locked).toBe(false)

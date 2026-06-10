@@ -43,6 +43,7 @@ export interface UseChatScrollReturn {
   pinMessage: ChatScrollInstance['pinMessage']
   pinLatest: ChatScrollInstance['pinLatest']
   pinRelative: ChatScrollInstance['pinRelative']
+  getPinnedElement: ChatScrollInstance['getPinnedElement']
   scrollToBottom: ChatScrollInstance['scrollToBottom']
   lock: ChatScrollInstance['lock']
   unlock: ChatScrollInstance['unlock']
@@ -162,6 +163,7 @@ export function useChatScroll(
       pinMessage: instance.pinMessage,
       pinLatest: instance.pinLatest,
       pinRelative: instance.pinRelative,
+      getPinnedElement: instance.getPinnedElement,
       scrollToBottom: instance.scrollToBottom,
       lock: instance.lock,
       unlock: instance.unlock,

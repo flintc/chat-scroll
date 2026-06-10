@@ -135,8 +135,8 @@ exchange scrolls up out of view without any other work.
 
 ## Prev / next navigation
 
-Once a message is pinned, `pinRelative(selector, direction)` walks the
-matched node list relative to the current pin. Wire it to buttons or
+`pinRelative(selector, direction)` walks the matched node list and pins
+the neighbor of the current reference turn. Wire it to buttons or
 keyboard shortcuts to give users a quick way to step back through the
 conversation:
 
@@ -151,10 +151,14 @@ window.addEventListener('keydown', (e) => {
 })
 ```
 
-`pinRelative` is a no-op when no message is currently pinned — call
-`pinLatest()` (or `pinMessage()`) once to seed a starting position, then
-prev/next can take over. Clamping at the ends is built-in: pressing
-"next" at the latest message does nothing.
+The reference point follows the user: while they're anchored at a
+pinned turn, navigation is relative to that turn; once they scroll
+away (or before anything is pinned at all), it's relative to the user
+turn nearest the viewport top — the one they're reading. Clamping at
+the ends is built-in: `pinRelative` returns `false` and pins nothing
+when there's no target in that direction. See the
+[message-navigation recipe](/recipes/message-navigation) for the full
+semantics and disabled-button patterns.
 
 Because the selector is queried fresh on every call, navigation
 naturally picks up messages added since the last call.

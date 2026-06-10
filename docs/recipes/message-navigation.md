@@ -4,7 +4,7 @@
 for long threads where scrolling between exchanges is tedious. Works
 with `pin-to-top` only.
 
-<LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev turn / Next turn › drive pinRelative(): each click pins the adjacent user turn to the top. The first click pins the latest turn as the starting point." />
+<LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev turn / Next turn › drive pinRelative(): each click smooth-scrolls the adjacent user turn to the top. Scroll away mid-reply and ‹ first snaps back to the turn you're reading. The buttons disable at the ends." />
 
 ```tsx
 import { useEffect } from 'react'
@@ -43,62 +43,68 @@ export function ChatWithNavigation({ messages }: { messages: Message[] }) {
 ## How it works
 
 `pinRelative(selector, ±1)` walks the elements matching `selector` and
-pins the neighbor of the currently pinned element. Internally it's
+pins the neighbor of the current reference turn. Internally it's
 `pinMessage()` applied to the right element, so all the same machinery
-runs: smooth scroll, gutter recalculation, pin-anchored state.
+runs: smooth scroll, gutter recalculation, pin-anchored state. It
+returns `true` when it pinned something and `false` at the edges.
 
 The selector controls what counts as "a message" for navigation. Most
 apps want user turns only, so `[data-role="user"]` is the typical
 choice — assistant turns are scrolled past on the way to the next user
 turn, which matches how people skim a transcript.
 
-## No starting position
+## The reference point
 
-`pinRelative` no-ops when no message is currently pinned. After a fresh
-mount, you need to seed the position with `pinLatest()` or
-`pinMessage()` before prev/next can take over:
+"Previous" and "next" are only meaningful relative to *somewhere*, and
+the right somewhere depends on what the user has done:
 
-```ts
-// On first send / on thread open, seed the latest turn.
-scroll.pinLatest('[data-role="user"]')
-// Now prev/next work.
-scroll.pinRelative('[data-role="user"]', -1)
-```
+- **While anchored at a pinned turn**, navigation is relative to that
+  turn — and because each call resolves synchronously against the
+  rendered DOM, rapid presses accumulate (two quick `-1`s move two
+  turns).
+- **After the user scrolls away**, the pin no longer describes what
+  they're looking at, so navigation switches to the match nearest the
+  viewport top — the turn whose reply they're reading. From the middle
+  of a long reply, `-1` first snaps back to that turn, then walks
+  upward on the next press; `+1` goes to the next turn below. (Editors
+  use the same convention for go-to-previous-change.)
 
-If you'd rather have a key press auto-seed when nothing is pinned,
-fall back to `pinLatest`:
-
-```ts
-function step(direction: -1 | 1): void {
-  if (scroll.state.pinActive) {
-    scroll.pinRelative('[data-role="user"]', direction)
-  } else {
-    scroll.pinLatest('[data-role="user"]')
-  }
-}
-```
+The viewport-relative mode also means `pinRelative` works with **no
+pin at all** — no `pinLatest()` seeding step is needed before prev/next
+take over. A fresh mount at the bottom of a thread navigates from the
+turn being read.
 
 ## Buttons instead of (or alongside) shortcuts
 
-Visual prev/next controls wire to the same call. The built-in no-op at
-the ends is usually all the disabled-state you need — clicking past
-the first/last just does nothing. Add `aria-label`s so screen readers
-announce the affordance:
+Visual prev/next controls wire to the same call. For disabled states,
+mirror the reference rule with `getPinnedElement()` — or skip disabled
+handling entirely and rely on the built-in no-op at the ends. Add
+`aria-label`s so screen readers announce the affordance:
 
 ```tsx
+const turns = [...(container?.querySelectorAll('[data-role="user"]') ?? [])]
+const idx = turns.indexOf(scroll.getPinnedElement())
+
 <button
   onClick={() => scroll.pinRelative('[data-role="user"]', -1)}
+  disabled={idx === 0}
   aria-label="Previous user message"
 >
   ↑
 </button>
 <button
   onClick={() => scroll.pinRelative('[data-role="user"]', 1)}
+  disabled={idx === turns.length - 1}
   aria-label="Next user message"
 >
   ↓
 </button>
 ```
+
+(When `idx === -1` — nothing pinned, or the user scrolled away — leave
+both enabled and let the viewport-relative resolution decide; the demo
+at the top of this page computes the full geometric mirror if you want
+exact disabled states in that mode too.)
 
 ## Beyond user messages
 

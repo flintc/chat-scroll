@@ -64,9 +64,10 @@ export function GroupChat({
 
 - **Default.** Locked. Container scrolled to bottom; new messages push
   older ones up.
-- **User scrolls up.** Lock releases (the scroll handler detects we're
-  outside `bottomThreshold`). Subsequent messages no longer push the
-  reading position.
+- **User scrolls up.** Lock releases on the input itself (wheel-up,
+  touch pan, ArrowUp/PageUp/Home — scrollbar drags are caught by a
+  position check). Subsequent messages no longer push the reading
+  position.
 - **`atBottom` flips to `false`.** Show a "new messages" pill.
 - **User taps pill.** Call `scroll.lock()` — snaps to bottom and
   re-engages.

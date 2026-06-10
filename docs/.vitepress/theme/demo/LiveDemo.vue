@@ -9,6 +9,7 @@ import {
   seedAltThread,
   seedConversation,
   seedLongConversation,
+  seedStickConversation,
   type DemoMsg,
 } from './data'
 import { useDemoChat } from './useDemoChat'
@@ -47,15 +48,20 @@ const chatA = useDemoChat({
   initial:
     props.scenario === 'thread-switch'
       ? threadA
-      : props.scenario === 'pin-to-top'
-        ? seedLongConversation()
-        : seedConversation(),
+      : props.scenario === 'stick-to-bottom'
+        ? seedStickConversation()
+        : seedLongConversation(),
   withBlocks: props.scenario === 'pin-to-top',
 })
-// Second chat: the stick pane of side-by-side, or thread B.
+// Second chat: the stick pane of side-by-side (same conversation as the
+// pin pane, so the comparison is apples-to-apples), or thread B.
 const chatB = useDemoChat({
   initial:
-    props.scenario === 'thread-switch' ? seedAltThread() : seedConversation(),
+    props.scenario === 'thread-switch'
+      ? seedAltThread()
+      : props.scenario === 'side-by-side'
+        ? seedLongConversation()
+        : seedConversation(),
 })
 
 // ── Thread switching (thread-switch scenario) ─────────────────────
@@ -119,23 +125,20 @@ function finish(): void {
   chatB.stop()
 }
 
-// ── Prev / next turn navigation (pin-to-top) ──────────────────────
-// `pinRelative` hops the pin between user turns relative to the
-// currently pinned message. It needs a current pin as the reference
-// point, so the first nav click pins the latest seeded turn and
-// subsequent clicks navigate from there — visitors can try it without
-// sending anything first.
+// ── Prev / next turn navigation (pin scenarios) ───────────────────
+// `pinRelative` hops the pin between user turns. Its reference point
+// is the pinned turn while you're anchored at it, or the turn nearest
+// the viewport top once you've scrolled away — so it works from
+// wherever the visitor is reading, with no pin required first.
+// Disabled states come from the pane's `nav` mirror of that rule.
 function navTurn(direction: -1 | 1): void {
-  const sc = paneA.value?.scroll
-  if (!sc) return
-  if (!sc.state.value.pinActive) {
-    sc.pinLatest('[data-role="user"]')
-    return
-  }
-  sc.pinRelative('[data-role="user"]', direction)
+  paneA.value?.scroll.pinRelative('[data-role="user"]', direction)
 }
+const navState = computed(
+  () => paneA.value?.nav ?? { prev: false, next: false, pos: '' },
+)
 
-function reset(): void {
+async function reset(): Promise<void> {
   chatA.reset()
   chatB.reset()
   positions.clear()
@@ -143,6 +146,10 @@ function reset(): void {
   promptIdx.value = 0
   paneA.value?.scroll.reset()
   paneB.value?.scroll.reset()
+  // Land at the latest message once the seeds have re-rendered.
+  await nextTick()
+  paneA.value?.snapToLatest()
+  paneB.value?.snapToLatest()
 }
 </script>
 
@@ -188,7 +195,7 @@ function reset(): void {
         Finish stream
       </button>
       <div
-        v-if="scenario === 'pin-to-top'"
+        v-if="isPin"
         class="live-demo__nav"
         role="group"
         aria-label="Navigate between user turns"
@@ -197,14 +204,23 @@ function reset(): void {
           type="button"
           class="live-demo__btn"
           title="Pin the previous user turn (pinRelative -1)"
+          :disabled="!navState.prev"
           @click="navTurn(-1)"
         >
           ‹ Prev turn
         </button>
+        <span
+          v-if="navState.pos"
+          class="live-demo__nav-pos"
+          aria-label="Current turn"
+        >
+          {{ navState.pos }}
+        </span>
         <button
           type="button"
           class="live-demo__btn"
           title="Pin the next user turn (pinRelative +1)"
+          :disabled="!navState.next"
           @click="navTurn(1)"
         >
           Next turn ›
@@ -295,7 +311,15 @@ function reset(): void {
 }
 .live-demo__nav {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
+}
+.live-demo__nav-pos {
+  font-size: 0.75rem;
+  font-family: var(--vp-font-family-mono);
+  color: var(--vp-c-text-2);
+  min-width: 2.2em;
+  text-align: center;
 }
 .live-demo__tabs {
   display: flex;

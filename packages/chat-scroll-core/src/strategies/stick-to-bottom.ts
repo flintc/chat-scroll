@@ -28,9 +28,18 @@ export const stickToBottomStrategy: Strategy = {
 
   onScroll(ctx) {
     if (!ctx.container) return
-    // If the user scrolled away from the bottom while locked, release the lock.
+    // Position-based lock release — the BACKUP for inputs that emit no
+    // wheel/touch/key events (scrollbar drags); those inputs release
+    // the lock at input time in the controller. Gated on the viewport
+    // having moved UP (negative delta): content growth and the
+    // streaming re-snap can transiently expose a below-threshold gap
+    // at scroll-event dispatch time (the next chunk renders between
+    // the snap write and its scroll event), but those events carry a
+    // non-negative delta. Without the gate the lock spuriously breaks
+    // mid-stream and the chat stops following.
     if (
       ctx.state.locked &&
+      ctx.scrollDelta < 0 &&
       !isAtBottom(ctx.container, ctx.options.bottomThreshold)
     ) {
       ctx.state.locked = false

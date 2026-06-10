@@ -92,11 +92,25 @@ export function recalcGutter(ctx: StrategyContext): void {
 
   // Size the gutter against the refreshed `pinnedY` so `scrollHeight`
   // is large enough to accommodate `scrollTop = pinnedY` below.
-  const h = calcGutterHeight({
+  const tight = calcGutterHeight({
     container: ctx.container,
     gutter: ctx.gutter,
     pinnedY: ctx.state.pinnedY,
   })
+  // While a controller-owned scroll animation is in flight the gutter
+  // may GROW but never SHRINK. Shrinking drops `scrollHeight`, and when
+  // the current `scrollTop` sits beyond the new max-scroll the browser
+  // clamps it synchronously — a teleport that destroys the animation.
+  // The motivating case is pinRelative() to an EARLIER turn: the
+  // outgoing pin's gutter is still tall, the new pin's tight height is
+  // usually 0, and without the floor the user jumps most of the way
+  // instead of smooth-scrolling. The animation's completion callback
+  // re-runs this recalc with `scrollInFlight` false, restoring the
+  // tight-pin contract. (After a user abort, the next content resize
+  // tightens instead.)
+  const h = ctx.state.scrollInFlight
+    ? Math.max(tight, parseFloat(ctx.gutter.style.height) || 0)
+    : tight
   setGutterHeight(ctx.gutter, h)
 
   // If the user was sitting at the pin, restore the pin against the

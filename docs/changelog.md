@@ -4,6 +4,12 @@
 
 ### Added
 
+- **`getPinnedElement()`** on the instance (and re-exposed by every
+  adapter): the element currently pinned, including one whose
+  `pinMessage` call is still waiting on its measurement frame. Powers
+  navigation UI — disabled prev/next at the edges, a "turn 3/7"
+  indicator, highlighting the pinned turn.
+
 - **React example app** (`examples/react`) mirroring the vanilla / Vue /
   Solid demos, plus a `react` Playwright project running the shared e2e
   specs against it.
@@ -18,6 +24,30 @@
 
 ### Changed
 
+- **`pinRelative` resolves synchronously, returns `boolean`, and
+  adapts its reference point.** It now returns `true` when a target
+  was pinned and `false` at the edges (wire it to disabled states).
+  While the user is anchored at the pin, navigation stays relative to
+  the pinned element — and resolves synchronously against the DOM, so
+  rapid calls accumulate (two quick "prev"s move two turns instead of
+  racing the measurement frame). Once the user scrolls away, the pin
+  no longer describes what they're looking at, so navigation becomes
+  relative to the match nearest the viewport top: `-1` first re-pins
+  the turn being read (editor go-to-previous-change convention), then
+  walks upward. This also makes `pinRelative` work before any pin
+  exists — no `pinLatest()` seeding required.
+- **`stick-to-bottom` releases the lock on upward *input*, not on the
+  resulting scroll position.** Wheel-up, a downward touch pan, and
+  ArrowUp / PageUp / Home / Shift+Space release the lock the moment
+  they arrive (unless a nested scrollable absorbs the event, or the
+  content doesn't overflow yet). During a stream the strategy re-snaps
+  to the bottom on every chunk, which cancels the browser's
+  in-progress scroll before it can observably leave the bottom — so
+  the old position-based release lost that race and the chat
+  "swallowed" upward scrolls mid-stream, yanking readers back down.
+  The position-based release remains as a backup for inputs that emit
+  no wheel/touch/key events (scrollbar drags), now gated on the
+  viewport actually moving up (see Fixed).
 - **Docs demos are live.** Every recorded `.webm` demo in the docs has
   been replaced by an interactive in-page demo driven by the real
   library (via `@chat-scroll/vue`) — stream, scroll, expand blocks, and
@@ -38,6 +68,25 @@
 
 ### Fixed
 
+- **The stick lock no longer self-destructs on send.** On `lock()` /
+  during a stream, new content can render *between* a snap write and
+  that write's scroll event, so the event observes a gap beyond
+  `bottomThreshold` without the viewport ever moving — and the old
+  release check read that as "user scrolled away", silently breaking
+  the follow right as a message was sent. The position-based release
+  is now gated on a negative scroll delta (the viewport moving up),
+  which only genuine user movement produces.
+- **`pinRelative()` to an earlier turn animates instead of
+  teleporting.** Pinning an earlier message shrinks the gutter, and the
+  synchronous shrink dropped `scrollHeight` below the current
+  `scrollTop` — the browser clamped it instantly, jumping most of the
+  distance before the smooth-scroll could run. The gutter now holds a
+  no-shrink floor while a controller-owned scroll animation is in
+  flight and tightens back to the tight-pin contract on arrival.
+- **`reset()` cancels in-flight pin work.** A `pinMessage` /
+  `pinLatest` scheduled just before a thread switch no longer lands on
+  the new thread's DOM; pending measurement frames and the active
+  scroll animation are cancelled.
 - **`setOptions` no longer clobbers defaults with `undefined`.** The
   framework adapters sync options by passing every key on every render,
   with `undefined` for options the consumer never set. Spreading those

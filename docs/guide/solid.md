@@ -87,7 +87,8 @@ interface CreateChatScrollReturn {
 
   pinMessage: (el: HTMLElement) => void
   pinLatest: (selector: string) => void
-  pinRelative: (selector: string, direction: -1 | 1) => void
+  pinRelative: (selector: string, direction: -1 | 1) => boolean
+  getPinnedElement: () => HTMLElement | null
   scrollToBottom: () => void
   lock: () => void
   unlock: () => void

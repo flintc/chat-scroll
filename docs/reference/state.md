@@ -72,8 +72,18 @@ believes.)
 
 - **Type:** `boolean`
 
-`true` while the `stick-to-bottom` lock is engaged. Becomes `false` when
-the user scrolls up; becomes `true` again on `lock()`.
+`true` while the `stick-to-bottom` lock is engaged.
+
+Released by upward scroll-driving **input** — wheel-up, a downward
+touch pan, ArrowUp / PageUp / Home / Shift+Space — the moment the input
+arrives. (Releasing on the resulting scroll position alone would race
+the controller's own re-snap during a stream and lose; input is the
+ground truth.) A position-based check backs this up for inputs that
+emit no wheel/touch/key events, like scrollbar drags: it releases when
+the viewport moves *up* past `bottomThreshold`.
+
+Re-engaged by `lock()` (call it from your send handler), by
+`scrollToBottom()` completing un-aborted, and by `reset()`.
 
 For `pin-to-top`, this is always `false`.
 

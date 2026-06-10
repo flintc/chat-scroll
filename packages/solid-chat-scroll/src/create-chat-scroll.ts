@@ -40,7 +40,8 @@ export interface CreateChatScrollReturn {
 
   pinMessage: (el: HTMLElement) => void
   pinLatest: (selector: string) => void
-  pinRelative: (selector: string, direction: -1 | 1) => void
+  pinRelative: (selector: string, direction: -1 | 1) => boolean
+  getPinnedElement: () => HTMLElement | null
   scrollToBottom: () => void
   lock: () => void
   unlock: () => void
@@ -115,6 +116,7 @@ export function createChatScroll(
     pinMessage: instance.pinMessage,
     pinLatest: instance.pinLatest,
     pinRelative: instance.pinRelative,
+    getPinnedElement: instance.getPinnedElement,
     scrollToBottom: instance.scrollToBottom,
     lock: instance.lock,
     unlock: instance.unlock,

@@ -80,7 +80,8 @@ firing on every tick.
 | -------------------- | ----------------------------------------------------- |
 | `pinMessage(el)`     | Anchor an element to the top (pin-to-top only).       |
 | `pinLatest(sel)`     | Find the last matching element and pin it.            |
-| `pinRelative(sel, ±1)` | Pin the prev (-1) / next (+1) match relative to the current pin. |
+| `pinRelative(sel, ±1)` | Pin the prev (-1) / next (+1) match relative to the pinned turn, or to the turn nearest the viewport top after the user scrolls away. Returns `false` at the ends. |
+| `getPinnedElement()` | The pinned element (incl. one pending its measurement frame), or `null`. |
 | `scrollToBottom()`   | Smooth-scroll (or instant) to the bottom.             |
 | `lock()` / `unlock()`| Engage / release stick-to-bottom lock.                |
 | `setStreaming(bool)` | Toggle `overflow-anchor: none`; arms stick-to-bottom's auto-snap. |

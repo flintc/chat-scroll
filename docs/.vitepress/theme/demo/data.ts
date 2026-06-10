@@ -129,6 +129,84 @@ export function seedLongConversation(): DemoMsg[] {
         'falls out for free: pinRelative() hops the pin between turns — ' +
         'try the ‹ › buttons above.',
     ),
+    mk('user', 'How does prev/next decide where to go?'),
+    mk(
+      'assistant',
+      'The reference point adapts to where you actually are.\n\n' +
+        'While you are anchored at a pinned turn, ‹ and › are relative ' +
+        'to that turn — press ‹ twice quickly and you move two turns, ' +
+        'because each call resolves against the newest intent rather ' +
+        'than the last settled scroll position.\n\n' +
+        'Once you scroll away, the pin no longer describes what you ' +
+        'are looking at, so navigation switches to the user turn ' +
+        'nearest the top of the viewport — the question whose answer ' +
+        'you are reading. From the middle of a long reply, ‹ first ' +
+        'snaps back to that question, then walks upward; › goes to the ' +
+        'next question below. Editors do the same thing for go-to-' +
+        'previous-change navigation.\n\n' +
+        'The buttons disable at the ends of the conversation: ' +
+        'pinRelative() returns false when there is no target in that ' +
+        'direction, and the toolbar mirrors the same rule to compute ' +
+        'the disabled state and the turn counter you see above.\n\n' +
+        'Everything stays smooth, too. Jumping to an earlier turn ' +
+        'shrinks the gutter, and a naive synchronous shrink would let ' +
+        'the browser clamp the scroll position mid-animation — a ' +
+        'visible teleport. The controller holds the gutter at a no-' +
+        'shrink floor while its scroll animation is in flight and ' +
+        'tightens it again on arrival.',
+    ),
+  ]
+}
+
+/**
+ * A settled group-chat-flavored conversation for the stick-to-bottom
+ * demos — long enough to overflow the pane so the follow/release
+ * behavior is visible from the first interaction.
+ */
+export function seedStickConversation(): DemoMsg[] {
+  const mk = (role: DemoMsg['role'], text: string): DemoMsg => ({
+    id: ++seedId,
+    role,
+    text,
+  })
+  return [
+    mk('user', 'What does stick-to-bottom actually do?'),
+    mk(
+      'assistant',
+      'It follows growth. While you sit at the bottom, every new ' +
+        'message (or stream chunk) pushes older content up and the ' +
+        'viewport stays glued to the newest line — the group-chat ' +
+        'contract.',
+    ),
+    mk('user', 'And when I scroll up to read something older?'),
+    mk(
+      'assistant',
+      'The follow releases the moment your input arrives — wheel up, ' +
+        'pan down with a finger, or press ArrowUp/PageUp/Home. It does ' +
+        'NOT wait for the scroll position to leave the bottom: during ' +
+        'a stream the controller re-snaps on every chunk, so a ' +
+        'position-based release would lose that race and yank you ' +
+        'straight back.\n\n' +
+        'Try it: send a message, then scroll up mid-stream. The text ' +
+        'keeps arriving below, but your reading position holds.',
+    ),
+    mk('user', 'How do I get back to following the stream?'),
+    mk(
+      'assistant',
+      'Two affordances re-engage the lock: the ↓ button (wired to ' +
+        'scrollToBottom(), which re-locks when the scroll completes) ' +
+        'and sending a message (the demo calls lock() on send). ' +
+        'Scrolling back to the bottom by hand intentionally does not ' +
+        're-lock — reading the latest text and following future text ' +
+        'are different intents.',
+    ),
+    mk('user', 'What about expanding things after the reply finished?'),
+    mk(
+      'assistant',
+      'Post-stream interaction is yours. The auto-snap is gated on ' +
+        'streaming, so expanding a collapsible block in a completed ' +
+        'reply never drags the viewport to the bottom.',
+    ),
   ]
 }
 

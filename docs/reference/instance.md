@@ -13,7 +13,8 @@ interface ChatScrollInstance {
 
   pinMessage(el: HTMLElement): void
   pinLatest(selector: string): void
-  pinRelative(selector: string, direction: -1 | 1): void
+  pinRelative(selector: string, direction: -1 | 1): boolean
+  getPinnedElement(): HTMLElement | null
   scrollToBottom(): void
 
   lock(): void
@@ -92,25 +93,51 @@ if (last) instance.pinMessage(last)
 
 ### `pinRelative(selector, direction)`
 
-`pin-to-top` only. Navigate to the previous (`-1`) or next (`1`) element
-matching `selector`, relative to the currently pinned element. Typical
-use: prev/next user-message navigation driven by buttons or
-`cmd+↑` / `cmd+↓` keybindings.
+`pin-to-top` only. Pin the previous (`-1`) or next (`1`) element
+matching `selector`. Returns `true` when a target was pinned, `false`
+when there is no target in that direction — wire it straight into your
+buttons' disabled handling. Typical use: prev/next user-message
+navigation driven by buttons or `cmd+↑` / `cmd+↓` keybindings.
 
 ```ts
 prevBtn.onclick = () => instance.pinRelative('[data-role="user"]', -1)
 nextBtn.onclick = () => instance.pinRelative('[data-role="user"]', 1)
 ```
 
-No-ops when:
+The reference point adapts to where the user actually is:
 
-- no message is currently pinned (call `pinLatest` first to seed),
-- the current pin isn't in the matched set (e.g. you pinned an
-  assistant message but the selector targets user messages),
-- the navigation would move past the start or end of the list.
+- **Anchored at the pin** (`pinAnchored` is true, or a pin call from
+  this frame is still pending): navigation is relative to the pinned
+  element. Calls resolve synchronously against the rendered DOM, so
+  rapid successive calls accumulate — two quick "prev" clicks move two
+  turns.
+- **Scrolled away** (wheel, touch, keys, a consumer scroll): the pin no
+  longer describes what the user is looking at, so navigation is
+  relative to the match nearest the viewport top — the turn they're
+  reading. In this mode `-1` first re-pins the turn being read when the
+  viewport sits below its top (like an editor's go-to-previous-change),
+  then walks upward. This also means `pinRelative` works before any pin
+  exists.
+
+Returns `false` (and pins nothing) when the selector matches nothing or
+the navigation would move past the start or end of the list.
 
 The matched set is queried fresh on every call, so messages added since
 the last `pinRelative` are picked up immediately.
+
+### `getPinnedElement()`
+
+The element currently pinned — including one whose `pinMessage` call is
+still waiting on its measurement frame — or `null` when no pin is
+active. Useful for navigation UI: disabling prev/next at the edges,
+highlighting the pinned turn, or a "turn 3/7" indicator.
+
+```ts
+const turns = [...container.querySelectorAll('[data-role="user"]')]
+const idx = turns.indexOf(instance.getPinnedElement())
+prevBtn.disabled = idx === 0
+nextBtn.disabled = idx === turns.length - 1
+```
 
 ### `scrollToBottom()`
 

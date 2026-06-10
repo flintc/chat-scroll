@@ -80,6 +80,7 @@ export function createChatScroll(
       scrollMargin: options.scrollMargin,
     },
     pinAnimationInterrupted: false,
+    scrollDelta: 0,
     // `reAnchorPin` is wired in `mount()` so it can close over the
     // controller's `startAnimatedScroll`. Strategies fall back to a
     // synchronous write when this is undefined.
@@ -104,8 +105,20 @@ export function createChatScroll(
   let userInputListeners: Array<{ type: string; fn: () => void }> = []
   let pendingPinFrame: number | null = null
   let pendingLatestFrame: number | null = null
-  let pendingRelativeFrame: number | null = null
   let activeScrollAbort: AbortController | null = null
+  // The element a scheduled `pinMessage` is about to pin. `pinMessage`
+  // defers its measurement one frame, but the *choice* of element is
+  // made synchronously — `pinRelative` and `getPinnedElement` read this
+  // so back-to-back calls within the same frame navigate from the
+  // newest intent instead of the last *settled* pin (two rapid "prev"
+  // clicks must move two turns, not one).
+  let pendingPinEl: HTMLElement | null = null
+  // Monotonic ticket for pin operations. Every pinMessage / pinLatest
+  // call takes a new ticket; a deferred rAF body whose ticket is stale
+  // aborts. This makes interleaved pin calls last-call-wins instead of
+  // rAF-scheduling-order-wins (pinLatest scheduled before a pinRelative
+  // would otherwise clobber the navigation when its frame fires).
+  let pinEpoch = 0
   // Last scrollTop / scrollHeight values seen by the scroll listener.
   // Used to detect a consumer's synchronous
   // `container.scrollTo({top: X})`, which produces a single large delta
@@ -168,10 +181,7 @@ export function createChatScroll(
       cancelAnimationFrame(pendingLatestFrame)
       pendingLatestFrame = null
     }
-    if (pendingRelativeFrame !== null) {
-      cancelAnimationFrame(pendingRelativeFrame)
-      pendingRelativeFrame = null
-    }
+    pendingPinEl = null
     lastSeenScrollTop = 0
     lastSeenScrollHeight = 0
     if (resizeObserver) {
@@ -297,6 +307,28 @@ export function createChatScroll(
       ctx.pinAnimationInterrupted = false
     }
 
+    // Release the stick-to-bottom lock from the INPUT event, not from
+    // the resulting scroll position. While streaming, the strategy
+    // re-snaps `scrollTop` to the bottom on every content tick — which
+    // cancels the browser's in-progress wheel/touch scroll before it
+    // can produce a scroll event that observably leaves the bottom.
+    // A position-based release alone therefore loses that race and the
+    // chat "swallows" upward scrolls mid-stream: the user wheels up,
+    // the next chunk snaps them straight back. Same principle the pin
+    // strategy documents: trust input events, not scroll events.
+    // The position-based release in the strategy's `onScroll` remains
+    // as a backup for inputs that produce no wheel/touch/key events
+    // at all (scrollbar drags).
+    const releaseStickLock = (): void => {
+      if (options.strategy !== 'stick-to-bottom') return
+      if (!internal.locked) return
+      // An upward scroll needs somewhere to go. Before the content
+      // overflows (scrollTop pinned at 0), a wheel-up is a no-op and
+      // must not silently kill the lock.
+      if (container.scrollTop <= 0) return
+      internal.locked = false
+    }
+
     const onWheel = (ev: Event): void => {
       const wasInFlight = abortAnim()
       const we = ev as WheelEvent
@@ -319,7 +351,21 @@ export function createChatScroll(
         commit()
         return
       }
+      if (dy < 0) releaseStickLock()
       clearPinAnchored()
+      commit()
+    }
+    // Last touch Y, tracked across touchstart/touchmove so the
+    // touchmove handler can tell pan direction (finger moving DOWN the
+    // screen scrolls the content UP, away from the bottom).
+    let lastTouchY: number | null = null
+    const touchY = (ev: Event): number | null => {
+      const t = (ev as TouchEvent).touches?.[0]
+      return typeof t?.clientY === 'number' ? t.clientY : null
+    }
+    const onTouchstart = (ev: Event): void => {
+      lastTouchY = touchY(ev)
+      flagInterruptedPinAnimation(abortAnim())
       commit()
     }
     const onTouchmove = (ev: Event): void => {
@@ -335,6 +381,15 @@ export function createChatScroll(
         commit()
         return
       }
+      const y = touchY(ev)
+      // Finger moving down (y increasing) pans the content up — the
+      // user is scrolling toward older messages. Unknown direction
+      // (no touch points exposed) is treated as upward so the user's
+      // gesture always wins over the lock.
+      if (y === null || lastTouchY === null || y > lastTouchY) {
+        releaseStickLock()
+      }
+      if (y !== null) lastTouchY = y
       clearPinAnchored()
       commit()
     }
@@ -365,6 +420,12 @@ export function createChatScroll(
         commit()
         return
       }
+      const scrollsUp =
+        e.key === 'ArrowUp' ||
+        e.key === 'PageUp' ||
+        e.key === 'Home' ||
+        (e.key === ' ' && e.shiftKey)
+      if (scrollsUp) releaseStickLock()
       clearPinAnchored()
       commit()
     }
@@ -378,7 +439,7 @@ export function createChatScroll(
     }
     bind('wheel', onWheel)
     bind('touchmove', onTouchmove)
-    bind('touchstart', abortOnly)
+    bind('touchstart', onTouchstart)
     bind('pointerdown', abortOnly)
     bind('keydown', onKeydown)
   }
@@ -442,7 +503,12 @@ export function createChatScroll(
     // shifts each ResizeObserver tick. Without the getter the catch-
     // up lands at the initial value and the pin ends up visibly low.
     ctx.reAnchorPin = (_target: number): void => {
-      startAnimatedScroll(() => internal.pinnedY)
+      // Same completion recalc as pinMessage: the gutter is floored
+      // while the catch-up runs; tighten on arrival.
+      startAnimatedScroll(
+        () => internal.pinnedY,
+        () => recalcGutter(ctx),
+      )
     }
 
     scrollListener = () => {
@@ -494,6 +560,7 @@ export function createChatScroll(
       ) {
         internal.pinAnchored = false
       }
+      ctx.scrollDelta = now - lastSeenScrollTop
       lastSeenScrollTop = now
       lastSeenScrollHeight = sh
       strategy.onScroll(ctx)
@@ -563,9 +630,15 @@ export function createChatScroll(
     if (!ctx.container) return
     const container = ctx.container
 
+    // Record the intent synchronously (see `pendingPinEl` / `pinEpoch`);
+    // only the layout measurement waits for the next frame.
+    pendingPinEl = el
+    const epoch = ++pinEpoch
     if (pendingPinFrame !== null) cancelAnimationFrame(pendingPinFrame)
     pendingPinFrame = requestAnimationFrame(() => {
       pendingPinFrame = null
+      if (epoch !== pinEpoch) return
+      if (pendingPinEl === el) pendingPinEl = null
       el.style.scrollMarginTop = `${options.scrollMargin}px`
       const offset = offsetWithin(el, container)
       internal.pinnedY = Math.max(0, offset - options.scrollMargin)
@@ -608,7 +681,16 @@ export function createChatScroll(
       // the animation, `refreshPinnedY` updates the state and the
       // animation re-reads the target each frame. Without this the
       // animation lands at the captured value.
-      startAnimatedScroll(() => internal.pinnedY)
+      //
+      // On completion, recalc once more: while the animation was in
+      // flight the gutter was held at a no-shrink floor (see
+      // `recalcGutter`) so a shrinking `scrollHeight` couldn't clamp
+      // `scrollTop` mid-animation. Now that we've arrived, tighten it
+      // back to the tight-pin contract.
+      startAnimatedScroll(
+        () => internal.pinnedY,
+        () => recalcGutter(ctx),
+      )
       commit()
     })
   }
@@ -617,43 +699,95 @@ export function createChatScroll(
     if (options.strategy !== 'pin-to-top') return
     if (!ctx.container) return
     const container = ctx.container
+    const epoch = ++pinEpoch
     if (pendingLatestFrame !== null) cancelAnimationFrame(pendingLatestFrame)
     pendingLatestFrame = requestAnimationFrame(() => {
       pendingLatestFrame = null
+      // A newer pin call (pinMessage / pinRelative / pinLatest) arrived
+      // while this frame was pending — the newer intent wins.
+      if (epoch !== pinEpoch) return
       const matches = container.querySelectorAll<HTMLElement>(selector)
       const target = matches[matches.length - 1]
       if (target) pinMessage(target)
     })
   }
 
-  function pinRelative(selector: string, direction: -1 | 1): void {
-    if (options.strategy !== 'pin-to-top') return
-    if (!ctx.container) return
+  function pinRelative(selector: string, direction: -1 | 1): boolean {
+    if (options.strategy !== 'pin-to-top') return false
+    if (!ctx.container) return false
     const container = ctx.container
-    if (pendingRelativeFrame !== null) cancelAnimationFrame(pendingRelativeFrame)
-    pendingRelativeFrame = requestAnimationFrame(() => {
-      pendingRelativeFrame = null
-      // No current pin → no reference point for "next" / "previous".
-      // Consumers expecting a fallback should call `pinLatest(selector)`
-      // first; conflating the two would surprise anyone using both.
-      const current = ctx.pinnedEl
-      if (!current) return
-      const matches = container.querySelectorAll<HTMLElement>(selector)
-      if (matches.length === 0) return
-      let currentIdx = -1
-      for (let i = 0; i < matches.length; i++) {
-        if (matches[i] === current) {
-          currentIdx = i
-          break
-        }
+    // Resolve synchronously — navigation targets already-rendered
+    // messages, so there's no layout to wait for, and deferring would
+    // make rapid calls race the rAF (two quick "prev" clicks would
+    // both resolve against the same settled pin and move one turn).
+    const matches = Array.from(
+      container.querySelectorAll<HTMLElement>(selector),
+    )
+    if (matches.length === 0) return false
+
+    // Reference point. While the user is still anchored at the pin —
+    // or a pin call from this same frame is pending — navigate
+    // relative to that element: it's what's at the top of their
+    // viewport, and it stays correct under rapid successive calls.
+    //
+    // Once the user scrolls away, the pin no longer describes what
+    // they're looking at, so "previous"/"next" relative to it would
+    // teleport them somewhere unrelated to their reading position.
+    // Fall back to VIEWPORT-relative navigation below.
+    const anchoredEl =
+      pendingPinEl ?? (internal.pinAnchored ? ctx.pinnedEl : null)
+    if (anchoredEl) {
+      const currentIdx = matches.indexOf(anchoredEl)
+      if (currentIdx !== -1) {
+        const target = matches[currentIdx + direction]
+        if (!target) return false
+        pinMessage(target)
+        return true
       }
-      // Current pin isn't in the matched set → no navigable position.
-      if (currentIdx === -1) return
-      const nextIdx = currentIdx + direction
-      if (nextIdx < 0 || nextIdx >= matches.length) return
-      const target = matches[nextIdx]
-      if (target) pinMessage(target)
-    })
+      // Anchored element not in the matched set (detached, or a
+      // different selector) — fall through to the geometric reference.
+    }
+
+    // Viewport-relative reference: the last match whose margin-adjusted
+    // top sits at or above the viewport top — i.e. the turn the user is
+    // currently reading. This also makes pinRelative usable before any
+    // pin exists.
+    const FUDGE = 2 // sub-pixel scroll positions + rounding
+    const st = container.scrollTop
+    const tops = matches.map(
+      (el) => offsetWithin(el, container) - options.scrollMargin,
+    )
+    let currentIdx = -1
+    let currentTop = 0
+    for (let i = 0; i < tops.length; i++) {
+      const top = tops[i]
+      if (top !== undefined && top <= st + FUDGE) {
+        currentIdx = i
+        currentTop = top
+      }
+    }
+    let targetIdx: number
+    if (direction === 1) {
+      // The next turn below the viewport top. With every match above
+      // the viewport (currentIdx === -1) this resolves to the first.
+      targetIdx = currentIdx + 1
+    } else {
+      // Reading mid-reply, below the reference turn's top: "previous"
+      // first snaps to the turn being read; pressing again walks up.
+      // Mirrors editor gutter navigation (go-to-previous-change).
+      targetIdx =
+        currentIdx >= 0 && st > currentTop + FUDGE
+          ? currentIdx
+          : currentIdx - 1
+    }
+    const target = targetIdx >= 0 ? matches[targetIdx] : undefined
+    if (!target) return false
+    pinMessage(target)
+    return true
+  }
+
+  function getPinnedElement(): HTMLElement | null {
+    return pendingPinEl ?? ctx.pinnedEl
   }
 
   function scrollToBottom(): void {
@@ -682,6 +816,9 @@ export function createChatScroll(
       () => {
         if (options.strategy === 'stick-to-bottom') {
           internal.locked = true
+        } else {
+          // Pin-to-top: tighten a gutter the in-flight floor kept slack.
+          recalcGutter(ctx)
         }
       },
     )
@@ -716,6 +853,24 @@ export function createChatScroll(
   }
 
   function reset(): void {
+    // Kill any pin work still in the pipeline — a pin scheduled just
+    // before a thread switch must not land on the new thread's DOM.
+    pinEpoch++
+    pendingPinEl = null
+    if (pendingPinFrame !== null) {
+      cancelAnimationFrame(pendingPinFrame)
+      pendingPinFrame = null
+    }
+    if (pendingLatestFrame !== null) {
+      cancelAnimationFrame(pendingLatestFrame)
+      pendingLatestFrame = null
+    }
+    if (activeScrollAbort) {
+      activeScrollAbort.abort()
+      activeScrollAbort = null
+      internal.scrollInFlight = false
+    }
+    ctx.pinAnimationInterrupted = false
     strategy.reset(ctx)
     if (ctx.container) {
       internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
@@ -782,6 +937,7 @@ export function createChatScroll(
     pinMessage,
     pinLatest,
     pinRelative,
+    getPinnedElement,
     scrollToBottom,
     lock,
     unlock,

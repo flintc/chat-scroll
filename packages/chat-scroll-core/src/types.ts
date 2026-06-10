@@ -82,7 +82,17 @@ export interface ChatScrollState {
   pinAnchored: boolean
   /** True while streaming mode is enabled (`overflow-anchor: none`). */
   streaming: boolean
-  /** True when the bottom-stick lock is engaged (stick-to-bottom only). */
+  /**
+   * True when the bottom-stick lock is engaged (stick-to-bottom only).
+   * Released by upward scroll-driving input (wheel-up, a downward
+   * touch pan, ArrowUp / PageUp / Home / Shift+Space) the moment the
+   * input arrives — not when the resulting scroll lands, which during
+   * a stream would race the controller's own re-snap and lose — and,
+   * as a backup for inputs that emit no wheel/touch/key events
+   * (scrollbar drags), by any scroll that leaves the bottom threshold.
+   * Re-engaged by `lock()` (send), `scrollToBottom()` completing, and
+   * `reset()`.
+   */
   locked: boolean
   /**
    * True while a controller-owned rAF scroll animation is in flight
@@ -146,16 +156,36 @@ export interface ChatScrollInstance {
   pinLatest: (selector: string) => void
 
   /**
-   * Navigate to the previous / next element matching the selector,
-   * relative to the currently pinned element. `direction` is `-1`
-   * (previous) or `1` (next). No-op when no message is currently
-   * pinned, when the current pin isn't in the matched set, or when
-   * already at an edge of the list. No-op on `'stick-to-bottom'`.
+   * Pin the previous / next element matching the selector. `direction`
+   * is `-1` (previous) or `1` (next). Returns `true` when a target was
+   * pinned, `false` at the edges of the list (or on
+   * `'stick-to-bottom'`) — wire it to your buttons' disabled state.
+   *
+   * The reference point adapts to where the user actually is:
+   * - While they're still anchored at the pin, navigation is relative
+   *   to the pinned element.
+   * - After they scroll away (wheel, touch, keys, a consumer scroll),
+   *   navigation is relative to the match nearest the viewport top —
+   *   i.e. the turn they're currently reading. In that mode `-1` first
+   *   re-pins the turn being read when the viewport sits below its top
+   *   (like an editor's go-to-previous-change), then walks upward.
+   *   This also means pinRelative works before any pin exists.
+   *
+   * Resolves synchronously against the rendered DOM, so back-to-back
+   * calls (rapid clicks, held keybindings) accumulate correctly.
    *
    * Typical use: prev/next user-message navigation driven by buttons
    * or `cmd+↑` / `cmd+↓` keybindings.
    */
-  pinRelative: (selector: string, direction: -1 | 1) => void
+  pinRelative: (selector: string, direction: -1 | 1) => boolean
+
+  /**
+   * The element currently pinned — including one whose `pinMessage`
+   * call is still waiting on its measurement frame. `null` when no pin
+   * is active. Useful for navigation UI: disabling prev/next at the
+   * edges, or highlighting the pinned turn.
+   */
+  getPinnedElement: () => HTMLElement | null
 
   /**
    * Imperatively scroll to the bottom. Uses resolved scroll behavior;

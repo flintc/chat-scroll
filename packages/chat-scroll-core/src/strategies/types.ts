@@ -47,6 +47,16 @@ export interface StrategyContext {
   }
 
   /**
+   * scrollTop delta of the scroll event currently being handled
+   * (current minus previous). Set by the controller before
+   * `onScroll` runs; meaningless outside of it. Lets strategies tell
+   * an upward user movement (negative) from controller snaps and
+   * growth-race artifacts (non-negative) — see stick-to-bottom's
+   * lock-release backup.
+   */
+  scrollDelta: number
+
+  /**
    * True between "pin animation aborted by an interaction event"
    * (pointerdown / touchstart while `scrollInFlight`) and the next
    * `recalcGutter` that consumes it. Disambiguates two states that look
