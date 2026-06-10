@@ -142,6 +142,10 @@ export default defineConfig({
               text: 'Prev / next navigation',
               link: '/recipes/message-navigation',
             },
+            {
+              text: 'Virtualized lists (TanStack)',
+              link: '/recipes/virtualization',
+            },
           ],
         },
       ],

@@ -16,3 +16,4 @@ streaming-option syntax.
 | [Multi-thread switching](./multi-thread)                | `key` remount vs persistent instance + save/restore. |
 | [Tight pin (sub-pixel)](./tight-pin)                    | Stabilize the scrollbar for an exact pin under `overflow-y: auto`. |
 | [Prev / next navigation](./message-navigation)          | `cmd+↑` / `cmd+↓` to step between user turns with `pinRelative`. |
+| [Virtualized lists (TanStack)](./virtualization)        | Stick-to-bottom over a windowed 5,000-message history with `@tanstack/virtual`. |

@@ -35,6 +35,9 @@ importers:
       '@chat-scroll/vue':
         specifier: workspace:*
         version: link:../packages/vue-chat-scroll
+      '@tanstack/vue-virtual':
+        specifier: ^3.13.28
+        version: 3.13.28(vue@3.5.33(typescript@5.9.3))
       vitepress:
         specifier: ^1.5.0
         version: 1.6.4(@algolia/client-search@5.51.0)(@types/node@22.19.17)(postcss@8.5.12)(search-insights@2.17.3)(typescript@5.9.3)
@@ -967,6 +970,14 @@ packages:
     peerDependenciesMeta:
       '@solidjs/router':
         optional: true
+
+  '@tanstack/virtual-core@3.17.0':
+    resolution: {integrity: sha512-gOxY/hFkPh/XQYhnThBHzkbkX3Ed+z/iushyz+R+JAr213aXxUDgQoTgTdrDpBSRsjFM73P/KfUyWmaF9WHMkQ==}
+
+  '@tanstack/vue-virtual@3.13.28':
+    resolution: {integrity: sha512-A+jWpXtMpWXKhGLKQrXeC9mk1VgYeMWSJ+o0CTCEi+HLYMSQFdVmPG9lJz7d4XJyIkc5xVwZU9QY67QpScqnxA==}
+    peerDependencies:
+      vue: ^2.7.0 || ^3.0.0
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -2983,6 +2994,13 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
       solid-js: 1.9.12
+
+  '@tanstack/virtual-core@3.17.0': {}
+
+  '@tanstack/vue-virtual@3.13.28(vue@3.5.33(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.0
+      vue: 3.5.33(typescript@5.9.3)
 
   '@testing-library/dom@10.4.1':
     dependencies:

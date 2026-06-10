@@ -271,6 +271,44 @@ export function seedStickConversation(): DemoMsg[] {
   ]
 }
 
+/**
+ * A huge deterministic history for the virtualization demo. Varied
+ * line lengths so row heights differ (the case windowing must
+ * measure), numbered so jumps across the list are visible.
+ */
+export function seedHugeConversation(count: number): DemoMsg[] {
+  const LINES = [
+    'Quick question — does this hold up at scale?',
+    'It does. The controller only ever reads container-level scroll ' +
+      'metrics, so it has no idea (and no need to know) how many rows ' +
+      'are actually mounted.',
+    'Scroll position math is all relative to the container, so a ' +
+      'windowed list behaves exactly like a fully rendered one.',
+    'Right — the virtualizer owns which rows exist, chat-scroll owns ' +
+      'where the viewport sits. Different jobs, one scroll element.',
+    'The total-size wrapper is the content element here, so every ' +
+      'estimate refinement and every re-measure flows through the ' +
+      'same ResizeObserver as ordinary content growth.',
+    'Makes sense.',
+    'And the input-driven lock release works untouched, because the ' +
+      'wheel and touch listeners sit on the container — which is real ' +
+      'DOM regardless of windowing.',
+    'Try the "Jump to #1" button: five thousand rows away, only a ' +
+      'couple dozen are ever in the DOM.',
+  ]
+  const out: DemoMsg[] = []
+  for (let i = 0; i < count; i++) {
+    out.push({
+      id: ++seedId,
+      role: i % 4 === 0 ? 'user' : 'assistant',
+      // Deterministic variety (no RNG): step through lines co-prime
+      // to the array length so neighbors rarely repeat.
+      text: LINES[(i * 3) % LINES.length] as string,
+    })
+  }
+  return out
+}
+
 /** A second, visibly different thread for the thread-switch demo. */
 export function seedAltThread(): DemoMsg[] {
   const mk = (role: DemoMsg['role'], text: string): DemoMsg => ({

@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@chat-scroll/vue": "workspace:*",
+    "@tanstack/vue-virtual": "^3.13.28",
     "vitepress": "^1.5.0",
     "vue": "^3.5.13"
   }
