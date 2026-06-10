@@ -5,17 +5,37 @@ Agentic UIs narrate while they work — "Searching the docs…",
 each sliding up and out as the next arrives, until the real answer
 streams in.
 
-<AgentDemo caption="Send a message: the question pins, status lines cycle in place below it, then the reply streams in. The transcript never shifts while statuses animate — and you can scroll away mid-run without being yanked back." />
+<AgentDemo caption="Send a message: the question pins, status lines cycle in place below it, then the reply streams in. The transcript never shifts while statuses animate — and you can scroll away mid-run without being yanked back. Toggle Variable-height statuses for the unpredictable case: the area swings between 1 and 10 lines and the question still never moves." />
 
-## The one rule
+## Keeping the transcript still
 
-Ephemeral UI must never touch layout. Give the status area a **fixed
-height** and animate lines with **`transform` and `opacity` only** —
-then `scrollHeight` never changes while statuses cycle, and there is
-nothing for the scroll position to absorb: no jitter under a pin, no
-at-bottom flapping under a stick. The controller only sees the real
-events — the pin on send, the answer streaming in, and one small
-resize when the slot hands over to the reply.
+Two ways, depending on how predictable your statuses are.
+
+**Fixed-height slot — zero scroll involvement.** Give the status area
+a fixed height and animate lines with **`transform` and `opacity`
+only** — then `scrollHeight` never changes while statuses cycle, and
+there is nothing for the scroll position to absorb: no jitter under a
+pin, no at-bottom flapping under a stick. The controller only sees
+the real events — the pin on send, the answer streaming in, and one
+small resize when the slot hands over to the reply. Works identically
+under both strategies. Use this when statuses are short and regular.
+
+**Natural height — let the library absorb it.** When statuses are
+unpredictable — one line or ten — don't reserve worst-case space.
+Render the area at its natural height and let every status resize the
+content; under `pin-to-top` that's already handled: the controller
+re-anchors to the pinned question on every resize and the gutter
+grows to cover shrinks, so the reading position doesn't move — and
+neither does a reader who scrolled away mid-run. No extra wiring,
+just skip the fixed height.
+
+Two trade-offs with natural height. Exit animations want fixed
+geometry, so animate entrances only (the demo's variable mode uses a
+fade-in). And under `stick-to-bottom` *at the bottom*, a resizing
+last element must visibly shift the transcript — that's the bottom
+anchor doing its job. There, prefer the fixed slot, or cap the area
+with `max-height` plus internal `overflow-y: auto` (an inner scroll
+region never touches the outer layout).
 
 ## The wiring
 
@@ -95,8 +115,10 @@ is fixed, so neither variant moves the transcript.
 
 - **Send.** The question pins to the viewport top; the status slot
   appears below it — one small growth the gutter absorbs.
-- **Statuses cycle.** Zero layout change, zero scroll involvement.
-  The reader can scroll away mid-run and nothing tugs at them.
+- **Statuses cycle.** In the fixed slot: zero layout change, zero
+  scroll involvement. At natural height: each resize is absorbed by
+  the pin and the gutter. Either way the reader can scroll away
+  mid-run and nothing tugs at them.
 - **The answer arrives.** The slot unmounts, the reply streams in
   below the pinned question — the normal
   [streaming flow](./ai-streaming) from here.

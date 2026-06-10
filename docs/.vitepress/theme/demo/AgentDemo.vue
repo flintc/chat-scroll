@@ -23,14 +23,35 @@ const STATUS_LINES = [
   'Comparing the two strategies…',
   'Drafting the answer…',
 ] as const
+
+// Unpredictable model output: 1 to 10 lines per status. No fixed slot
+// here — the area renders at natural height and the pin absorbs every
+// resize.
+const STATUS_LINES_VARIABLE = [
+  'Planning the approach…',
+  'Running 4 checks:\n· pin holds through growth\n· gutter bounds ' +
+    'the overscroll\n· lock releases on wheel-up\n· keyboard parity',
+  'Two look flaky — re-running with verbose output…',
+  'Re-running the full matrix:\n· pin: growth below the fold\n· pin: ' +
+    'shrink mid-animation\n· stick: wheel release\n· stick: keyboard ' +
+    'release\n· gutter: no-shrink in flight\n· gutter: re-tighten on ' +
+    'settle\n· restore: anchored\n· restore: fallback\n· a11y: live ' +
+    'regions',
+  'All green — summarizing…',
+] as const
 const STATUS_MS = 900
+
+const variable = ref(false)
+const lines = computed<readonly string[]>(() =>
+  variable.value ? STATUS_LINES_VARIABLE : STATUS_LINES,
+)
 
 const chat = useDemoChat({
   initial: seedConversation(),
   withBlocks: true,
   // The "agent is working" window before the first reply chunk — the
   // status lines below cycle through it.
-  firstChunkDelayMs: STATUS_LINES.length * STATUS_MS + 200,
+  firstChunkDelayMs: () => lines.value.length * STATUS_MS + 200,
 })
 
 type PaneHandle = InstanceType<typeof ChatPane> | null
@@ -56,7 +77,7 @@ watch(working, (w) => {
   if (!w) return
   statusIdx.value = 0
   statusTimer = setInterval(() => {
-    statusIdx.value = Math.min(statusIdx.value + 1, STATUS_LINES.length - 1)
+    statusIdx.value = Math.min(statusIdx.value + 1, lines.value.length - 1)
   }, STATUS_MS)
 })
 onBeforeUnmount(clearStatusTimer)
@@ -84,6 +105,10 @@ async function reset(): Promise<void> {
         moves.
       </span>
       <span class="agent-demo__spacer" />
+      <label class="agent-demo__toggle">
+        <input v-model="variable" type="checkbox" />
+        Variable-height statuses
+      </label>
       <button type="button" class="agent-demo__btn" @click="reset">
         Reset
       </button>
@@ -98,18 +123,35 @@ async function reset(): Promise<void> {
         show-gutter
       >
         <template #bottom>
-          <!-- The whole trick: a FIXED-HEIGHT slot whose lines animate
-               with transform/opacity only. scrollHeight never changes
-               while statuses cycle, so the scroll position has nothing
-               to absorb. -->
-          <div v-if="working" class="agent-demo__slot" aria-live="polite">
+          <!-- Fixed mode: a FIXED-HEIGHT slot whose lines animate with
+               transform/opacity only — scrollHeight never changes, so
+               the scroll position has nothing to absorb.
+               Variable mode: natural height, every status resizes the
+               content — the pin re-anchors on each resize and the
+               gutter covers shrinks, so the question still never
+               moves. Exit animations want fixed geometry, hence the
+               fade-only swap here. -->
+          <div
+            v-if="working && !variable"
+            class="agent-demo__slot"
+            aria-live="polite"
+          >
             <Transition name="agent-status">
               <span :key="statusIdx" class="agent-demo__line">
                 <span class="agent-demo__line-text">
-                  {{ STATUS_LINES[statusIdx] }}
+                  {{ lines[statusIdx] }}
                 </span>
               </span>
             </Transition>
+          </div>
+          <div
+            v-else-if="working"
+            class="agent-demo__slot agent-demo__slot--auto"
+            aria-live="polite"
+          >
+            <span :key="statusIdx" class="agent-demo__line-auto">
+              {{ lines[statusIdx] }}
+            </span>
           </div>
         </template>
       </ChatPane>
@@ -212,6 +254,34 @@ async function reset(): Promise<void> {
   overflow: hidden;
   line-height: 1.45;
 }
+/* Variable mode: natural height, the controller absorbs the resizes. */
+.agent-demo__slot--auto {
+  height: auto;
+  overflow: visible;
+}
+.agent-demo__line-auto {
+  display: block;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--vp-c-text-2);
+  line-height: 1.45;
+  white-space: pre-line;
+  animation: agent-fade-in 200ms ease;
+}
+@keyframes agent-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.agent-demo__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  user-select: none;
+}
 .agent-status-enter-active,
 .agent-status-leave-active {
   transition:
@@ -230,6 +300,9 @@ async function reset(): Promise<void> {
   .agent-status-enter-active,
   .agent-status-leave-active {
     transition: none;
+  }
+  .agent-demo__line-auto {
+    animation: none;
   }
 }
 @media (max-width: 640px) {
