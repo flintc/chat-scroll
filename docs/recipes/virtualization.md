@@ -126,20 +126,78 @@ mounted. In particular:
   job; an unlocked stick controller deliberately leaves the viewport
   alone, so the two don't fight.
 
-## Caveat: pin-to-top doesn't window
+## Pin-to-top over a window
 
-Use **stick-to-bottom** for virtualized transcripts. Pin-to-top's
-contract is anchored to a *specific element* — the pinned turn must
-stay mounted for the gutter math and the re-anchor pass, and
-selector-driven APIs (`pinLatest`, `pinRelative`) only see rendered
-rows. Windowing unmounts exactly those elements.
+Pin-to-top works too — it needs two adjustments, because its contract
+is anchored to a *specific element*:
 
-If you need pinning **and** a huge history, split the list: virtualize
-the settled history above, render the live exchange (pinned turn +
-streaming reply) as ordinary DOM below it. The pinned element then
-always exists, and the history above the pin can mount and unmount
-freely — content-above-the-pin changes are already re-anchored on
-every resize pass.
+1. **The pinned element must stay mounted.** The controller re-reads
+   the pinned element's live offset on every resize pass, and the
+   gutter math depends on it. Windowing would unmount it the moment
+   you scroll away. TanStack already has the primitive for this:
+   **`rangeExtractor`** — the same mechanism its sticky rows use —
+   forces an index into the rendered range regardless of where the
+   viewport is. Force the pinned index; its DOM node persists, so
+   element identity, offsets, and the re-anchor all keep working.
+2. **Drive pinning by index, not selector.** `pinLatest` /
+   `pinRelative` query the DOM, and a windowed DOM only contains the
+   rows near the viewport. You have the data, so use it: track the
+   pinned index, let the `rangeExtractor` mount it, then hand the
+   live row to `pinMessage`. Prev/next navigation is the same idea —
+   walk the message array for the adjacent user turn instead of the
+   node list.
+
+<VirtualDemo strategy="pin-to-top" caption="Live demo — pin-to-top over the same windowed 5,000-message history. Send: the new turn pins to the top and the reply streams in below (toggle the gutter to watch it absorb the stream). Scroll anywhere mid-stream — the pinned row stays mounted via rangeExtractor, so the pin survives. ‹ Prev / Next › walk user turns from the data, not the DOM." />
+
+```tsx
+const [pinnedIndex, setPinnedIndex] = useState<number | null>(null)
+
+const virtualizer = useVirtualizer({
+  count: messages.length,
+  getScrollElement: () => containerEl.current,
+  estimateSize: () => 60,
+  overscan: 8,
+  // Keep the pinned row mounted wherever the viewport is.
+  rangeExtractor: (range) => {
+    const def = defaultRangeExtractor(range)
+    if (pinnedIndex === null || (pinnedIndex >= def[0] && pinnedIndex <= def.at(-1)))
+      return def
+    return pinnedIndex < def[0] ? [pinnedIndex, ...def] : [...def, pinnedIndex]
+  },
+})
+
+function pinIndex(i: number) {
+  setPinnedIndex(i) // mounts the row via rangeExtractor
+  requestAnimationFrame(() => {
+    const el = containerEl.current?.querySelector<HTMLElement>(
+      `[data-index="${i}"]`,
+    )
+    if (el) scroll.pinMessage(el)
+  })
+}
+
+function handleSend(text: string) {
+  sendMessage(text)
+  pinIndex(messages.length) // the about-to-append user turn
+}
+```
+
+Why the rest needs no changes: the gutter is container-level geometry
+(it sits below the total-size wrapper and only reads rects), and the
+pin's smooth scroll re-reads its target every frame — so when rows
+mount and re-measure mid-animation and the estimated offsets shift
+under it, the animation lands at the live position. While you're
+anchored at the pin during a stream, the rows far above aren't even
+mounted, so "content above the pin resizing" mostly stops being a
+thing.
+
+One residual honesty note: row offsets above the pin are *estimates*
+until those rows have been scrolled past once, so the pinned turn's
+absolute offset can shift as estimates refine. The controller
+re-reads live offsets on every resize pass and re-anchors while
+you're at the pin, so this self-corrects — you may just see the
+scrollbar thumb adjust as you cross unmeasured territory, which is
+inherent to estimated virtualization, not to the pin.
 
 ## Jumping far away
 
