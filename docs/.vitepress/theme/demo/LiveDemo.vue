@@ -400,7 +400,29 @@ async function reset(): Promise<void> {
     height: auto !important;
   }
   .live-demo__panes > * {
+    /* In the column layout the pane's own `flex: 1` (basis 0%) would
+       win the main axis over `height` and expand to full content
+       height — no scroll viewport, nothing to demo. Pin the basis. */
+    flex: 0 0 380px;
     height: 380px;
+  }
+  /* Two deterministic toolbar rows: actions, then settings. The
+     spacer becomes the row break. */
+  .live-demo__spacer {
+    flex: 0 0 100%;
+    height: 0;
+  }
+  .live-demo__btn,
+  .live-demo__toggle,
+  .live-demo__select,
+  .live-demo__tabs button {
+    font-size: 0.75rem;
+  }
+  .live-demo__btn {
+    padding: 0.3rem 0.55rem;
+  }
+  .live-demo__btn--action {
+    min-width: 7.5rem;
   }
 }
 </style>
