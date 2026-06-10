@@ -2057,6 +2057,80 @@ describe('createChatScroll', () => {
         wasAtBottom: true,
       })
     })
+
+    it('anchored restore holds the reading position through a prepend', () => {
+      // A top offset is wrong the moment content changes ABOVE the
+      // reader (a history page prepends). The snapshot anchors to the
+      // message at the viewport top, so the restore follows it.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, setContentHeight } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll()
+      s.mount(container, content)
+      const m1 = { height: 280, y: 0 }
+      const m2 = { height: 200, y: 280 }
+      appendMessage(container, content, m1)
+      const reading = appendMessage(container, content, m2)
+      setScrollTop(300) // 20px into the second message
+      const pos = s.savePosition()
+      expect(pos.anchorEl).toBe(reading)
+      expect(pos.anchorOffset).toBe(20)
+
+      // A 150px history page lands above: every message shifts down.
+      m1.y += 150
+      m2.y += 150
+      setContentHeight(1150)
+      setScrollTop(0)
+      s.restorePosition(pos)
+      expect(container.scrollTop).toBe(450) // 300 + the prepended 150
+      s.destroy()
+    })
+
+    it('anchored restore falls back to the top offset when the anchor is gone', () => {
+      // A thread switch re-renders the list — the saved element is no
+      // longer in the DOM, so restoration uses the offset measure.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll()
+      s.mount(container, content)
+      appendMessage(container, content, { height: 280, y: 0 })
+      const reading = appendMessage(container, content, {
+        height: 200,
+        y: 280,
+      })
+      setScrollTop(300)
+      const pos = s.savePosition()
+      expect(pos.anchorEl).toBe(reading)
+
+      content.removeChild(reading)
+      setScrollTop(0)
+      s.restorePosition(pos)
+      expect(container.scrollTop).toBe(300)
+      s.destroy()
+    })
+
+    it('saved-at-bottom snapshots carry no anchor', () => {
+      // Bottom restores re-snap to the NEW bottom — anchoring to the
+      // last message would pin the reader to the OLD one.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 500,
+      })
+      const s = createChatScroll()
+      s.mount(container, content)
+      appendMessage(container, content, { height: 500, y: 0 })
+      setScrollTop(400)
+      const pos = s.savePosition()
+      expect(pos.wasAtBottom).toBe(true)
+      expect(pos.anchorEl).toBeUndefined()
+    })
   })
 
   describe('destroy', () => {

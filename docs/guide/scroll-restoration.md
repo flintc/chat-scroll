@@ -12,18 +12,19 @@ const pos = scroll.savePosition() // → ScrollPosition
 scroll.restorePosition(pos)
 ```
 
-`ScrollPosition` is opaque — treat it as a token:
+`ScrollPosition` is opaque — treat it as a token. Restoring resolves in
+this order:
 
-```ts
-interface ScrollPosition {
-  scrollTop: number
-  wasAtBottom: boolean
-}
-```
-
-The `wasAtBottom` flag matters: when restoring, if the user _was_ at the
-bottom before, we jump to the new bottom (which may be lower if more
-messages arrived). Otherwise we measure from the top of content.
+1. **Saved at the bottom** → jump to the _new_ bottom (which may be
+   lower if more messages arrived) and re-engage the follow.
+2. **The message the user was reading is still in the DOM** → land
+   relative to it. The snapshot anchors to the content child nearest
+   the viewport top, so the restore survives content changes _above_
+   the reading position — history pages prepending, expandable blocks
+   settling — that would shift a plain offset.
+3. **Otherwise** (the thread re-rendered, the token came from
+   `JSON.parse`) → fall back to the saved offset from the top of
+   content, which is exact as long as content only appended below.
 
 ## Per-thread restoration
 
@@ -73,3 +74,9 @@ useEffect(() => {
   restore against content that hasn't been swapped in yet.
 - If the content is _shorter_ on restoration than when saved, `scrollTop`
   is clamped to the maximum allowed by the new content.
+- The token holds a live element reference, so it isn't
+  JSON-serializable — a `sessionStorage` round-trip (as above) still
+  works, it just restores via the offset fallback.
+- Anchoring assumes a keyed list. If your framework recycles message
+  elements across _different_ messages (an unkeyed `v-for`/`map`), the
+  anchor can point at the wrong message — key your lists.

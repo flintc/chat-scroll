@@ -57,6 +57,18 @@
 
 ### Changed
 
+- **`savePosition()` snapshots are anchored to the message at the
+  reading position** (the content child nearest the viewport top).
+  `restorePosition` lands relative to that element while it's still
+  in the DOM, so a restore survives content changes *above* the
+  reader — history pages prepending
+  ([infinite-history recipe](/recipes/infinite-history)), expandable
+  blocks settling — that shift a plain top offset. When the element
+  is gone (a re-rendered thread, a JSON-round-tripped token) the
+  previous offset-from-top behavior is the fallback; saved-at-bottom
+  snapshots still re-snap to the new bottom. `ScrollPosition` gained
+  optional `anchorEl` / `anchorOffset` fields and is no longer fully
+  JSON-serializable (persisted tokens restore via the fallback).
 - **`setStreaming(false)` keeps the follow alive for a two-frame
   grace period.** The final chunk's growth typically renders after
   the consumer flips their loading flag; previously that growth was

@@ -154,12 +154,26 @@ export interface ReferenceMessage {
 /**
  * Opaque token returned by `savePosition()`. Treat as readonly — pass back
  * into `restorePosition(token)` to recover scroll state across navigation.
+ * Holds a live element reference, so it is not JSON-serializable; a
+ * structurally-cloned/persisted token still restores via the offset
+ * fallback.
  */
 export interface ScrollPosition {
-  /** Distance from the top of the content. Used when `wasAtBottom` is false. */
+  /** Distance from the top of the content — the fallback measure. */
   scrollTop: number
   /** True when the saved position was at-bottom — restoration re-snaps to the (new) bottom. */
   wasAtBottom: boolean
+  /**
+   * The message the reader was at — the content child nearest the
+   * viewport top at save time. While it is still connected at restore
+   * time, restoration lands relative to it, which survives content
+   * changes ABOVE the reading position (history prepends, expandable
+   * blocks settling) that shift a plain top offset. Unset when saved
+   * at the bottom.
+   */
+  anchorEl?: HTMLElement
+  /** The viewport top's offset below `anchorEl`'s top at save time (px). */
+  anchorOffset?: number
 }
 
 export interface ChatScrollInstance {
@@ -299,7 +313,14 @@ export interface ChatScrollInstance {
    */
   reset: () => void
 
-  /** Snapshot current scroll state. */
+  /**
+   * Snapshot current scroll state. Unless at the bottom, the snapshot
+   * is anchored to the message at the reading position (the content
+   * child nearest the viewport top), so restoring survives content
+   * changes above the reader — history prepends, expandable blocks —
+   * as long as that element is still in the DOM. Assumes a keyed list
+   * (elements aren't recycled across different messages).
+   */
   savePosition: () => ScrollPosition
 
   /**
@@ -308,7 +329,9 @@ export interface ChatScrollInstance {
    * snap to the bottom before the restore lands), applies immediately,
    * and re-applies on the next frame in case the destination content
    * hadn't finished laying out. A `wasAtBottom` snapshot restores to
-   * the NEW bottom and re-engages the follow.
+   * the NEW bottom and re-engages the follow; otherwise it lands
+   * relative to the snapshot's anchor message, falling back to the
+   * saved top offset when that element is gone (a re-rendered thread).
    */
   restorePosition: (pos: ScrollPosition) => void
 

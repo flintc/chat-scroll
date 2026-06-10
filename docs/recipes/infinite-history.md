@@ -141,11 +141,14 @@ large insertions. The explicit shift is three lines and deterministic.
 - **Don't double-compensate.** Gate the shift on "the first message
   changed", as above. Keying it on any content growth would also fire
   for appends and streaming chunks.
-- **Saved positions don't survive prepends.** `savePosition()` offsets
-  are measured from the top of the content, so a prepend invalidates
-  them. When combining with
-  [multi-thread switching](./multi-thread), restore the position
-  first, then resume paging.
+- **Saved positions survive prepends.** `savePosition()` snapshots are
+  anchored to the message at the reading position, so a
+  [restore](../guide/scroll-restoration) after pages landed above it is
+  exact — as long as the thread stayed mounted. Across a remount (the
+  `key`-per-thread pattern in
+  [multi-thread switching](./multi-thread)) the anchor element is gone
+  and restoration falls back to a top offset, so restore first, then
+  resume paging.
 - **Sentinel option.** An `IntersectionObserver` on the header (with
   the container as `root`) works instead of the `scrollTop` check —
   same wiring, just make sure the sentinel can't be visible at the

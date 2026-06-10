@@ -219,6 +219,13 @@ useEffect(() => instance.reset(), [threadId])
 
 See [Scroll restoration](../guide/scroll-restoration).
 
+Unless saved at the bottom, the snapshot anchors to the message at the
+reading position (the content child nearest the viewport top), so the
+restore survives content changes above the reader — history prepends,
+expandable blocks — while that element is in the DOM. When it's gone
+(a re-rendered thread, a JSON-round-tripped token), restoration falls
+back to the saved top offset.
+
 `restorePosition` is self-sufficient: it releases the stick lock (so
 the content swap's resize can't snap to the bottom over the restore),
 applies immediately, and re-applies on the next frame in case the

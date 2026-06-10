@@ -1125,10 +1125,35 @@ export function createChatScroll(
       return { scrollTop: 0, wasAtBottom: true }
     }
     const c = ctx.container
-    return {
+    const pos: ScrollPosition = {
       scrollTop: c.scrollTop,
       wasAtBottom: measureAtBottom(c),
     }
+    // Anchor to the message at the reading position — the content child
+    // nearest the viewport top. A plain top offset shifts when content
+    // ABOVE the reader changes between save and restore (a history
+    // prepend, an expanded block settling); landing relative to the
+    // element survives that. Saved-at-bottom restores re-snap instead.
+    if (!pos.wasAtBottom && ctx.content) {
+      let anchor: HTMLElement | null = null
+      let anchorTop = -Infinity
+      for (const child of Array.from(ctx.content.children)) {
+        if (!(child instanceof HTMLElement)) continue
+        const top = offsetWithin(child, c)
+        // DOM order isn't guaranteed to be visual order (windowed lists
+        // force-mount out-of-range rows), so take the max top at or
+        // above the viewport top instead of early-breaking.
+        if (top <= c.scrollTop + 1 && top > anchorTop) {
+          anchor = child
+          anchorTop = top
+        }
+      }
+      if (anchor) {
+        pos.anchorEl = anchor
+        pos.anchorOffset = c.scrollTop - anchorTop
+      }
+    }
+    return pos
   }
 
   function restorePosition(pos: ScrollPosition): void {
@@ -1155,12 +1180,20 @@ export function createChatScroll(
         // follow so the next stream is tracked.
         c.scrollTop = c.scrollHeight
         if (options.strategy === 'stick-to-bottom') internal.locked = true
+      } else if (pos.anchorEl?.isConnected && c.contains(pos.anchorEl)) {
+        // Land relative to the anchor message — survives content
+        // changes above the reading position (history prepends,
+        // expandable blocks) that shift a plain top offset.
+        c.scrollTop = Math.max(
+          0,
+          offsetWithin(pos.anchorEl, c) + (pos.anchorOffset ?? 0),
+        )
       } else {
-        // Measure from the TOP: messages append below, so the content
-        // the user was reading keeps its offset-from-top. Restoring
-        // from the bottom would shift their spot by however much
-        // content arrived since the save. The browser clamps if
-        // content shrank.
+        // Anchor gone (a re-rendered thread) — measure from the TOP:
+        // messages append below, so the content the user was reading
+        // keeps its offset-from-top. Restoring from the bottom would
+        // shift their spot by however much content arrived since the
+        // save. The browser clamps if content shrank.
         c.scrollTop = Math.max(0, pos.scrollTop)
       }
     }
