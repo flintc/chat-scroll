@@ -1,8 +1,10 @@
 # Prev / next message navigation
 
 `cmd+↑` / `cmd+↓` to step back and forward through user turns. Useful
-for long threads where scrolling between exchanges is tedious. Works
-with `pin-to-top` only.
+for long threads where scrolling between exchanges is tedious. With
+`pin-to-top`, `pinRelative()` does it in one call; with
+`stick-to-bottom`, the same buttons are a few lines of plain scrolling
+— [both below](#stick-to-bottom-same-buttons-no-pin).
 
 <LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev / Next › drive pinRelative(): each click smooth-scrolls the adjacent user turn to the top. Scroll away mid-reply and ‹ first snaps back to the turn you're reading. The buttons disable at the ends." />
 
@@ -105,6 +107,75 @@ const idx = turns.indexOf(scroll.getPinnedElement())
 both enabled and let the viewport-relative resolution decide; the demo
 at the top of this page computes the full geometric mirror if you want
 exact disabled states in that mode too.)
+
+## Stick-to-bottom: same buttons, no pin
+
+`pinRelative` itself is pin-to-top-only, because it doesn't just
+scroll — it **pins**: the gutter manufactures enough scroll room that
+*any* turn (including the last) can sit at the viewport top, and the
+controller holds it there while content above or below resizes. A
+gutter is incompatible with stick-to-bottom by definition — it would
+put empty space below the newest message, and "the bottom" would stop
+meaning the bottom.
+
+But the navigation UX doesn't need the pin. Under stick-to-bottom,
+prev/next is plain container scrolling with the same reference rule:
+
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — the same ‹ Prev / Next › buttons under stick-to-bottom. Each click releases the follow and scrolls the adjacent user turn to the top — try ‹ Prev mid-stream: the reply keeps growing below while you read. At the bottom you're on the latest turn, so Next › disables; the ↓ button re-engages the follow." />
+
+```ts
+const MARGIN = 12 // match your scrollMargin
+
+function navTurn(direction: -1 | 1): boolean {
+  const turns = [
+    ...container.querySelectorAll<HTMLElement>('[data-role="user"]'),
+  ]
+  const cTop = container.getBoundingClientRect().top
+  const st = container.scrollTop
+  const tops = turns.map(
+    (t) => t.getBoundingClientRect().top - cTop + st - MARGIN,
+  )
+
+  // Same reference rule as pinRelative: the turn nearest the viewport
+  // top is the one being read; from mid-reply, -1 first snaps back to
+  // it, then walks upward.
+  let cur = -1
+  tops.forEach((t, i) => {
+    if (t <= st + 2) cur = i
+  })
+  const midReply = cur >= 0 && st > tops[cur] + 2
+
+  const target = direction === 1 ? cur + 1 : midReply ? cur : cur - 1
+  if (target < 0 || target >= turns.length) return false
+
+  scroll.unlock() // navigating away is explicit intent — release first
+  container.scrollTo({ top: tops[target], behavior: 'smooth' })
+  return true
+}
+```
+
+Three things differ from the pinned version, all of them consequences
+of having no gutter:
+
+- **Release the lock yourself.** During a stream the controller
+  re-snaps to the bottom on every chunk, and a snap write cancels an
+  in-flight smooth scroll. `unlock()` before `scrollTo` makes the
+  navigation win deterministically. (Input-driven release only covers
+  *user* input — wheel, touch, keys — not programmatic scrolls.)
+- **The latest turn clamps at the real bottom.** Without synthetic
+  scroll room, a turn near the end may not reach the viewport top —
+  the scroll stops at `scrollHeight - clientHeight`. Treat "at the
+  bottom" as being on the latest turn: disable Next there, and let the
+  ↓ affordance (or a send) re-engage the follow. Landing at the bottom
+  via Next intentionally does **not** re-lock — reading the latest
+  text and following future text are different intents.
+- **Rapid clicks need a memo.** `pinRelative` records intent
+  synchronously, so two quick `-1`s move two turns. Native smooth
+  `scrollTo` doesn't — a second click mid-animation would re-resolve
+  against the in-flight position. Remember the pending target index
+  and resolve from it until the scroll arrives (`scrollend`) or real
+  user input supersedes it; the demo above does exactly this (see
+  `ChatPane.vue` in the docs source).
 
 ## Beyond user messages
 

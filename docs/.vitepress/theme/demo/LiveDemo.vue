@@ -139,14 +139,15 @@ function finish(): void {
   chatB.stop()
 }
 
-// ── Prev / next turn navigation (pin scenarios) ───────────────────
-// `pinRelative` hops the pin between user turns. Its reference point
-// is the pinned turn while you're anchored at it, or the turn nearest
-// the viewport top once you've scrolled away — so it works from
-// wherever the visitor is reading, with no pin required first.
+// ── Prev / next turn navigation ───────────────────────────────────
+// Strategy-aware (ChatPane.navTo): under pin-to-top it's
+// pinRelative() — hop the pin between user turns; under
+// stick-to-bottom it's plain container scrolling plus unlock(), and
+// the latest turn clamps at the real bottom (no gutter). The
+// reference point is the turn the reader is at in both cases.
 // Disabled states come from the pane's `nav` mirror of that rule.
 function navTurn(direction: -1 | 1): void {
-  paneA.value?.scroll.pinRelative('[data-role="user"]', direction)
+  paneA.value?.navTo(direction)
 }
 const navState = computed(
   () => paneA.value?.nav ?? { prev: false, next: false, pos: '' },
@@ -200,7 +201,7 @@ async function reset(): Promise<void> {
         {{ streaming ? 'Finish stream' : 'Send a message' }}
       </button>
       <div
-        v-if="isPin"
+        v-if="scenario !== 'thread-switch'"
         class="live-demo__nav"
         role="group"
         aria-label="Navigate between user turns"
@@ -208,7 +209,11 @@ async function reset(): Promise<void> {
         <button
           type="button"
           class="live-demo__btn"
-          title="Pin the previous user turn (pinRelative -1)"
+          :title="
+            isPin
+              ? 'Pin the previous user turn (pinRelative -1)'
+              : 'Scroll the previous user turn to the top'
+          "
           :disabled="!navState.prev"
           @click="navTurn(-1)"
         >
@@ -220,7 +225,11 @@ async function reset(): Promise<void> {
         <button
           type="button"
           class="live-demo__btn"
-          title="Pin the next user turn (pinRelative +1)"
+          :title="
+            isPin
+              ? 'Pin the next user turn (pinRelative +1)'
+              : 'Scroll the next user turn to the top'
+          "
           :disabled="!navState.next"
           @click="navTurn(1)"
         >

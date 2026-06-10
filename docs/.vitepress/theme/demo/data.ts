@@ -240,6 +240,34 @@ export function seedStickConversation(): DemoMsg[] {
         'holds.',
       { title: 'Reasoning', body: REASONING_BODY },
     ),
+    mk('user', 'Can I jump between questions here too?'),
+    mk(
+      'assistant',
+      'Yes — the ‹ Prev / Next › buttons above work in this demo, and ' +
+        'they use no pin machinery at all. Each click finds the user ' +
+        'turn nearest the top of the viewport, releases the follow, ' +
+        'and smooth-scrolls the container until the target turn sits ' +
+        'at the top. Stick-to-bottom navigation is exactly that: plain ' +
+        'scrolling plus unlock().\n\n' +
+        "One honest limitation: without pin-to-top's synthetic gutter " +
+        'there is no way to put a turn at the very top of the viewport ' +
+        'until enough content exists below it — the scroll just clamps ' +
+        'at the real bottom. That is precisely the problem the gutter ' +
+        'solves, and why pinRelative() belongs to the pin strategy.\n\n' +
+        'You will notice it right after a send: the brand-new question ' +
+        'cannot reach the top yet, so Prev steps to the previous ' +
+        'exchange instead. As the reply streams in, scroll room grows ' +
+        'and the newest question becomes a navigation target like any ' +
+        'other turn in the transcript.\n\n' +
+        'The counter between the buttons mirrors the same rule: it ' +
+        'reads the turn at the top of your viewport while you are ' +
+        'reading history, and the latest turn while you are at the ' +
+        'bottom following the stream. And at the bottom you are on the ' +
+        'latest turn by definition, so Next disables — hit the ↓ ' +
+        'button to re-engage the follow, or just send another message: ' +
+        'the demo calls lock() on send, which is the other standard ' +
+        'affordance for returning to the live stream.',
+    ),
   ]
 }
 

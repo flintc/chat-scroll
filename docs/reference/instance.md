@@ -125,6 +125,10 @@ the navigation would move past the start or end of the list.
 The matched set is queried fresh on every call, so messages added since
 the last `pinRelative` are picked up immediately.
 
+For the same prev/next UX under `stick-to-bottom` — plain container
+scrolling with the same reference rule, no pin machinery — see the
+[message-navigation recipe](/recipes/message-navigation#stick-to-bottom-same-buttons-no-pin).
+
 ### `getPinnedElement()`
 
 The element currently pinned — including one whose `pinMessage` call is
