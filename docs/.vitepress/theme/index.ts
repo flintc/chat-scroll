@@ -1,6 +1,7 @@
 import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
 import './custom.css'
+import AgentDemo from './demo/AgentDemo.vue'
 import DemoVideo from './DemoVideo.vue'
 import InfiniteDemo from './demo/InfiniteDemo.vue'
 import LiveDemo from './demo/LiveDemo.vue'
@@ -17,6 +18,9 @@ const theme: Theme = {
     // Server-paged history with prepend compensation (infinite-history
     // recipe).
     app.component('InfiniteDemo', InfiniteDemo)
+    // Cycling agent status lines in a fixed-height slot (agent-status
+    // recipe).
+    app.component('AgentDemo', AgentDemo)
     // Recorded e2e videos — kept for the promote pipeline (`pnpm
     // e2e:promote`) and any page that wants a non-interactive capture.
     app.component('DemoVideo', DemoVideo)

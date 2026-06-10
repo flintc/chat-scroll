@@ -143,6 +143,7 @@ defineExpose({ scroll, nav, navTo, chatEl })
             </details>
             <div class="ld-msg__text">{{ m.text }}</div>
           </div>
+          <slot name="bottom" />
         </div>
       </div>
       <button

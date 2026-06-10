@@ -18,3 +18,4 @@ streaming-option syntax.
 | [Prev / next navigation](./message-navigation)          | `cmd+↑` / `cmd+↓` to step between user turns with `pinRelative`. |
 | [Virtualized lists (TanStack)](./virtualization)        | Stick-to-bottom and pin-to-top over a windowed 5,000-message history with `@tanstack/virtual`. |
 | [Infinite history (TanStack Query)](./infinite-history) | Bidirectional `useInfiniteQuery` paging with prepend scroll compensation. |
+| [Agent status messages](./agent-status)                 | Cycling "working…" lines that animate out without ever moving the transcript. |

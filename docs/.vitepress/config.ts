@@ -150,6 +150,10 @@ export default defineConfig({
               text: 'Infinite history (TanStack Query)',
               link: '/recipes/infinite-history',
             },
+            {
+              text: 'Agent status messages',
+              link: '/recipes/agent-status',
+            },
           ],
         },
       ],

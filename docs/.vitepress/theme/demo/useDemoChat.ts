@@ -24,6 +24,12 @@ export interface UseDemoChatOptions {
   intervalMs?: MaybeRefOrGetter<number>
   /** Give assistant replies collapsible reasoning + tool-call blocks. */
   withBlocks?: boolean
+  /**
+   * Delay before the FIRST reply chunk — the window where an agent
+   * narrates its progress (the agent-status demo). Defaults to the
+   * regular cadence.
+   */
+  firstChunkDelayMs?: MaybeRefOrGetter<number>
 }
 
 export interface UseDemoChatReturn {
@@ -104,13 +110,17 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
   }
 
   function scheduleNextChunk(): void {
+    const delay =
+      chunkIdx === 0
+        ? (toValue(opts.firstChunkDelayMs) ?? intervalOf())
+        : intervalOf()
     timer = setTimeout(() => {
       if (appendChunk()) {
         scheduleNextChunk()
       } else {
         finalize()
       }
-    }, intervalOf())
+    }, delay)
   }
 
   function submit(text: string): void {
