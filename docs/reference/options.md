@@ -36,11 +36,11 @@ user scroll-up).
 - **Type:** `number` (pixels)
 - **Default:** `12`
 
-Applied as `scroll-margin-top` to messages pinned via `pinMessage()`. The
-gutter math accounts for this offset, so the user never scrolls past where
-the response will arrive.
-
-Only used by `pin-to-top`.
+The gap kept above a message brought to the viewport top — pins
+(`pinMessage` and friends) and `scrollToMessage` landings both honor
+it, and the gutter math accounts for it. Live-updatable via
+`setOptions`; the [home page demo](/) exposes it as the **Margin**
+control.
 
 ## `scrollBehavior`
 

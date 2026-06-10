@@ -1,0 +1,13 @@
+/* Mobile typography: stock VitePress sizes read large on small
+   screens — step the doc body and hero down a notch. */
+@media (max-width: 640px) {
+  .vp-doc {
+    font-size: 15px;
+  }
+  .VPHero .text {
+    font-size: 28px;
+  }
+  .VPHero .tagline {
+    font-size: 16px;
+  }
+}

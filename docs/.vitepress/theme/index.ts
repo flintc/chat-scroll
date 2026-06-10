@@ -1,5 +1,6 @@
 import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
+import './custom.css'
 import DemoVideo from './DemoVideo.vue'
 import LiveDemo from './demo/LiveDemo.vue'
 import VirtualDemo from './demo/VirtualDemo.vue'

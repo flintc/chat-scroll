@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import type { ScrollPosition } from '@chat-scroll/vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import type { ChatScrollBehavior, ScrollPosition } from '@chat-scroll/vue'
 
 import ChatPane from './ChatPane.vue'
 import {
@@ -44,6 +44,32 @@ const SPEEDS = [
   { label: 'fast', ms: 15 },
 ] as const
 const speedMs = ref<number>(55)
+
+// ── Live options (home page demo) ─────────────────────────────────
+// scrollMargin and scrollBehavior, applied to the running instances
+// via setOptions. A margin change re-pins the current element so the
+// pinned turn visibly slides to the new offset.
+const MARGINS = [0, 12, 32, 64] as const
+const marginPx = ref<number>(12)
+const motion = ref<ChatScrollBehavior>('auto')
+
+function panes(): PaneHandle[] {
+  return [paneA.value, paneB.value]
+}
+watch(marginPx, (m) => {
+  for (const pane of panes()) {
+    const sc = pane?.scroll
+    if (!sc) continue
+    sc.instance.setOptions({ scrollMargin: m })
+    const el = sc.getPinnedElement()
+    if (el) sc.pinMessage(el)
+  }
+})
+watch(motion, (b) => {
+  for (const pane of panes()) {
+    pane?.scroll.instance.setOptions({ scrollBehavior: b })
+  }
+})
 
 // ── Per-scenario chat state ───────────────────────────────────────
 let threadSeedId = 5000
@@ -194,12 +220,46 @@ async function reset(): Promise<void> {
       <span class="live-demo__spacer" />
       <label class="live-demo__toggle" title="Chunk cadence of the fake stream">
         Speed
-        <select v-model.number="speedMs" class="live-demo__select">
+        <select
+          v-model.number="speedMs"
+          class="live-demo__select"
+          aria-label="Stream speed"
+        >
           <option v-for="sp in SPEEDS" :key="sp.ms" :value="sp.ms">
             {{ sp.label }}
           </option>
         </select>
       </label>
+      <template v-if="scenario === 'side-by-side'">
+        <label
+          class="live-demo__toggle"
+          title="scrollMargin — the gap kept above a pinned turn"
+        >
+          Margin
+          <select
+            v-model.number="marginPx"
+            class="live-demo__select"
+            aria-label="Pin margin in pixels"
+          >
+            <option v-for="m in MARGINS" :key="m" :value="m">{{ m }}px</option>
+          </select>
+        </label>
+        <label
+          class="live-demo__toggle"
+          title="scrollBehavior — auto respects prefers-reduced-motion"
+        >
+          Motion
+          <select
+            v-model="motion"
+            class="live-demo__select"
+            aria-label="Scroll behavior"
+          >
+            <option value="auto">auto</option>
+            <option value="smooth">smooth</option>
+            <option value="instant">instant</option>
+          </select>
+        </label>
+      </template>
       <label v-if="isPin" class="live-demo__toggle">
         <input v-model="showGutter" type="checkbox" />
         Show gutter
@@ -425,6 +485,12 @@ async function reset(): Promise<void> {
   }
   .live-demo__btn--action {
     min-width: 7.5rem;
+  }
+  /* iOS Safari zooms the page when a focused form control's font is
+     smaller than 16px — and the zoom sticks after blur. */
+  .live-demo__select {
+    font-size: 16px;
+    padding: 0.05rem 0.2rem;
   }
 }
 </style>

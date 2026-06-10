@@ -42,7 +42,7 @@ features:
 
 <div style="max-width: 960px; margin: 3rem auto 0;">
 
-<LiveDemo scenario="side-by-side" caption="pin-to-top (left) vs stick-to-bottom (right) — same prompt, same chunks, different scroll behavior. The striped band is the gutter shrinking as the response fills space. Try scrolling mid-stream." />
+<LiveDemo scenario="side-by-side" caption="pin-to-top (left) vs stick-to-bottom (right) — same prompt, same chunks, different scroll behavior. The striped band is the gutter shrinking as the response fills space. Margin is the scrollMargin option (watch the pinned turn slide); Motion is scrollBehavior. Try scrolling mid-stream." />
 
 </div>
 
