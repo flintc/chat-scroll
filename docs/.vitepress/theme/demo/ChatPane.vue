@@ -80,10 +80,16 @@ defineExpose({ scroll, nav, navTo })
   <div class="ld-pane">
     <div v-if="label" class="ld-pane__label">{{ label }}</div>
     <div class="ld-pane__surface">
+      <!-- tabindex makes the scroller keyboard-operable everywhere
+           (Safari doesn't auto-focus scrollable regions); role="log"
+           announces appended messages politely to screen readers. -->
       <div
         class="ld-chat"
         :class="{ 'ld-chat--show-gutter': showGutter }"
         :ref="containerRef"
+        tabindex="0"
+        role="log"
+        :aria-label="label ? `Conversation — ${label}` : 'Conversation'"
         @scroll.passive="onPaneScroll"
       >
         <div class="ld-messages" :ref="contentRef">
@@ -167,6 +173,10 @@ defineExpose({ scroll, nav, navTo })
   /* Keep clientHeight stable when the gutter adds/removes overflow —
      see the "tight pin" recipe. */
   scrollbar-gutter: stable;
+}
+.ld-chat:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: -2px;
 }
 .ld-messages {
   display: flex;

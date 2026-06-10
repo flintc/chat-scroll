@@ -40,6 +40,16 @@
   "jump to pin" affordance only while `pinActive && !pinAnchored`).
   See [`ChatScrollState`](/reference/state).
 
+### Fixed
+
+- **Keyboard/mouse parity for in-chat interactions.** Scroll keys
+  consumed by the focused element are now treated as interaction, not
+  scroll intent: Space on a button / `<summary>` / link (it activates
+  — previously it dropped the pin anchor for keyboard users while a
+  mouse click preserved it), and arrows / Home / End / Space inside an
+  editable (they move the caret — previously they released the stick
+  lock mid-typing).
+
 ### Changed
 
 - **`setStreaming(false)` keeps the follow alive for a two-frame

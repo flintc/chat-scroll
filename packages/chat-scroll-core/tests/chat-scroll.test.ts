@@ -2612,4 +2612,121 @@ describe('createChatScroll', () => {
       s.destroy()
     })
   })
+  describe('keyboard interaction parity', () => {
+    // A "scroll key" only expresses scroll intent when the browser
+    // will actually scroll the chat with it. Inside an editable it
+    // moves the caret; Space on an activatable element activates it.
+    // Mouse users get the pin/lock preserved on those interactions
+    // (pointerdown path) — keyboard users must too.
+    function keyOn(el: HTMLElement, key: string, shiftKey = false): void {
+      el.dispatchEvent(
+        new KeyboardEvent('keydown', { key, shiftKey, bubbles: true }),
+      )
+    }
+
+    function buildPinned(): {
+      s: ReturnType<typeof createChatScroll>
+      container: HTMLElement
+      content: HTMLElement
+    } {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1500,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 800,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinAnchored).toBe(true)
+      return { s, container, content }
+    }
+
+    it('Space on a <summary> does NOT clear pinAnchored (mouse/keyboard parity)', () => {
+      const { s, content } = buildPinned()
+      const details = document.createElement('details')
+      const summary = document.createElement('summary')
+      details.appendChild(summary)
+      content.appendChild(details)
+      keyOn(summary, ' ')
+      expect(s.state.pinAnchored).toBe(true)
+      s.destroy()
+    })
+
+    it('scroll keys inside a textarea do NOT clear pinAnchored (caret movement)', () => {
+      const { s, content } = buildPinned()
+      const ta = document.createElement('textarea')
+      content.appendChild(ta)
+      keyOn(ta, 'ArrowUp')
+      keyOn(ta, 'Home')
+      keyOn(ta, ' ')
+      expect(s.state.pinAnchored).toBe(true)
+      s.destroy()
+    })
+
+    it('ArrowUp on a plain message still clears pinAnchored (control)', () => {
+      const { s, content } = buildPinned()
+      const msgEl = content.firstElementChild as HTMLElement
+      keyOn(msgEl, 'ArrowUp')
+      expect(s.state.pinAnchored).toBe(false)
+      s.destroy()
+    })
+
+    function buildLockedStick(): {
+      s: ReturnType<typeof createChatScroll>
+      container: HTMLElement
+      content: HTMLElement
+    } {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(900)
+      expect(s.state.locked).toBe(true)
+      return { s, container, content }
+    }
+
+    it('upward scroll keys inside a textarea do NOT release the stick lock', () => {
+      const { s, content } = buildLockedStick()
+      const ta = document.createElement('textarea')
+      content.appendChild(ta)
+      keyOn(ta, 'ArrowUp')
+      keyOn(ta, 'PageUp')
+      keyOn(ta, 'Home')
+      expect(s.state.locked).toBe(true)
+      s.destroy()
+    })
+
+    it('Shift+Space on a button does NOT release the stick lock (activation)', () => {
+      const { s, content } = buildLockedStick()
+      const btn = document.createElement('button')
+      content.appendChild(btn)
+      keyOn(btn, ' ', true)
+      expect(s.state.locked).toBe(true)
+      s.destroy()
+    })
+
+    it('ArrowUp on a plain message still releases the stick lock (control)', () => {
+      const { s, content } = buildLockedStick()
+      keyOn(content, 'ArrowUp')
+      expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
+  })
 })

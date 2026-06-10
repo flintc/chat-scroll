@@ -18,6 +18,11 @@ export function ChatWithNavigation({ messages }: { messages: Message[] }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
       if (!(e.metaKey || e.ctrlKey)) return
+      // Never steal modifier+arrow from an editable: on macOS,
+      // Cmd+↑/↓ in a text field is caret-to-start/end — including in
+      // your own composer.
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable]')) return
       if (e.key === 'ArrowUp') {
         e.preventDefault()
         scroll.pinRelative('[data-role="user"]', -1)
@@ -157,6 +162,32 @@ having no gutter:
 For disabled states and a "turn x/y" counter, `referenceMessage`
 returns the turn the user is at (`{ el, index, count, past }`) under
 either strategy — no geometry to re-derive.
+
+## Keyboard & screen readers
+
+Shortcuts are an **accelerator, not the accessible path** — the
+buttons are. Keep them focusable, in the tab order, with `aria-label`s
+(as above), and treat the keybindings as a bonus for power users.
+Three things to know:
+
+- **Every modifier+arrow combo collides with something.** `Cmd+↑/↓`
+  is the browser's page-top/bottom on macOS and caret-to-start/end
+  inside text fields (hence the editable guard in the snippet);
+  `Ctrl+↑/↓` is NVDA's paragraph navigation in browse mode, so screen
+  reader users typically never reach your handler — the buttons are
+  their path. Guard editables, don't fight the screen reader, and
+  accept that the shortcut is best-effort.
+- **Make the chat container focusable** (`tabindex="0"`, a visible
+  `:focus-visible` style, and `role="log"` with an `aria-label` for a
+  live transcript) so native keyboard scrolling works everywhere —
+  Safari doesn't focus scrollable regions on its own. The library's
+  input-driven lock/pin release listens on the container, so once
+  it's focusable, ArrowUp releases the follow for keyboard users
+  exactly like wheel-up does for mouse users.
+- **In-chat interactions are keyboard/mouse symmetric.** Space on a
+  focused tool-block `<summary>` (or any button/link), and scroll
+  keys inside an editable, are treated as interaction — they don't
+  drop the pin or release the lock, matching what a mouse click does.
 
 ## Beyond user messages
 

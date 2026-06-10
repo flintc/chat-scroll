@@ -273,10 +273,16 @@ const navState = computed(() => {
     </div>
 
     <div class="virtual-demo__surface" :style="{ height: `${height}px` }">
+      <!-- tabindex: keyboard-operable scroller. role="region", NOT
+           "log": windowing mounts rows on scroll, and a live region
+           would announce them as new messages. -->
       <div
         class="vd-chat"
         :class="{ 'vd-chat--show-gutter': showGutter }"
         :ref="setContainer"
+        tabindex="0"
+        role="region"
+        aria-label="Conversation (virtualized)"
         @scroll.passive="onPaneScroll"
       >
         <div
@@ -424,6 +430,10 @@ const navState = computed(() => {
   padding: 0.75rem;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+.vd-chat:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: -2px;
 }
 .vd-total {
   position: relative;

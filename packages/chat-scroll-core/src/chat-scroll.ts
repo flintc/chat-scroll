@@ -457,6 +457,26 @@ export function createChatScroll(
       clearPinAnchored()
       commit()
     }
+    // Keyboard/mouse parity for in-chat interactions. A "scroll key"
+    // is only scroll intent when the browser will actually scroll the
+    // chat with it:
+    //  - inside an editable (input/textarea/select/contenteditable),
+    //    arrows and Home/End move the caret and Space types — none of
+    //    them scroll the chat;
+    //  - Space on an activatable element (button, <summary>, link)
+    //    ACTIVATES it. A mouse click on the same element preserves the
+    //    pin via the pointerdown path; Tab+Space must get the same
+    //    treatment, or keyboard users see the pin drift on every
+    //    tool-block toggle.
+    const isEditableTarget = (t: EventTarget | null): boolean =>
+      t instanceof HTMLElement &&
+      t.closest(
+        'input, textarea, select, [contenteditable="true"], [contenteditable=""]',
+      ) !== null
+    const isActivatableTarget = (t: EventTarget | null): boolean =>
+      t instanceof HTMLElement &&
+      t.closest('button, summary, a[href], [role="button"]') !== null
+
     const onKeydown = (ev: Event): void => {
       const wasInFlight = abortAnim()
       const e = ev as KeyboardEvent
@@ -472,6 +492,16 @@ export function createChatScroll(
         // Tab / Enter / letter keys: same semantics as pointerdown —
         // an interaction event, not a scroll event. Preserve the pin
         // and flag mid-animation interruption for an animated catch-up.
+        flagInterruptedPinAnimation(wasInFlight)
+        commit()
+        return
+      }
+      // The focused element consumes the key (see above): interaction,
+      // not scroll intent.
+      if (
+        isEditableTarget(ev.target) ||
+        (e.key === ' ' && isActivatableTarget(ev.target))
+      ) {
         flagInterruptedPinAnimation(wasInFlight)
         commit()
         return

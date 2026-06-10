@@ -101,7 +101,8 @@ export interface ChatScrollState {
   /**
    * True when the bottom-stick lock is engaged (stick-to-bottom only).
    * Released by upward scroll-driving input (wheel-up, a downward
-   * touch pan, ArrowUp / PageUp / Home / Shift+Space) the moment the
+   * touch pan, ArrowUp / PageUp / Home / Shift+Space — unless the key
+   * is consumed by an editable or activatable element) the moment the
    * input arrives — not when the resulting scroll lands, which during
    * a stream would race the controller's own re-snap and lose — and,
    * as a backup for inputs that emit no wheel/touch/key events

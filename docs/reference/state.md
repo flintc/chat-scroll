@@ -82,6 +82,11 @@ ground truth.) A position-based check backs this up for inputs that
 emit no wheel/touch/key events, like scrollbar drags: it releases when
 the viewport moves *up* past `bottomThreshold`.
 
+Keys consumed by the focused element don't count: scroll keys inside
+an editable move the caret, and Space on a button / `<summary>` /
+link activates it — neither releases the lock (matching the mouse
+click, which never did).
+
 Re-engaged by `lock()` (call it from your send handler), by
 `scrollToBottom()` completing un-aborted, and by `reset()`.
 

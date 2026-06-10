@@ -146,6 +146,9 @@ nextBtn.onclick = () => scroll.pinRelative('[data-role="user"]', 1)
 
 window.addEventListener('keydown', (e) => {
   if (!(e.metaKey || e.ctrlKey)) return
+  // Don't steal modifier+arrow from text fields (macOS caret jumps).
+  const t = e.target as HTMLElement | null
+  if (t?.closest('input, textarea, select, [contenteditable]')) return
   if (e.key === 'ArrowUp') scroll.pinRelative('[data-role="user"]', -1)
   if (e.key === 'ArrowDown') scroll.pinRelative('[data-role="user"]', 1)
 })
@@ -217,6 +220,10 @@ The `pinAnchored` flag is cleared by:
   scrollable that can absorb the delta (e.g. a horizontally-pannable
   code block, a vertical inner panel) are skipped — the inner
   element handles the scroll, the chat doesn't move, the pin stays.
+  Likewise skipped: scroll keys inside an editable (they move the
+  caret) and Space on an activatable element (button, `<summary>`,
+  link — it activates, exactly like the mouse click that already
+  preserves the pin).
 - **`scrollToBottom()`** — programmatic jump to the bottom is the
   consumer's explicit "move away from the pin" intent.
 - **Consumer programmatic scroll** — when the host application
