@@ -132,12 +132,13 @@ large insertions. The explicit shift is three lines and deterministic.
 
 ## Notes
 
-- **Pin-to-top absorbs prepends for free — while pinned.** The
-  controller re-reads the pinned element's offset on every resize and
-  re-anchors `scrollTop`, so under `pin-to-top` a prepend above the
-  pin never moves the viewport. The manual compensation is for the
-  *released* state — reading old history with no active pin — which is
-  exactly when history fetches happen.
+- **Using pin-to-top? Same wiring — only the `strategy` option
+  changes.** Nothing else here is strategy-specific. Pins actually
+  need *less*: while a turn is pinned, the controller re-reads the
+  pinned element's offset on every resize and re-anchors `scrollTop`,
+  so a prepend above the pin never moves the viewport. The manual
+  compensation covers the released state — reading old history with
+  no active pin — which is exactly when history fetches happen.
 - **Don't double-compensate.** Gate the shift on "the first message
   changed", as above. Keying it on any content growth would also fire
   for appends and streaming chunks.
@@ -149,10 +150,13 @@ large insertions. The explicit shift is three lines and deterministic.
   [multi-thread switching](./multi-thread)) the anchor element is gone
   and restoration falls back to a top offset, so restore first, then
   resume paging.
-- **Sentinel option.** An `IntersectionObserver` on the header (with
-  the container as `root`) works instead of the `scrollTop` check —
-  same wiring, just make sure the sentinel can't be visible at the
-  initial bottom position.
+- **Prefer an `IntersectionObserver`?** Instead of checking
+  `scrollTop` in the scroll handler, watch a marker element at the
+  top of the transcript — the header above works — with an
+  `IntersectionObserver` (container as `root`) and fetch when it
+  scrolls into view. One caveat: if the first page doesn't overflow
+  the container, the marker is visible on mount and fires
+  immediately — gate the fetch on the user having scrolled.
 - **Virtualized?** For very large loaded windows, combine with the
   [virtualization recipe](./virtualization) — TanStack Virtual
   measures in index space, so prepends shift offsets there instead of
