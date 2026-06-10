@@ -4,7 +4,7 @@
 for long threads where scrolling between exchanges is tedious. Works
 with `pin-to-top` only.
 
-<LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev turn / Next turn › drive pinRelative(): each click smooth-scrolls the adjacent user turn to the top. Scroll away mid-reply and ‹ first snaps back to the turn you're reading. The buttons disable at the ends." />
+<LiveDemo scenario="pin-to-top" caption="Live demo — ‹ Prev / Next › drive pinRelative(): each click smooth-scrolls the adjacent user turn to the top. Scroll away mid-reply and ‹ first snaps back to the turn you're reading. The buttons disable at the ends." />
 
 ```tsx
 import { useEffect } from 'react'

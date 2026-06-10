@@ -194,19 +194,10 @@ async function reset(): Promise<void> {
       </template>
       <button
         type="button"
-        class="live-demo__btn live-demo__btn--primary"
-        :disabled="streaming"
-        @click="send"
+        class="live-demo__btn live-demo__btn--primary live-demo__btn--action"
+        @click="streaming ? finish() : send()"
       >
-        Send a message
-      </button>
-      <button
-        v-if="streaming"
-        type="button"
-        class="live-demo__btn"
-        @click="finish"
-      >
-        Finish stream
+        {{ streaming ? 'Finish stream' : 'Send a message' }}
       </button>
       <div
         v-if="isPin"
@@ -221,14 +212,10 @@ async function reset(): Promise<void> {
           :disabled="!navState.prev"
           @click="navTurn(-1)"
         >
-          ‹ Prev turn
+          ‹ Prev
         </button>
-        <span
-          v-if="navState.pos"
-          class="live-demo__nav-pos"
-          aria-label="Current turn"
-        >
-          {{ navState.pos }}
+        <span class="live-demo__nav-pos" aria-label="Current turn">
+          {{ navState.pos || '–' }}
         </span>
         <button
           type="button"
@@ -237,7 +224,7 @@ async function reset(): Promise<void> {
           :disabled="!navState.next"
           @click="navTurn(1)"
         >
-          Next turn ›
+          Next ›
         </button>
       </div>
       <span class="live-demo__spacer" />
@@ -331,6 +318,12 @@ async function reset(): Promise<void> {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
+/* Send ⇄ Finish swap labels in place — fixed width so the toolbar
+   never reflows when streaming starts or ends. */
+.live-demo__btn--action {
+  min-width: 9.25rem;
+  text-align: center;
+}
 .live-demo__nav {
   display: flex;
   align-items: center;
@@ -340,7 +333,9 @@ async function reset(): Promise<void> {
   font-size: 0.75rem;
   font-family: var(--vp-font-family-mono);
   color: var(--vp-c-text-2);
-  min-width: 2.2em;
+  /* Always rendered (placeholder when empty) at a reserved width, so
+     the nav buttons never slide as the counter changes. */
+  min-width: 2.6em;
   text-align: center;
 }
 .live-demo__tabs {
