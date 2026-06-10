@@ -63,20 +63,14 @@ and instant from a UI toggle without reconstructing the instance.
 
 ### `pinMessage(el)`
 
-`pin-to-top` only. Anchors `el` to the viewport top:
-
-1. Sets `scroll-margin-top: <scrollMargin>px` on `el`.
-2. Measures `el`'s offset within the container; records it as `pinnedY`.
-3. Recalculates the gutter so the user can't scroll past where the
-   response will arrive.
-4. Kicks off an rAF-driven smooth scroll to `pinnedY`. The animation
-   re-reads the target every frame, so it tracks live `pinnedY` if
-   content above the pin grows or shrinks mid-flight. With
-   `prefers-reduced-motion: reduce` (or `scrollBehavior: 'instant'`),
-   the write is synchronous.
-
-The work is deferred to the next animation frame so layout has settled.
-`pinMessage` is a no-op when strategy is `stick-to-bottom`.
+`pin-to-top` only. Anchors `el` to the viewport top: measures its
+offset (`pinnedY`), recalculates the gutter so the user can't scroll
+past where the response will arrive, and smooth-scrolls to the pin.
+The animation re-reads its target every frame, so content resizing
+mid-flight doesn't make it land short; with
+`prefers-reduced-motion: reduce` (or `scrollBehavior: 'instant'`) the
+write is synchronous. Work is deferred to the next animation frame so
+layout has settled. No-op under `stick-to-bottom`.
 
 ### `pinLatest(selector)`
 
@@ -98,38 +92,22 @@ if (last) instance.pinMessage(last)
 
 `pin-to-top` only. Pin the previous (`-1`) or next (`1`) element
 matching `selector`. Returns `true` when a target was pinned, `false`
-when there is no target in that direction — wire it straight into your
-buttons' disabled handling. Typical use: prev/next user-message
-navigation driven by buttons or `cmd+↑` / `cmd+↓` keybindings.
+at the edges (or when nothing matches) — wire it straight into your
+buttons' disabled handling.
 
 ```ts
 prevBtn.onclick = () => instance.pinRelative('[data-role="user"]', -1)
 nextBtn.onclick = () => instance.pinRelative('[data-role="user"]', 1)
 ```
 
-The reference point adapts to where the user actually is:
+The reference point adapts to where the user is: relative to the
+pinned element while they're anchored at it (calls resolve
+synchronously, so rapid presses accumulate), and relative to the match
+nearest the viewport top once they've scrolled away — where `-1` first
+re-pins the turn being read, then walks upward. It therefore works
+before any pin exists. The matched set is queried fresh on every call.
 
-- **Anchored at the pin** (`pinAnchored` is true, or a pin call from
-  this frame is still pending): navigation is relative to the pinned
-  element. Calls resolve synchronously against the rendered DOM, so
-  rapid successive calls accumulate — two quick "prev" clicks move two
-  turns.
-- **Scrolled away** (wheel, touch, keys, a consumer scroll): the pin no
-  longer describes what the user is looking at, so navigation is
-  relative to the match nearest the viewport top — the turn they're
-  reading. In this mode `-1` first re-pins the turn being read when the
-  viewport sits below its top (like an editor's go-to-previous-change),
-  then walks upward. This also means `pinRelative` works before any pin
-  exists.
-
-Returns `false` (and pins nothing) when the selector matches nothing or
-the navigation would move past the start or end of the list.
-
-The matched set is queried fresh on every call, so messages added since
-the last `pinRelative` are picked up immediately.
-
-For the same prev/next UX under `stick-to-bottom` — plain container
-scrolling with the same reference rule, no pin machinery — see the
+For the same UX under `stick-to-bottom`, see the
 [message-navigation recipe](/recipes/message-navigation#stick-to-bottom-same-buttons-no-pin).
 
 ### `getPinnedElement()`
@@ -217,15 +195,14 @@ lock automatically when the user scrolls up.
 
 ### `setStreaming(streaming)`
 
-Toggles `overflow-anchor: none` on the container. Call before / after a
-streaming response. See [Streaming mode](../guide/streaming) for why.
+Toggles `overflow-anchor: none` on the container. Call before / after
+a streaming response. See [Streaming mode](../guide/streaming).
 
 Turning streaming OFF keeps the follow alive for a two-frame grace
-period: the final chunk's growth typically renders *after* the
-consumer flips their loading flag, and without the grace that growth
-would be orphaned above the bottom. Flip your flag synchronously with
-the last append — the controller handles the ordering. User input
-during the grace still wins immediately.
+period, so the final chunk's growth — which typically renders after
+you flip your loading flag — isn't orphaned above the bottom. Flip the
+flag synchronously with the last append; user input during the grace
+still wins immediately.
 
 ### `reset()`
 

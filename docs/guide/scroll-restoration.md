@@ -3,7 +3,7 @@
 When the user navigates between threads, switches tabs, or re-mounts the
 component, you usually want their scroll position preserved.
 
-<LiveDemo scenario="thread-switch" caption="Live demo — scroll mid-thread, switch away, switch back: your spot is where you left it." />
+<LiveDemo scenario="thread-switch" caption="Scroll mid-thread, switch away, switch back: your spot is where you left it." />
 
 ## API
 
@@ -68,8 +68,8 @@ useEffect(() => {
 
 ## Caveats
 
-- Restoration runs immediately on call — the content must already be
-  rendered. If you're restoring after async data load, defer until after
-  render (e.g. `useEffect` post-render, `nextTick`, `requestAnimationFrame`).
+- Restore after the destination content has rendered. The controller
+  applies immediately and re-applies on the next frame, but it can't
+  restore against content that hasn't been swapped in yet.
 - If the content is _shorter_ on restoration than when saved, `scrollTop`
   is clamped to the maximum allowed by the new content.

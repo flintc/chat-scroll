@@ -36,7 +36,7 @@ import {
 | `destroyGutter`         | Remove a gutter from the DOM.                        |
 | `setGutterHeight`       | Set a gutter's height (clamped to ≥ 0, rounded).     |
 | `calcGutterHeight`      | Compute the gutter height that satisfies the tight-pin contract. |
-| `isAtBottom`            | Within `threshold` of the bottom (configurable).     |
+| `isAtBottom`            | Within `threshold` of the bottom, minus an optional `endSlack` (e.g. a gutter). |
 | `offsetWithin`          | Geometric offset of an element within a container.   |
 | `resolveScrollBehavior` | Resolve `'auto'` against `prefers-reduced-motion`.   |
 

@@ -1,9 +1,10 @@
 # Stick-to-bottom strategy
 
-The classic chat scroll behavior: stay glued to the bottom as new messages
-arrive, but get out of the way when the user scrolls up to read history.
+The classic chat scroll behavior: stay glued to the bottom as new
+messages arrive, but get out of the way when the user scrolls up to
+read history.
 
-<LiveDemo scenario="stick-to-bottom" caption="Live demo — auto-follow on append. Scrolling up releases the lock; the ↓ button (or a new send) re-engages it. ‹ Prev / Next › step between user turns with plain scrolling — no pin machinery (see the message-navigation recipe). After a stream, expand the Tool call / Reasoning blocks in earlier replies: the streaming gate keeps the controller out of post-stream interaction." />
+<LiveDemo scenario="stick-to-bottom" caption="Auto-follow on append. Scrolling up releases the lock; the ↓ button (or a new send) re-engages it. ‹ Prev / Next › step between turns with plain scrolling." />
 
 ## When to use it
 
@@ -13,58 +14,36 @@ arrive, but get out of the way when the user scrolls up to read history.
 
 ## How it works
 
-Two pieces of state combine: `locked: boolean` and `streaming: boolean`. The
-strategy only re-pins `scrollTop` to `scrollHeight` when **both** are true.
+Two flags combine: `locked` and `streaming`. The strategy re-pins
+`scrollTop` to the bottom on content resize only when **both** are
+true.
 
-- **Streaming + locked** — every content resize snaps to bottom.
-- **Not streaming** — content can grow freely (e.g., the user expands a tool
-  block in a completed reply) without the controller yanking them back. The
-  browser's native `overflow-anchor` handles whatever stability the layout
-  asks for.
-- **Not locked** — same: a user who scrolled up to read history is left alone.
-
-The lifecycle:
-
-1. **Mount.** `locked = true`, container scrolled to bottom. `streaming` is
-   still `false`, so the strategy is inert.
-2. **Consumer starts a stream.** Call `scroll.setStreaming(true)`. Now any
-   ResizeObserver fire while locked snaps to bottom — perfect for the new
-   tokens arriving from the model.
+1. **Mount.** `locked = true`, container at the bottom. `streaming` is
+   `false`, so the strategy is inert.
+2. **Stream starts.** With `streaming` set, every content resize while
+   locked snaps to the bottom — the viewport follows the tokens.
 3. **User scrolls up mid-stream.** The lock releases the moment the
-   *input* arrives — a wheel-up, a downward touch pan, ArrowUp /
-   PageUp / Home — and subsequent content growth no longer disturbs
-   scroll. Releasing on input rather than on the resulting scroll
-   position matters mid-stream: the strategy re-snaps to the bottom on
-   every chunk, which cancels the browser's in-progress scroll before
-   it can observably leave the bottom. A position-based release alone
-   would lose that race and the chat would "swallow" upward scrolls.
-   (A position check still backs this up for inputs that emit no
-   wheel/touch/key events, like scrollbar drags — it releases when the
-   viewport *moves up* past `bottomThreshold`.)
-4. **Consumer ends the stream.** Call `scroll.setStreaming(false)` —
-   synchronously with the last append is fine: the controller keeps
-   following resizes for a two-frame grace so the final chunk's growth
-   (which renders after the flag flip) isn't orphaned above the
-   bottom. After the grace, the resize handler is inert. The user can
-   interact with completed content — tap to expand a tool-call block,
-   copy a code span — without the controller fighting them.
-5. **User sends a new message.** Consumer calls `scroll.lock()` and
-   `scroll.setStreaming(true)`. Both flags are true again, we snap to bottom,
-   and the cycle repeats.
+   _input_ arrives (wheel-up, downward touch pan, ArrowUp / PageUp /
+   Home), so the stream can't race the release and swallow the scroll.
+   A position check backs this up for inputs that emit no events, like
+   scrollbar drags.
+4. **Stream ends.** Flip your flag synchronously with the last append —
+   the controller follows resizes for a two-frame grace so the final
+   chunk isn't orphaned, then goes inert.
+5. **User sends.** Call `scroll.lock()` — both flags are true again and
+   the cycle repeats.
 
 ::: warning Why the streaming gate matters
-Without it, expanding a collapsible block in a past reply (a tool-call body,
-a thinking block) would yank the user to the bottom by the block's full
-expanded height. They tapped a summary at viewport-Y=250, and 200ms of
-animated resize later, that summary is at Y=37 — visibly fighting their
-intent. The gate makes "the controller follows the stream; the user owns
-post-stream interaction" the explicit contract.
+Without it, expanding a collapsible block in a past reply would yank
+the user to the bottom by the block's expanded height. The gate makes
+the contract explicit: the controller follows the stream; the user
+owns post-stream interaction.
 :::
 
 ## Wiring
 
-The minimum surface — pass `streaming` so the adapter handles the
-`setStreaming` lifecycle, and call `lock()` from your send handler:
+Pass `streaming` so the adapter handles the `setStreaming` lifecycle,
+and call `lock()` from your send handler:
 
 ```tsx
 const scroll = useChatScroll({
@@ -74,37 +53,25 @@ const scroll = useChatScroll({
 
 function handleSend(text: string) {
   sendMessage(text)
-  scroll.lock() // see below
+  scroll.lock()
 }
 ```
 
-You typically don't call `unlock()` yourself — the controller releases
-the lock automatically on upward scroll input.
+You don't call `unlock()` yourself — the controller releases the lock
+on upward scroll input.
 
-### Why call `lock()` on send?
+`lock()` on send covers the user who scrolled up to read history, then
+typed a reply: without it, their own message lands below the viewport.
+If they're already at the bottom it changes nothing, so call it
+unconditionally.
 
-`lock()` re-engages the bottom-stick and snaps the container to the
-bottom now. You need it in the case where the user has scrolled up to
-read history, then types a reply and hits send — without `lock()`, the
-new send and the streamed response land below the viewport, and the
-user has to scroll down to see their own message.
-
-If the user is already at the bottom, `lock()` is a no-op for them
-visually (already locked, already there) — so it's safe to call
-unconditionally from the send handler.
-
-### Why an upstream `streaming` flag and not just `setStreaming`?
-
-You can drop the `streaming` option and call `scroll.setStreaming(true
-/ false)` imperatively at the start/end of your stream — same effect.
-The reactive option is the shorter form when your data source already
-exposes a loading boolean (`useChat`'s `isLoading`, an agent SDK's
-`isRunning`, a `useQuery`'s `isFetching`). See [Streaming
-mode](./streaming) for the trade-offs between the two shapes.
+Prefer the reactive `streaming` option when your data source already
+exposes a loading boolean; `scroll.setStreaming(true/false)` is the
+imperative equivalent. See [Streaming mode](./streaming).
 
 ## Showing a "scroll to bottom" affordance
 
-Use `state.atBottom` to drive a button:
+Drive a button with `state.atBottom`:
 
 ```tsx
 {!scroll.state.atBottom && (
@@ -113,14 +80,13 @@ Use `state.atBottom` to drive a button:
 ```
 
 `scrollToBottom()` re-engages the lock once the scroll completes, so a
-mid-stream click resumes following the stream — you don't need a
-separate `lock()` call in the click handler. (If the user aborts the
-animation with a wheel or touch, the lock stays released — their intent
-wins.) Note that manually *scrolling* back to the bottom does **not**
-re-lock; only the explicit affordances do (`scrollToBottom()`, `lock()`,
+mid-stream click resumes following — no separate `lock()` needed. If
+the user aborts the animation with a wheel or touch, the lock stays
+released. Manually scrolling back to the bottom does **not** re-lock;
+only the explicit affordances do (`scrollToBottom()`, `lock()`,
 `reset()`).
 
-The threshold for "at bottom" is configurable:
+The threshold is configurable:
 
 ```ts
 useChatScroll({
@@ -129,20 +95,13 @@ useChatScroll({
 })
 ```
 
-## Streaming
-
-The streaming flag is **load-bearing** for this strategy — without it,
-the auto-snap is permanently disarmed. See the gate logic in
-[How it works](#how-it-works). [Streaming mode](./streaming) covers
-the broader `overflow-anchor` story that applies to both strategies.
-
 ## Difference from pin-to-top
 
-| Property              | pin-to-top              | stick-to-bottom            |
-| --------------------- | ----------------------- | -------------------------- |
-| Scroll position       | Stable during streaming | Glued to bottom            |
-| Anchor reference      | User message            | Bottom of content          |
-| Gutter usage          | Yes — bounds scroll     | None                       |
-| User scroll-up        | Free                    | Releases lock              |
-| Re-engagement         | New `pinMessage()` call | `lock()` on send, or the FAB's `scrollToBottom()` |
-| Default for           | AI chat                 | Group / traditional chat   |
+| Property        | pin-to-top              | stick-to-bottom                                   |
+| --------------- | ----------------------- | ------------------------------------------------- |
+| Scroll position | Stable during streaming | Glued to bottom                                   |
+| Anchor          | User message            | Bottom of content                                 |
+| Gutter          | Yes — bounds scroll     | None                                              |
+| User scroll-up  | Free                    | Releases lock                                     |
+| Re-engagement   | New `pinMessage()` call | `lock()` on send, or the FAB's `scrollToBottom()` |
+| Default for     | AI chat                 | Group / traditional chat                          |

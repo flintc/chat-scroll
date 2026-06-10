@@ -92,6 +92,9 @@ interface UseChatScrollReturn {
   pinLatest: (selector: string) => void
   pinRelative: (selector: string, direction: -1 | 1) => boolean
   getPinnedElement: () => HTMLElement | null
+  referenceMessage: (selector: string) => ReferenceMessage
+  relativeMessage: (selector: string, direction: -1 | 1) => HTMLElement | null
+  scrollToMessage: (el: HTMLElement) => void
   scrollToBottom: () => void
   lock: () => void
   unlock: () => void

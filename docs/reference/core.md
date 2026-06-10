@@ -56,7 +56,7 @@ utilities](../guide/lower-level-utilities)), the core also exports:
 | `destroyGutter`         | Remove a gutter from the DOM.                        |
 | `setGutterHeight`       | Set a gutter's height (clamped to ≥ 0, rounded).     |
 | `calcGutterHeight`      | Compute the gutter height that pins `scrollHeight − clientHeight` to `pinnedY`. |
-| `isAtBottom`            | Boolean: is container within `threshold` of bottom.  |
+| `isAtBottom`            | Boolean: within `threshold` of the bottom, minus an optional `endSlack` (e.g. a gutter). |
 | `offsetWithin`          | Geometric offset of an element within a container.   |
 | `resolveScrollBehavior` | Resolve `'auto'` against `prefers-reduced-motion`.   |
 

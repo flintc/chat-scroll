@@ -1,9 +1,8 @@
 # Troubleshooting
 
-Symptoms → causes, in the order we see them reported. Most of these
-trace back to the same fact: the library owns exactly two elements (the
-scroll container and the content wrapper) and infers everything else
-from geometry.
+Symptoms → causes. Most of these trace back to the same fact: the
+library owns exactly two elements (the scroll container and the
+content wrapper) and infers everything else from geometry.
 
 ## Nothing scrolls at all
 
@@ -93,10 +92,9 @@ clear/preserve matrix.
 `restorePosition()` measures from the **top** of content when the saved
 position wasn't at the bottom — the messages the user was reading keep
 their offset. If you expected "same distance from the end", that's
-`wasAtBottom: true` behavior only. Also make sure the thread's content
-is fully rendered *before* restoring (defer with `nextTick` /
-`requestAnimationFrame` after async loads); restoring against
-half-rendered content clamps to the shorter height.
+`wasAtBottom: true` behavior only. Restore after the destination
+thread has rendered; the controller re-applies on the next frame, but
+it can't restore against content that hasn't been swapped in yet.
 
 ## Images make the layout jump
 
@@ -105,13 +103,6 @@ attributes or `aspect-ratio`). The controller compensates for content
 resizing above the pin, but a page full of zero-height-then-tall images
 churns the geometry on every load and makes any scroll logic feel
 jittery — that's true with or without this library.
-
-## React: it worked, then died in development
-
-Old versions of the adapter broke under `<StrictMode>` (React 18
-simulates an unmount that destroyed the instance without a re-mount
-path). Fixed — the mount effect now re-mounts from the stored refs. If
-you see this, update `@chat-scroll/react`.
 
 ## Multiple chats on one page
 

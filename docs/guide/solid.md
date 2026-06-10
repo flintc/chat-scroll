@@ -4,7 +4,7 @@
 pnpm add @chat-scroll/solid
 ```
 
-<LiveDemo scenario="pin-to-top" caption="Live demo of pin-to-top. The Solid adapter wraps the exact same core — reactive state arrives as Solid signals instead." />
+<LiveDemo scenario="pin-to-top" caption="The Solid adapter wraps the same core — reactive state arrives as signals." />
 
 `createChatScroll` is the Solid entry point. It owns a single
 `ChatScrollInstance` per owner scope, exposes state as a signal
@@ -89,6 +89,9 @@ interface CreateChatScrollReturn {
   pinLatest: (selector: string) => void
   pinRelative: (selector: string, direction: -1 | 1) => boolean
   getPinnedElement: () => HTMLElement | null
+  referenceMessage: (selector: string) => ReferenceMessage
+  relativeMessage: (selector: string, direction: -1 | 1) => HTMLElement | null
+  scrollToMessage: (el: HTMLElement) => void
   scrollToBottom: () => void
   lock: () => void
   unlock: () => void

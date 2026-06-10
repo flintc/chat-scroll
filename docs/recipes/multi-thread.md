@@ -123,15 +123,5 @@ useEffect(() => {
 longer than a session — trim old keys periodically to avoid unbounded
 growth.
 
-## Why two patterns, not one?
-
-The `key`-based remount is what React tells you to do, and it's
-genuinely simpler. But save/restore needs `savePosition` to outlive
-the chat that produced it — and the natural place to put the
-positions map is on the persistent instance's component. Mixing the
-two doesn't help: either you remount, in which case there's no
-controller to ask for `savePosition`, or you keep one instance, in
-which case the `key` is a no-op.
-
 Pick based on whether scroll position is part of "thread state" in
-your app's model.
+your app's model — remount when it isn't, save/restore when it is.

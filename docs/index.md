@@ -42,7 +42,7 @@ features:
 
 <div style="max-width: 960px; margin: 3rem auto 0;">
 
-<LiveDemo scenario="side-by-side" gutter caption="Live demo — pin-to-top (left) vs stick-to-bottom (right). Same prompt, same response chunks, fundamentally different scroll behavior. The striped band beneath pin-to-top is the dynamic gutter shrinking as the response fills space. Try scrolling mid-stream." />
+<LiveDemo scenario="side-by-side" caption="pin-to-top (left) vs stick-to-bottom (right) — same prompt, same chunks, different scroll behavior. The striped band is the gutter shrinking as the response fills space. Try scrolling mid-stream." />
 
 </div>
 
@@ -166,25 +166,21 @@ composer.addEventListener('send', async (e) => {
 
 :::
 
-Notice what's _not_ there: no `useEffect` watching `messages.length` to
-decide when to pin, no thread-aware effects to reset state. The send
-handler is the only place that knows a new turn is starting, so that's
-where the pin call lives. The framework adapter mirrors `isLoading`
-into `setStreaming` for you so `overflow-anchor` flips at the right
-moments without a second hook.
+Notice what's _not_ there: no `useEffect` watching `messages.length`,
+no thread-aware effects to reset state. The send handler is the only
+place that knows a new turn is starting, so that's where the pin call
+lives. The adapter mirrors `isLoading` into `setStreaming` for you.
 
 ## Why?
 
-Every chat UI reinvents scroll behavior. The requirements are universal —
-pin messages, auto-scroll, detect user scroll intent, show a
-scroll-to-bottom affordance. The implementations are always inlined
-into components and coupled to a specific framework.
+Every chat UI reinvents scroll behavior — pin messages, auto-scroll,
+detect scroll intent, show a scroll-to-bottom affordance — and the
+implementations end up inlined into components and coupled to one
+framework.
 
-`chat-scroll` extracts the scroll math and DOM orchestration
-(`ResizeObserver`, gutter elements, position measurement) into a
+`chat-scroll` extracts the scroll math and DOM orchestration into a
 framework-agnostic core. The framework layer is _"give me refs, tell
-me when to clean up, expose reactive state."_
-
-Modeled on [`@tanstack/virtual`](https://tanstack.com/virtual),
-[`@tanstack/table`](https://tanstack.com/table), and friends — same
-options/instance/adapter pattern.
+me when to clean up, expose reactive state"_ — the same
+options/instance/adapter pattern as
+[`@tanstack/virtual`](https://tanstack.com/virtual) and
+[`@tanstack/table`](https://tanstack.com/table).

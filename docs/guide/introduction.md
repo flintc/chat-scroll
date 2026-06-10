@@ -81,8 +81,7 @@ to add `@chat-scroll/core` separately; it ships with the adapter.
 ## What about virtualization?
 
 `chat-scroll` and [`@tanstack/virtual`](https://tanstack.com/virtual)
-solve different problems and compose cleanly in principle: virtual
-takes ownership of the visible-row math, `chat-scroll` takes ownership
-of scroll position semantics. A worked recipe isn't yet written —
-[file an issue](https://github.com/flintc/chat-scroll/issues) if
-this is your use case so we know to prioritise it.
+solve different problems and compose cleanly: the virtualizer owns the
+visible-row math, `chat-scroll` owns scroll position semantics. See
+the [virtualization recipe](../recipes/virtualization) — both
+strategies, with live demos over a 5,000-message history.
