@@ -28,8 +28,14 @@ scroll.setStreaming(false)
    `streaming && locked` are both true. Outside a stream, expanding a
    collapsible block in a completed reply doesn't yank the viewport.
 
-`setStreaming(false)` clears both. Browser default anchoring resumes;
-the controller becomes inert on resize for stick-to-bottom.
+`setStreaming(false)` clears both — after a **two-frame grace
+period**. The final chunk's growth typically renders *after* your
+loading flag flips (the append and the flag change land in the same
+tick; the resize fires later), and without the grace stick-to-bottom
+would stop following one resize too early, orphaning the last chunk
+above the bottom. Flip the flag synchronously with the last append —
+the controller handles the ordering, and user input during the grace
+still wins immediately.
 
 ## Two shapes for the same lifecycle
 

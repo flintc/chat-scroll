@@ -57,6 +57,15 @@ export interface StrategyContext {
   scrollDelta: number
 
   /**
+   * True for a couple of frames after `setStreaming(false)` when a
+   * stream was running. The final chunk's growth typically renders
+   * AFTER the consumer flips their loading flag; strategies that gate
+   * follow-behavior on `state.streaming` honor this window so that
+   * growth isn't orphaned. Owned by the controller (`setStreaming`).
+   */
+  streamingGrace: boolean
+
+  /**
    * True between "pin animation aborted by an interaction event"
    * (pointerdown / touchstart while `scrollInFlight`) and the next
    * `recalcGutter` that consumes it. Disambiguates two states that look

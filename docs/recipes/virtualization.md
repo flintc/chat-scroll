@@ -58,7 +58,6 @@ export function VirtualChat({ messages, isStreaming }: Props) {
         style={{
           height: virtualizer.getTotalSize(),
           position: 'relative',
-          flexShrink: 0, // see note below
         }}
       >
         {virtualizer.getVirtualItems().map((row) => (
@@ -83,17 +82,11 @@ export function VirtualChat({ messages, isStreaming }: Props) {
 }
 ```
 
-::: warning The one CSS line that matters: `flex-shrink: 0`
-The controller lays the container out as a column flexbox (that's how
-the pin gutter sits below content). A normal message list survives
-that as a flex item because its `min-height: auto` floor is its own
-text. The virtualizer's wrapper doesn't — its children are absolutely
-positioned, so its min-content height is **0**, and the default
-`flex-shrink: 1` silently crushes the 300,000px total size down to
-the viewport height. One symptom: the list "ends" after a screenful
-and the rendered window never moves. `flex-shrink: 0` on the wrapper
-restores the real scroll range.
-:::
+(The controller lays the container out as a column flexbox and pins
+`flex-shrink: 0` on the content element itself, so the wrapper — whose
+absolutely-positioned children give it a min-content height of 0 —
+isn't crushed down to the viewport height by default flex shrinking.
+No CSS needed on your side.)
 
 Send stays the usual shape — append, `lock()`, stream:
 

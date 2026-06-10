@@ -15,6 +15,9 @@ interface ChatScrollInstance {
   pinLatest(selector: string): void
   pinRelative(selector: string, direction: -1 | 1): boolean
   getPinnedElement(): HTMLElement | null
+  referenceMessage(selector: string): ReferenceMessage
+  relativeMessage(selector: string, direction: -1 | 1): HTMLElement | null
+  scrollToMessage(el: HTMLElement): void
   scrollToBottom(): void
 
   lock(): void
@@ -133,15 +136,59 @@ scrolling with the same reference rule, no pin machinery — see the
 
 The element currently pinned — including one whose `pinMessage` call is
 still waiting on its measurement frame — or `null` when no pin is
-active. Useful for navigation UI: disabling prev/next at the edges,
-highlighting the pinned turn, or a "turn 3/7" indicator.
+active. For navigation UI, prefer [`referenceMessage`](#referencemessage-selector)
+/ [`relativeMessage`](#relativemessage-selector-direction), which cover
+the scrolled-away case too.
+
+### `referenceMessage(selector)`
+
+The match the user is currently "at", resolved with the same rule
+`pinRelative` uses: the pinned element while anchored at it (or a pin /
+`scrollToMessage` still in flight), otherwise the match nearest the
+viewport top. Works under both strategies. Returns:
 
 ```ts
-const turns = [...container.querySelectorAll('[data-role="user"]')]
-const idx = turns.indexOf(instance.getPinnedElement())
-prevBtn.disabled = idx === 0
-nextBtn.disabled = idx === turns.length - 1
+interface ReferenceMessage {
+  el: HTMLElement | null // null when the viewport is above every match
+  index: number //          -1 when el is null
+  count: number //          total matches (0: selector matched nothing)
+  past: boolean //          viewport sits below el's top ("mid-reply")
+}
 ```
+
+Built for disabled states and "turn x/y" counters — re-evaluate it from
+the container's scroll event:
+
+```ts
+const ref = instance.referenceMessage('[data-role="user"]')
+counter.textContent = ref.index >= 0 ? `${ref.index + 1}/${ref.count}` : ''
+```
+
+### `relativeMessage(selector, direction)`
+
+The element `pinRelative(selector, direction)` *would* navigate to — a
+pure query, nothing scrolls. `null` at the edges or when the selector
+matches nothing, so it doubles as the disabled-state check. Combine
+with `scrollToMessage` for prev/next under `stick-to-bottom`:
+
+```ts
+const target = instance.relativeMessage('[data-role="user"]', -1)
+if (target) instance.scrollToMessage(target)
+```
+
+### `scrollToMessage(el)`
+
+Animated scroll that brings `el`'s top to the viewport top (minus
+`scrollMargin`), under either strategy. It releases the stick lock
+first — programmatic scrolls don't get the input-driven release, so a
+mid-stream snap would otherwise cancel the animation — and clears
+`pinAnchored`. It does **not** pin, resize the gutter, or re-engage the
+lock on arrival (use `scrollToBottom()` to follow again).
+
+The target is re-read every frame, so it tracks content resizing above
+the element mid-animation, and back-to-back calls are last-call-wins:
+the in-flight target is what `relativeMessage` navigates from, so rapid
+prev/prev moves two steps.
 
 ### `scrollToBottom()`
 
@@ -173,6 +220,13 @@ lock automatically when the user scrolls up.
 Toggles `overflow-anchor: none` on the container. Call before / after a
 streaming response. See [Streaming mode](../guide/streaming) for why.
 
+Turning streaming OFF keeps the follow alive for a two-frame grace
+period: the final chunk's growth typically renders *after* the
+consumer flips their loading flag, and without the grace that growth
+would be orphaned above the bottom. Flip your flag synchronously with
+the last append — the controller handles the ordering. User input
+during the grace still wins immediately.
+
 ### `reset()`
 
 Clears per-thread state — pin, gutter, and (for stick-to-bottom) re-engage
@@ -187,6 +241,13 @@ useEffect(() => instance.reset(), [threadId])
 ### `savePosition()` / `restorePosition(pos)`
 
 See [Scroll restoration](../guide/scroll-restoration).
+
+`restorePosition` is self-sufficient: it releases the stick lock (so
+the content swap's resize can't snap to the bottom over the restore),
+applies immediately, and re-applies on the next frame in case the
+destination content hadn't finished laying out. A `wasAtBottom`
+snapshot restores to the *new* bottom and re-engages the follow. No
+`unlock()` / `requestAnimationFrame` wrapping needed.
 
 ### `subscribe(listener)`
 

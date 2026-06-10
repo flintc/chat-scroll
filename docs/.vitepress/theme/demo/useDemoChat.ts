@@ -84,20 +84,13 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
     return chunkIdx < ASSISTANT_CHUNKS.length
   }
 
+  // Flipping `streaming` synchronously with the final growth is safe:
+  // the controller keeps following resizes for a short grace period
+  // after setStreaming(false), so the last chunk isn't orphaned.
   function finalize(): void {
     clearTimer()
     streaming.value = false
     assistantId = null
-  }
-
-  // Flip `streaming` only after the final growth has rendered AND the
-  // controller's resize pass has followed it: stick-to-bottom snaps
-  // only while streaming, so finalizing synchronously with the last
-  // chunk orphans that growth above the bottom. Render + RO happen in
-  // the first frame, finalize in the second.
-  function finalizeAfterSettle(): void {
-    clearTimer()
-    requestAnimationFrame(() => requestAnimationFrame(finalize))
   }
 
   function scheduleNextChunk(): void {
@@ -105,7 +98,7 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
       if (appendChunk()) {
         scheduleNextChunk()
       } else {
-        finalizeAfterSettle()
+        finalize()
       }
     }, intervalOf())
   }
@@ -125,12 +118,12 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
   function stop(): void {
     if (!streaming.value) return
     clearTimer()
-    // Flush the remaining chunks in one go, then finalize after the
-    // burst has been followed.
+    // Flush the remaining chunks in one go; the controller's
+    // streaming-end grace follows the burst.
     while (appendChunk()) {
       // appendChunk advances chunkIdx until the reply is exhausted
     }
-    finalizeAfterSettle()
+    finalize()
   }
 
   function reset(): void {

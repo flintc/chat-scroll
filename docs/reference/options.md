@@ -67,6 +67,21 @@ want to disable the animation per call rather than per instance.
 Read on every scroll call, so changes via `setOptions` take effect
 immediately — wire it to a slider if you want users to tune the feel.
 
+## `initialPosition`
+
+- **Type:** `'bottom' | 'none'`
+- **Default:** `'none'`
+
+Where the viewport opens. `'bottom'` lands at the latest content on
+mount (and again on `reset()`), and keeps re-landing there on every
+content resize — hydration, web-font swap, late-loading images — until
+the first user input, the first upward scroll, or the first
+programmatic scroll call. This replaces the mount + rAF + `fonts.ready`
+snap dance chats otherwise hand-roll.
+
+Evaluated at `mount()` / `reset()` time; not live-updatable via
+`setOptions`.
+
 ## `onScrollChange`
 
 - **Type:** `(state: ChatScrollState) => void`

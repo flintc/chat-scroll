@@ -51,6 +51,22 @@ export interface ChatScrollOptions {
   scrollDurationMs?: number
 
   /**
+   * Where the viewport opens.
+   * - `'bottom'`: land at the latest content on mount (and on
+   *   `reset()`), and keep re-landing there on every content resize —
+   *   hydration, web-font swap, late images — until the first user
+   *   input, the first upward scroll, or the first programmatic scroll
+   *   call. This replaces the mount + rAF + `fonts.ready` snap dance
+   *   every chat otherwise hand-rolls.
+   * - `'none'`: don't touch the initial position.
+   *
+   * Evaluated at `mount()` and `reset()` time; not live-updatable via
+   * `setOptions`.
+   * @default 'none'
+   */
+  initialPosition?: 'bottom' | 'none'
+
+  /**
    * Called when state changes. Framework adapters use this to publish
    * reactive state into their own systems (signals, hooks, refs).
    */
@@ -106,6 +122,27 @@ export interface ChatScrollState {
    * on every content resize so it tracks the live element.
    */
   pinnedY: number
+}
+
+/**
+ * Result of `referenceMessage(selector)` — the match the user is
+ * currently "at", resolved with the same rule `pinRelative` uses.
+ */
+export interface ReferenceMessage {
+  /** The reference element, or `null` when the viewport sits above every match. */
+  el: HTMLElement | null
+  /** Index of `el` in the matched set; `-1` when `el` is null. */
+  index: number
+  /** Total number of matches (`0` when the selector matches nothing). */
+  count: number
+  /**
+   * True when the viewport top sits measurably below the reference's
+   * top — the user has scrolled into the content that follows it
+   * ("mid-reply" in a chat). In this state `relativeMessage(sel, -1)`
+   * returns the reference itself (snap back to the turn being read)
+   * before walking upward on the next call.
+   */
+  past: boolean
 }
 
 /**
@@ -188,6 +225,42 @@ export interface ChatScrollInstance {
   getPinnedElement: () => HTMLElement | null
 
   /**
+   * The match the user is currently "at", resolved with the same rule
+   * `pinRelative` uses: the pinned element while anchored at it (or a
+   * pin/`scrollToMessage` still in flight), otherwise the match
+   * nearest the viewport top. Use it for disabled states and "turn
+   * x of y" counters instead of re-deriving the geometry. Works under
+   * both strategies.
+   */
+  referenceMessage: (selector: string) => ReferenceMessage
+
+  /**
+   * The element `pinRelative(selector, direction)` WOULD navigate to —
+   * a pure query, nothing scrolls. `null` at the edges (wire it to
+   * disabled states) or when the selector matches nothing. Combine
+   * with `scrollToMessage` for prev/next navigation under
+   * `stick-to-bottom`, where pinning doesn't apply:
+   *
+   *     const target = scroll.relativeMessage('[data-role="user"]', -1)
+   *     if (target) scroll.scrollToMessage(target)
+   */
+  relativeMessage: (selector: string, direction: -1 | 1) => HTMLElement | null
+
+  /**
+   * Animated scroll that brings `el`'s top to the viewport top (minus
+   * `scrollMargin`), under either strategy. Releases the stick lock
+   * first (programmatic scrolls don't get the input-driven release, so
+   * a mid-stream snap would cancel the animation) and clears
+   * `pinAnchored`; does NOT pin, resize the gutter, or re-engage the
+   * lock on arrival. The target is re-read every frame, so it tracks
+   * content resizing above the element mid-animation. Back-to-back
+   * calls are last-call-wins, and the in-flight target is what
+   * `relativeMessage` navigates from — rapid prev/prev moves two
+   * steps.
+   */
+  scrollToMessage: (el: HTMLElement) => void
+
+  /**
    * Imperatively scroll to the bottom. Uses resolved scroll behavior;
    * the target tracks live `scrollHeight`, so content streaming in
    * mid-animation doesn't leave the scroll short of the real bottom.
@@ -203,7 +276,14 @@ export interface ChatScrollInstance {
   /** Release the stick-to-bottom lock. No-op when strategy is `'pin-to-top'`. */
   unlock: () => void
 
-  /** Toggle streaming mode (`overflow-anchor` on container). */
+  /**
+   * Toggle streaming mode (`overflow-anchor` on container). Turning it
+   * OFF keeps the follow alive for a two-frame grace period: the final
+   * chunk's growth typically renders after the consumer flips their
+   * loading flag, and would otherwise be orphaned above the bottom.
+   * Flip your flag synchronously with the last append — the controller
+   * handles the ordering.
+   */
   setStreaming: (streaming: boolean) => void
 
   /**
@@ -216,7 +296,14 @@ export interface ChatScrollInstance {
   /** Snapshot current scroll state. */
   savePosition: () => ScrollPosition
 
-  /** Apply a previously saved scroll snapshot. */
+  /**
+   * Apply a previously saved scroll snapshot. Self-sufficient: releases
+   * the stick lock first (the content swap's resize would otherwise
+   * snap to the bottom before the restore lands), applies immediately,
+   * and re-applies on the next frame in case the destination content
+   * hadn't finished laying out. A `wasAtBottom` snapshot restores to
+   * the NEW bottom and re-engages the follow.
+   */
   restorePosition: (pos: ScrollPosition) => void
 
   /** Subscribe to state changes. Returns an unsubscribe function. */

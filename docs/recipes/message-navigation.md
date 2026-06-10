@@ -78,35 +78,36 @@ turn being read.
 
 ## Buttons instead of (or alongside) shortcuts
 
-Visual prev/next controls wire to the same call. For disabled states,
-mirror the reference rule with `getPinnedElement()` — or skip disabled
-handling entirely and rely on the built-in no-op at the ends. Add
+Visual prev/next controls wire to the same call. For disabled states
+and a "turn x/y" counter, ask the library instead of re-deriving the
+reference rule: `relativeMessage(selector, dir)` returns the element a
+navigation *would* go to (`null` at the edges), and
+`referenceMessage(selector)` returns the turn the user is at. Add
 `aria-label`s so screen readers announce the affordance:
 
 ```tsx
-const turns = [...(container?.querySelectorAll('[data-role="user"]') ?? [])]
-const idx = turns.indexOf(scroll.getPinnedElement())
+const ref = scroll.referenceMessage('[data-role="user"]')
+const canPrev = scroll.relativeMessage('[data-role="user"]', -1) !== null
 
 <button
   onClick={() => scroll.pinRelative('[data-role="user"]', -1)}
-  disabled={idx === 0}
+  disabled={!canPrev}
   aria-label="Previous user message"
 >
   ↑
 </button>
+<span>{ref.index >= 0 ? `${ref.index + 1}/${ref.count}` : ''}</span>
 <button
   onClick={() => scroll.pinRelative('[data-role="user"]', 1)}
-  disabled={idx === turns.length - 1}
+  disabled={ref.index + 1 >= ref.count}
   aria-label="Next user message"
 >
   ↓
 </button>
 ```
 
-(When `idx === -1` — nothing pinned, or the user scrolled away — leave
-both enabled and let the viewport-relative resolution decide; the demo
-at the top of this page computes the full geometric mirror if you want
-exact disabled states in that mode too.)
+Re-evaluate on scroll (the demos bump a counter from the container's
+scroll event) so the states track the user's reading position.
 
 ## Stick-to-bottom: same buttons, no pin
 
@@ -119,63 +120,43 @@ put empty space below the newest message, and "the bottom" would stop
 meaning the bottom.
 
 But the navigation UX doesn't need the pin. Under stick-to-bottom,
-prev/next is plain container scrolling with the same reference rule:
+prev/next is two calls — `relativeMessage` resolves the target with
+the same reference rule `pinRelative` uses, and `scrollToMessage`
+brings it to the top:
 
-<LiveDemo scenario="stick-to-bottom" caption="Live demo — the same ‹ Prev / Next › buttons under stick-to-bottom. Each click releases the follow and scrolls the adjacent user turn to the top — try ‹ Prev mid-stream: the reply keeps growing below while you read. At the bottom you're on the latest turn, so Next › disables; the ↓ button re-engages the follow." />
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — the same ‹ Prev / Next › buttons under stick-to-bottom, via relativeMessage + scrollToMessage. Each click releases the follow and scrolls the adjacent user turn to the top — try ‹ Prev mid-stream: the reply keeps growing below while you read. At the bottom you're on the latest turn, so Next › disables; the ↓ button re-engages the follow." />
 
 ```ts
-const MARGIN = 12 // match your scrollMargin
-
 function navTurn(direction: -1 | 1): boolean {
-  const turns = [
-    ...container.querySelectorAll<HTMLElement>('[data-role="user"]'),
-  ]
-  const cTop = container.getBoundingClientRect().top
-  const st = container.scrollTop
-  const tops = turns.map(
-    (t) => t.getBoundingClientRect().top - cTop + st - MARGIN,
-  )
-
-  // Same reference rule as pinRelative: the turn nearest the viewport
-  // top is the one being read; from mid-reply, -1 first snaps back to
-  // it, then walks upward.
-  let cur = -1
-  tops.forEach((t, i) => {
-    if (t <= st + 2) cur = i
-  })
-  const midReply = cur >= 0 && st > tops[cur] + 2
-
-  const target = direction === 1 ? cur + 1 : midReply ? cur : cur - 1
-  if (target < 0 || target >= turns.length) return false
-
-  scroll.unlock() // navigating away is explicit intent — release first
-  container.scrollTo({ top: tops[target], behavior: 'smooth' })
+  const target = scroll.relativeMessage('[data-role="user"]', direction)
+  if (!target) return false
+  scroll.scrollToMessage(target)
   return true
 }
 ```
 
-Three things differ from the pinned version, all of them consequences
-of having no gutter:
+`scrollToMessage` handles the parts that used to need hand-rolling:
+it releases the lock first (programmatic scrolls don't get the
+input-driven release, so a mid-stream snap would otherwise cancel the
+animation), and rapid clicks resolve against the in-flight target —
+two quick `-1`s move two turns, same as `pinRelative`.
 
-- **Release the lock yourself.** During a stream the controller
-  re-snaps to the bottom on every chunk, and a snap write cancels an
-  in-flight smooth scroll. `unlock()` before `scrollTo` makes the
-  navigation win deterministically. (Input-driven release only covers
-  *user* input — wheel, touch, keys — not programmatic scrolls.)
+Two stick-specific conventions remain yours, both consequences of
+having no gutter:
+
 - **The latest turn clamps at the real bottom.** Without synthetic
   scroll room, a turn near the end may not reach the viewport top —
   the scroll stops at `scrollHeight - clientHeight`. Treat "at the
-  bottom" as being on the latest turn: disable Next there, and let the
-  ↓ affordance (or a send) re-engage the follow. Landing at the bottom
-  via Next intentionally does **not** re-lock — reading the latest
-  text and following future text are different intents.
-- **Rapid clicks need a memo.** `pinRelative` records intent
-  synchronously, so two quick `-1`s move two turns. Native smooth
-  `scrollTo` doesn't — a second click mid-animation would re-resolve
-  against the in-flight position. Remember the pending target index
-  and resolve from it until the scroll arrives (`scrollend`) or real
-  user input supersedes it; the demo above does exactly this (see
-  `ChatPane.vue` in the docs source).
+  bottom" as being on the latest turn: disable Next there
+  (`state.atBottom`), and let the ↓ affordance (or a send) re-engage
+  the follow.
+- **Landing at the bottom via Next does not re-lock** — reading the
+  latest text and following future text are different intents; use
+  `scrollToBottom()` to follow.
+
+For disabled states and a "turn x/y" counter, `referenceMessage`
+returns the turn the user is at (`{ el, index, count, past }`) under
+either strategy — no geometry to re-derive.
 
 ## Beyond user messages
 

@@ -5,6 +5,7 @@ export type {
   ChatScrollOptions,
   ChatScrollState,
   ChatScrollStrategy,
+  ReferenceMessage,
   ScrollPosition,
 } from './types'
 

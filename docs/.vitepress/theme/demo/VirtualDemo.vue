@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, ref, shallowRef } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useChatScroll } from '@chat-scroll/vue'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/vue-virtual'
@@ -27,6 +27,9 @@ const showGutter = ref(false)
 const scroll = useChatScroll({
   strategy: props.strategy,
   streaming: () => chat.streaming.value,
+  // Open at the latest message; the controller keeps landing there
+  // while the virtualizer's estimates settle, until first interaction.
+  initialPosition: 'bottom',
 })
 const { state, containerRef, contentRef, scrollToBottom } = scroll
 
@@ -85,23 +88,6 @@ const measureElement = (
   if (el instanceof Element) virtualizer.value.measureElement(el)
 }
 
-// ── Open at the latest message ─────────────────────────────────────
-function snapToBottom(): void {
-  const el = chatEl.value
-  if (!el) return
-  el.scrollTop = el.scrollHeight
-}
-onMounted(() => {
-  snapToBottom()
-  // The first frames refine row-size estimates near the bottom — keep
-  // landing on the latest message until layout is stable.
-  requestAnimationFrame(() => {
-    snapToBottom()
-    requestAnimationFrame(snapToBottom)
-  })
-  document.fonts?.ready.then(snapToBottom).catch(() => {})
-})
-
 // ── Pin by index (pin-to-top) ──────────────────────────────────────
 // Selector-driven APIs (pinLatest / pinRelative) only see mounted
 // rows, so a windowed list drives pinning from the data instead:
@@ -147,9 +133,10 @@ async function reset(): Promise<void> {
   chat.reset()
   promptIdx.value = 0
   pinnedIndex.value = null
-  scroll.reset()
+  // reset() re-arms initialPosition's bottom-anchoring for the
+  // re-seeded list.
   await nextTick()
-  requestAnimationFrame(snapToBottom)
+  scroll.reset()
 }
 
 // ── Prev / next turn navigation (pin-to-top) ───────────────────────
@@ -437,11 +424,8 @@ const navState = computed(() => {
 .vd-total {
   position: relative;
   width: 100%;
-  /* The controller makes the container a column flexbox (for the
-     gutter). This wrapper's children are absolutely positioned, so
-     its min-content height is 0 and default flex-shrink would crush
-     the virtualizer's total size down to the viewport. */
-  flex-shrink: 0;
+  /* No flex-shrink handling needed: the controller pins
+     flex-shrink: 0 on its content element itself. */
 }
 .vd-row {
   position: absolute;

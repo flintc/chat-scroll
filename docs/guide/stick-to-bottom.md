@@ -41,11 +41,13 @@ The lifecycle:
    (A position check still backs this up for inputs that emit no
    wheel/touch/key events, like scrollbar drags — it releases when the
    viewport *moves up* past `bottomThreshold`.)
-4. **Consumer ends the stream.** Call `scroll.setStreaming(false)`. The lock
-   may still be `true` (if the user never scrolled away), but the resize
-   handler is now inert. The user can interact with completed content — tap
-   to expand a tool-call block, copy a code span — without the controller
-   fighting them.
+4. **Consumer ends the stream.** Call `scroll.setStreaming(false)` —
+   synchronously with the last append is fine: the controller keeps
+   following resizes for a two-frame grace so the final chunk's growth
+   (which renders after the flag flip) isn't orphaned above the
+   bottom. After the grace, the resize handler is inert. The user can
+   interact with completed content — tap to expand a tool-call block,
+   copy a code span — without the controller fighting them.
 5. **User sends a new message.** Consumer calls `scroll.lock()` and
    `scroll.setStreaming(true)`. Both flags are true again, we snap to bottom,
    and the cycle repeats.

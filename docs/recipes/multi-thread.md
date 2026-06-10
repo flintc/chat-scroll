@@ -63,10 +63,7 @@ export function ChatRouter({
     scroll.reset()
 
     const saved = positions.current.get(threadId)
-    if (saved) {
-      // The new thread's messages render this same tick. Restore after layout.
-      requestAnimationFrame(() => scroll.restorePosition(saved))
-    }
+    if (saved) scroll.restorePosition(saved)
 
     lastThread.current = threadId
   }, [threadId, scroll])
@@ -90,6 +87,13 @@ thread" from "initial mount" — on mount there's nothing to save.
 state from the previous thread (so a stale `pinnedY` doesn't bias the
 new thread's `atBottom` measurement) without destroying the instance.
 
+`restorePosition` owns the awkward timing itself: it releases the
+stick lock first (otherwise the content swap's resize snaps to the
+bottom over your restore), applies immediately, and re-applies on the
+next frame in case the destination thread hadn't finished laying out.
+A `wasAtBottom` snapshot restores to the *new* bottom and re-engages
+the follow.
+
 ## Persisting across reload
 
 If you want positions to survive page refresh, persist the map to
@@ -108,11 +112,9 @@ useEffect(() => {
 useEffect(() => {
   const raw = sessionStorage.getItem(`chat-scroll:${threadId}`)
   if (raw) {
-    requestAnimationFrame(() => {
-      try {
-        scroll.restorePosition(JSON.parse(raw))
-      } catch {}
-    })
+    try {
+      scroll.restorePosition(JSON.parse(raw))
+    } catch {}
   }
 }, [threadId])
 ```

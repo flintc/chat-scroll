@@ -4,6 +4,24 @@
 
 ### Added
 
+- **`referenceMessage(selector)` and `relativeMessage(selector, ±1)`**
+  on the instance and every adapter: the reference-point resolution
+  `pinRelative` uses internally, exposed as pure queries.
+  `referenceMessage` returns the match the user is at
+  (`{ el, index, count, past }`) for counters and disabled states;
+  `relativeMessage` returns the element a prev/next navigation would
+  target (`null` at the edges). Work under both strategies.
+- **`scrollToMessage(el)`**: animated scroll bringing a message to the
+  viewport top (minus `scrollMargin`) under either strategy. Releases
+  the stick lock first, clears `pinAnchored`, re-reads its target
+  every frame, and resolves rapid calls last-call-wins (the in-flight
+  target feeds `relativeMessage`). With `relativeMessage` this makes
+  stick-to-bottom prev/next navigation a two-liner — see the
+  [message-navigation recipe](/recipes/message-navigation).
+- **`initialPosition: 'bottom'` option**: open at the latest content
+  and keep landing there through hydration / font-swap / late-media
+  growth until the first interaction. Re-armed by `reset()`. Replaces
+  the mount + rAF + `fonts.ready` snap dance.
 - **`getPinnedElement()`** on the instance (and re-exposed by every
   adapter): the element currently pinned, including one whose
   `pinMessage` call is still waiting on its measurement frame. Powers
@@ -24,6 +42,22 @@
 
 ### Changed
 
+- **`setStreaming(false)` keeps the follow alive for a two-frame
+  grace period.** The final chunk's growth typically renders after
+  the consumer flips their loading flag; previously that growth was
+  orphaned above the bottom unless the consumer hand-deferred the
+  flag flip. User input during the grace still wins immediately.
+- **`restorePosition` is self-sufficient.** It releases the stick
+  lock (the content swap's resize would otherwise snap to the bottom
+  over the restore), applies immediately and re-applies next frame,
+  and a `wasAtBottom` snapshot restores to the new bottom and
+  re-engages the follow. The `unlock()` + `requestAnimationFrame`
+  wrapping recipes used to show is gone.
+- **The controller pins `flex-shrink: 0` on the content element.**
+  The container is a column flexbox, and a content element with only
+  absolutely-positioned children (a virtualizer's total-size wrapper)
+  has min-content height 0 — default flex-shrink silently crushed its
+  scroll range to the viewport height.
 - **`pinRelative` resolves synchronously, returns `boolean`, and
   adapts its reference point.** It now returns `true` when a target
   was pinned and `false` at the edges (wire it to disabled states).

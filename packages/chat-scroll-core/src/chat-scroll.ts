@@ -17,6 +17,7 @@ const DEFAULTS = {
   scrollMargin: 12,
   scrollBehavior: 'auto' as const,
   scrollDurationMs: 320,
+  initialPosition: 'none' as const,
 }
 
 const STRATEGIES: Record<NonNullable<ChatScrollOptions['strategy']>, Strategy> =
@@ -49,6 +50,7 @@ export function createChatScroll(
     scrollMargin: opts.scrollMargin ?? DEFAULTS.scrollMargin,
     scrollBehavior: opts.scrollBehavior ?? DEFAULTS.scrollBehavior,
     scrollDurationMs: opts.scrollDurationMs ?? DEFAULTS.scrollDurationMs,
+    initialPosition: opts.initialPosition ?? DEFAULTS.initialPosition,
     onScrollChange: opts.onScrollChange,
   }
 
@@ -81,6 +83,7 @@ export function createChatScroll(
     },
     pinAnimationInterrupted: false,
     scrollDelta: 0,
+    streamingGrace: false,
     // `reAnchorPin` is wired in `mount()` so it can close over the
     // controller's `startAnimatedScroll`. Strategies fall back to a
     // synchronous write when this is undefined.
@@ -113,6 +116,34 @@ export function createChatScroll(
   // newest intent instead of the last *settled* pin (two rapid "prev"
   // clicks must move two turns, not one).
   let pendingPinEl: HTMLElement | null = null
+  // Target of an in-flight `scrollToMessage` animation. Read by the
+  // reference resolution (`referenceMessage` / `relativeMessage` /
+  // `pinRelative`) so rapid navigation calls resolve against where the
+  // user is HEADING, not the mid-animation scroll position. Gated on
+  // `scrollInFlight` at read time — once the animation completes or
+  // aborts, the geometric reference takes over (and at completion the
+  // two agree).
+  let navTargetEl: HTMLElement | null = null
+  // True while `initialPosition: 'bottom'` is still anchoring the
+  // viewport to the latest content: from mount until the first user
+  // input, the first consumer scroll API call, or an upward scroll
+  // (scrollbar drags emit no input events). While set, every content
+  // resize re-lands at the bottom — hydration, web-font swap, and
+  // late-loading media all grow content after the first paint.
+  let initialAnchoring = false
+  // Deferred re-apply scheduled by `restorePosition` (the destination
+  // thread may not have finished laying out when it's called).
+  let restoreFrame: number | null = null
+  // Streaming-end grace (see `setStreaming`).
+  let streamingGraceFrame: number | null = null
+
+  function cancelStreamingGrace(): void {
+    if (streamingGraceFrame !== null) {
+      cancelAnimationFrame(streamingGraceFrame)
+      streamingGraceFrame = null
+    }
+    ctx.streamingGrace = false
+  }
   // Monotonic ticket for pin operations. Every pinMessage / pinLatest
   // call takes a new ticket; a deferred rAF body whose ticket is stale
   // aborts. This makes interleaved pin calls last-call-wins instead of
@@ -146,6 +177,7 @@ export function createChatScroll(
     flexDirection: string
     overflowAnchor: string
   } | null = null
+  let savedContentStyles: { flexShrink: string } | null = null
 
   function applyContainerStyles(container: HTMLElement): void {
     savedContainerStyles = {
@@ -159,6 +191,19 @@ export function createChatScroll(
     container.style.flexDirection = 'column'
   }
 
+  function applyContentStyles(content: HTMLElement): void {
+    savedContentStyles = { flexShrink: content.style.flexShrink }
+    // The container is a column flexbox (so the gutter sits below the
+    // content), which makes the content element a flex item with
+    // default `flex-shrink: 1`. A normal message list survives that
+    // only because its `min-height: auto` floor is its own text. A
+    // content element whose children are absolutely positioned — a
+    // virtualizer's total-size wrapper is the canonical case — has
+    // min-content height 0 and would be silently crushed to the
+    // viewport height, destroying the scroll range.
+    content.style.flexShrink = '0'
+  }
+
   function restoreContainerStyles(container: HTMLElement): void {
     if (!savedContainerStyles) return
     container.style.overflowY = savedContainerStyles.overflowY
@@ -166,6 +211,12 @@ export function createChatScroll(
     container.style.flexDirection = savedContainerStyles.flexDirection
     container.style.overflowAnchor = savedContainerStyles.overflowAnchor
     savedContainerStyles = null
+  }
+
+  function restoreContentStyles(content: HTMLElement): void {
+    if (!savedContentStyles) return
+    content.style.flexShrink = savedContentStyles.flexShrink
+    savedContentStyles = null
   }
 
   function teardownDom(): void {
@@ -205,6 +256,16 @@ export function createChatScroll(
     if (ctx.container) {
       restoreContainerStyles(ctx.container)
     }
+    if (ctx.content) {
+      restoreContentStyles(ctx.content)
+    }
+    cancelStreamingGrace()
+    if (restoreFrame !== null) {
+      cancelAnimationFrame(restoreFrame)
+      restoreFrame = null
+    }
+    navTargetEl = null
+    initialAnchoring = false
   }
 
   // Cancel any in-flight rAF animation when the user touches or wheels
@@ -247,6 +308,9 @@ export function createChatScroll(
       const wasInFlight = internal.scrollInFlight
       activeScrollAbort?.abort()
       internal.scrollInFlight = false
+      // Any user input ends the initial-position anchoring — the user
+      // has taken over the viewport.
+      initialAnchoring = false
       return wasInFlight
     }
     // If an abort cut a pin animation short while the pin is being
@@ -492,6 +556,7 @@ export function createChatScroll(
     ctx.content = content
 
     applyContainerStyles(container)
+    applyContentStyles(content)
     ctx.gutter = createGutter(container)
     // Strategies call this to request a smooth catch-up to the pin
     // instead of a synchronous `scrollTop = pinnedY` jump. Used after
@@ -561,6 +626,11 @@ export function createChatScroll(
         internal.pinAnchored = false
       }
       ctx.scrollDelta = now - lastSeenScrollTop
+      // Scrollbar drags emit no wheel/touch/key events; an upward
+      // move is still the user taking over from the initial anchoring.
+      if (initialAnchoring && ctx.scrollDelta < 0) {
+        initialAnchoring = false
+      }
       lastSeenScrollTop = now
       lastSeenScrollHeight = sh
       strategy.onScroll(ctx)
@@ -572,6 +642,12 @@ export function createChatScroll(
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
         strategy.onContentResize(ctx)
+        if (initialAnchoring && ctx.container) {
+          // `initialPosition: 'bottom'`: keep landing at the latest
+          // content while layout settles (hydration, web-font swap,
+          // late media) — until the first real interaction.
+          ctx.container.scrollTop = ctx.container.scrollHeight
+        }
         if (ctx.container) {
           internal.atBottom = isAtBottom(
             ctx.container,
@@ -593,6 +669,17 @@ export function createChatScroll(
       resizeObserver.observe(container, { box: 'border-box' })
     }
 
+    initialAnchoring = options.initialPosition === 'bottom'
+    if (initialAnchoring) {
+      container.scrollTop = container.scrollHeight
+    }
+    // Seed the scroll listener's delta baseline at the mount position
+    // (possibly the bottom, just above). Without this, the first scroll
+    // event computes its delta against 0 and an upward scrollbar drag
+    // from the bottom reads as a large POSITIVE delta — masking the
+    // user's take-over from the delta-gated checks.
+    lastSeenScrollTop = container.scrollTop
+    lastSeenScrollHeight = container.scrollHeight
     internal.atBottom = isAtBottom(container, options.bottomThreshold)
     internal.locked = options.strategy === 'stick-to-bottom'
     if (internal.streaming) container.style.overflowAnchor = 'none'
@@ -639,6 +726,8 @@ export function createChatScroll(
       pendingPinFrame = null
       if (epoch !== pinEpoch) return
       if (pendingPinEl === el) pendingPinEl = null
+      navTargetEl = null
+      initialAnchoring = false
       el.style.scrollMarginTop = `${options.scrollMargin}px`
       const offset = offsetWithin(el, container)
       internal.pinnedY = Math.max(0, offset - options.scrollMargin)
@@ -712,78 +801,142 @@ export function createChatScroll(
     })
   }
 
-  function pinRelative(selector: string, direction: -1 | 1): boolean {
-    if (options.strategy !== 'pin-to-top') return false
-    if (!ctx.container) return false
+  // Shared reference resolution for pinRelative / relativeMessage /
+  // referenceMessage. Resolves synchronously — navigation targets
+  // already-rendered messages, so there's no layout to wait for, and
+  // deferring would make rapid calls race the rAF (two quick "prev"
+  // clicks would both resolve against the same settled position and
+  // move one step).
+  //
+  // The reference adapts to where the user actually is:
+  // - INTENT-anchored, strongest first: a pin scheduled this frame
+  //   (`pendingPinEl`), the settled pin while the user is still at it,
+  //   and the target of an in-flight `scrollToMessage`. All three make
+  //   rapid successive calls resolve against where the user is
+  //   HEADING, not the mid-animation scroll position.
+  // - Otherwise GEOMETRIC: the last match whose margin-adjusted top
+  //   sits at or above the viewport top — the turn being read. This
+  //   also makes navigation usable before any pin or scroll exists.
+  function resolveReference(selector: string): {
+    matches: HTMLElement[]
+    index: number
+    past: boolean
+    anchored: boolean
+  } | null {
+    if (!ctx.container) return null
     const container = ctx.container
-    // Resolve synchronously — navigation targets already-rendered
-    // messages, so there's no layout to wait for, and deferring would
-    // make rapid calls race the rAF (two quick "prev" clicks would
-    // both resolve against the same settled pin and move one turn).
     const matches = Array.from(
       container.querySelectorAll<HTMLElement>(selector),
     )
-    if (matches.length === 0) return false
+    if (matches.length === 0) return null
 
-    // Reference point. While the user is still anchored at the pin —
-    // or a pin call from this same frame is pending — navigate
-    // relative to that element: it's what's at the top of their
-    // viewport, and it stays correct under rapid successive calls.
-    //
-    // Once the user scrolls away, the pin no longer describes what
-    // they're looking at, so "previous"/"next" relative to it would
-    // teleport them somewhere unrelated to their reading position.
-    // Fall back to VIEWPORT-relative navigation below.
     const anchoredEl =
-      pendingPinEl ?? (internal.pinAnchored ? ctx.pinnedEl : null)
+      pendingPinEl ??
+      (internal.pinAnchored ? ctx.pinnedEl : null) ??
+      (internal.scrollInFlight ? navTargetEl : null)
     if (anchoredEl) {
-      const currentIdx = matches.indexOf(anchoredEl)
-      if (currentIdx !== -1) {
-        const target = matches[currentIdx + direction]
-        if (!target) return false
-        pinMessage(target)
-        return true
+      const idx = matches.indexOf(anchoredEl)
+      if (idx !== -1) {
+        return { matches, index: idx, past: false, anchored: true }
       }
       // Anchored element not in the matched set (detached, or a
       // different selector) — fall through to the geometric reference.
     }
 
-    // Viewport-relative reference: the last match whose margin-adjusted
-    // top sits at or above the viewport top — i.e. the turn the user is
-    // currently reading. This also makes pinRelative usable before any
-    // pin exists.
     const FUDGE = 2 // sub-pixel scroll positions + rounding
     const st = container.scrollTop
-    const tops = matches.map(
-      (el) => offsetWithin(el, container) - options.scrollMargin,
-    )
-    let currentIdx = -1
-    let currentTop = 0
-    for (let i = 0; i < tops.length; i++) {
-      const top = tops[i]
-      if (top !== undefined && top <= st + FUDGE) {
-        currentIdx = i
-        currentTop = top
+    let index = -1
+    let refTop = 0
+    for (let i = 0; i < matches.length; i++) {
+      const el = matches[i]
+      if (!el) continue
+      const top = offsetWithin(el, container) - options.scrollMargin
+      if (top <= st + FUDGE) {
+        index = i
+        refTop = top
       }
     }
+    return {
+      matches,
+      index,
+      // The viewport top sits measurably below the reference's top —
+      // the user has scrolled into the content that follows it
+      // ("mid-reply" in a chat).
+      past: index >= 0 && st > refTop + FUDGE,
+      anchored: false,
+    }
+  }
+
+  function referenceMessage(selector: string): {
+    el: HTMLElement | null
+    index: number
+    count: number
+    past: boolean
+  } {
+    const ref = resolveReference(selector)
+    if (!ref) return { el: null, index: -1, count: 0, past: false }
+    return {
+      el: ref.index >= 0 ? (ref.matches[ref.index] ?? null) : null,
+      index: ref.index,
+      count: ref.matches.length,
+      past: ref.past,
+    }
+  }
+
+  function relativeMessage(
+    selector: string,
+    direction: -1 | 1,
+  ): HTMLElement | null {
+    const ref = resolveReference(selector)
+    if (!ref) return null
     let targetIdx: number
     if (direction === 1) {
-      // The next turn below the viewport top. With every match above
-      // the viewport (currentIdx === -1) this resolves to the first.
-      targetIdx = currentIdx + 1
+      // The next match below the reference. With every match above the
+      // viewport (index === -1) this resolves to the first.
+      targetIdx = ref.index + 1
     } else {
-      // Reading mid-reply, below the reference turn's top: "previous"
-      // first snaps to the turn being read; pressing again walks up.
-      // Mirrors editor gutter navigation (go-to-previous-change).
-      targetIdx =
-        currentIdx >= 0 && st > currentTop + FUDGE
-          ? currentIdx
-          : currentIdx - 1
+      // Geometric mode, reading past the reference's top: "previous"
+      // first returns the reference itself (snap back to the turn
+      // being read), then walks upward on the next call. Mirrors
+      // editor go-to-previous-change. Anchored mode is already AT the
+      // reference, so it always walks.
+      targetIdx = !ref.anchored && ref.past ? ref.index : ref.index - 1
     }
-    const target = targetIdx >= 0 ? matches[targetIdx] : undefined
+    return targetIdx >= 0 ? (ref.matches[targetIdx] ?? null) : null
+  }
+
+  function pinRelative(selector: string, direction: -1 | 1): boolean {
+    if (options.strategy !== 'pin-to-top') return false
+    const target = relativeMessage(selector, direction)
     if (!target) return false
     pinMessage(target)
     return true
+  }
+
+  function scrollToMessage(el: HTMLElement): void {
+    if (!ctx.container) return
+    const container = ctx.container
+    // Navigating to a message is explicit scroll intent. Release the
+    // stick follow — a mid-stream snap would cancel the animation, and
+    // the input-driven lock release only covers USER input, not
+    // programmatic scrolls. Likewise drop the pin anchor so the next
+    // resize doesn't yank the viewport back. Arriving at the bottom
+    // does NOT re-engage the lock (reading the latest content and
+    // following future content are different intents — use
+    // `scrollToBottom()` to follow).
+    internal.locked = false
+    internal.pinAnchored = false
+    ctx.pinAnimationInterrupted = false
+    initialAnchoring = false
+    el.style.scrollMarginTop = `${options.scrollMargin}px`
+    navTargetEl = el
+    // Live getter: the element's offset can shift mid-animation
+    // (content above it resizing, a virtualizer refining estimated row
+    // offsets); the animation re-reads and re-clamps every frame.
+    startAnimatedScroll(() =>
+      Math.max(0, offsetWithin(el, container) - options.scrollMargin),
+    )
+    commit()
   }
 
   function getPinnedElement(): HTMLElement | null {
@@ -803,6 +956,8 @@ export function createChatScroll(
     // shortcut / deep-link / notification jump has the same problem.
     internal.pinAnchored = false
     ctx.pinAnimationInterrupted = false
+    navTargetEl = null
+    initialAnchoring = false
     // Live getter, not a captured number: content may stream in during
     // the ~320ms animation, and a stale target would land short of the
     // real bottom. The rAF loop re-reads and re-clamps every frame.
@@ -845,9 +1000,36 @@ export function createChatScroll(
   }
 
   function setStreaming(streaming: boolean): void {
+    const wasStreaming = internal.streaming
     internal.streaming = streaming
-    if (ctx.container) {
-      ctx.container.style.overflowAnchor = streaming ? 'none' : ''
+    if (streaming) {
+      cancelStreamingGrace()
+      if (ctx.container) ctx.container.style.overflowAnchor = 'none'
+      commit()
+      return
+    }
+    if (wasStreaming) {
+      // Grace period: the final chunk often renders AFTER the consumer
+      // flips their loading flag — the append and the flag change land
+      // in the same tick, but the resulting ResizeObserver callback
+      // fires later. Without the grace, stick-to-bottom stops snapping
+      // one resize too early and that last growth is orphaned above
+      // the bottom. Keep following (and keep `overflow-anchor: none`)
+      // for two frames; real user input still wins immediately because
+      // the lock release runs at input time.
+      ctx.streamingGrace = true
+      if (streamingGraceFrame !== null) {
+        cancelAnimationFrame(streamingGraceFrame)
+      }
+      streamingGraceFrame = requestAnimationFrame(() => {
+        streamingGraceFrame = requestAnimationFrame(() => {
+          streamingGraceFrame = null
+          ctx.streamingGrace = false
+          if (ctx.container) ctx.container.style.overflowAnchor = ''
+        })
+      })
+    } else if (ctx.container) {
+      ctx.container.style.overflowAnchor = ''
     }
     commit()
   }
@@ -871,7 +1053,19 @@ export function createChatScroll(
       internal.scrollInFlight = false
     }
     ctx.pinAnimationInterrupted = false
+    navTargetEl = null
+    cancelStreamingGrace()
+    if (restoreFrame !== null) {
+      cancelAnimationFrame(restoreFrame)
+      restoreFrame = null
+    }
     strategy.reset(ctx)
+    // A reset is a fresh thread — re-arm the initial-position anchoring
+    // so the new content opens at the latest message too.
+    initialAnchoring = options.initialPosition === 'bottom'
+    if (initialAnchoring && ctx.container) {
+      ctx.container.scrollTop = ctx.container.scrollHeight
+    }
     if (ctx.container) {
       internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
     }
@@ -892,15 +1086,49 @@ export function createChatScroll(
   function restorePosition(pos: ScrollPosition): void {
     if (!ctx.container) return
     const c = ctx.container
-    if (pos.wasAtBottom) {
-      c.scrollTop = c.scrollHeight
-    } else {
-      // Measure from the TOP: messages append below, so the content the
-      // user was reading keeps its offset-from-top. Restoring from the
-      // bottom would shift their spot by however much content arrived
-      // since the save. The browser clamps if content shrank.
-      c.scrollTop = Math.max(0, pos.scrollTop)
+    // The content swap that accompanies a thread switch fires a resize;
+    // a still-engaged lock would snap to the bottom before the restore
+    // lands. Release it up front — the at-bottom branch re-engages.
+    internal.locked = false
+    internal.pinAnchored = false
+    initialAnchoring = false
+    navTargetEl = null
+    if (activeScrollAbort) {
+      activeScrollAbort.abort()
+      internal.scrollInFlight = false
     }
+    if (restoreFrame !== null) cancelAnimationFrame(restoreFrame)
+
+    const apply = (): void => {
+      if (ctx.container !== c) return // re-mounted in between
+      if (pos.wasAtBottom) {
+        // The user was following this thread — they want the NEW
+        // bottom, not the pixel offset of the old one. Re-engage the
+        // follow so the next stream is tracked.
+        c.scrollTop = c.scrollHeight
+        if (options.strategy === 'stick-to-bottom') internal.locked = true
+      } else {
+        // Measure from the TOP: messages append below, so the content
+        // the user was reading keeps its offset-from-top. Restoring
+        // from the bottom would shift their spot by however much
+        // content arrived since the save. The browser clamps if
+        // content shrank.
+        c.scrollTop = Math.max(0, pos.scrollTop)
+      }
+    }
+    // Apply now AND re-apply next frame: callers typically restore
+    // right after swapping the message list in, and the synchronous
+    // write can clamp against content that hasn't finished laying out.
+    apply()
+    restoreFrame = requestAnimationFrame(() => {
+      restoreFrame = null
+      apply()
+      if (ctx.container) {
+        internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
+      }
+      commit()
+    })
+    commit()
   }
 
   function subscribe(listener: (s: ChatScrollState) => void): () => void {
@@ -938,6 +1166,9 @@ export function createChatScroll(
     pinLatest,
     pinRelative,
     getPinnedElement,
+    referenceMessage,
+    relativeMessage,
+    scrollToMessage,
     scrollToBottom,
     lock,
     unlock,

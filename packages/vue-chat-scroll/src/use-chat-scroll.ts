@@ -19,6 +19,7 @@ import {
   type ChatScrollInstance,
   type ChatScrollOptions,
   type ChatScrollState,
+  type ReferenceMessage,
   type ScrollPosition,
 } from '@chat-scroll/core'
 
@@ -59,6 +60,9 @@ export interface UseChatScrollReturn {
   pinLatest: (selector: string) => void
   pinRelative: (selector: string, direction: -1 | 1) => boolean
   getPinnedElement: () => HTMLElement | null
+  referenceMessage: (selector: string) => ReferenceMessage
+  relativeMessage: (selector: string, direction: -1 | 1) => HTMLElement | null
+  scrollToMessage: (el: HTMLElement) => void
   scrollToBottom: () => void
   lock: () => void
   unlock: () => void
@@ -173,6 +177,9 @@ export function useChatScroll(
     pinLatest: instance.pinLatest,
     pinRelative: instance.pinRelative,
     getPinnedElement: instance.getPinnedElement,
+    referenceMessage: instance.referenceMessage,
+    relativeMessage: instance.relativeMessage,
+    scrollToMessage: instance.scrollToMessage,
     scrollToBottom: instance.scrollToBottom,
     lock: instance.lock,
     unlock: instance.unlock,

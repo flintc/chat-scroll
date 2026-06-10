@@ -82,6 +82,9 @@ firing on every tick.
 | `pinLatest(sel)`     | Find the last matching element and pin it.            |
 | `pinRelative(sel, ±1)` | Pin the prev (-1) / next (+1) match relative to the pinned turn, or to the turn nearest the viewport top after the user scrolls away. Returns `false` at the ends. |
 | `getPinnedElement()` | The pinned element (incl. one pending its measurement frame), or `null`. |
+| `referenceMessage(sel)` | The match the user is at — `{ el, index, count, past }` — for counters and disabled states. Both strategies. |
+| `relativeMessage(sel, ±1)` | The element a prev/next navigation would target (pure query; `null` at the edges). |
+| `scrollToMessage(el)` | Animated scroll bringing `el` to the viewport top; releases the follow first. Both strategies. |
 | `scrollToBottom()`   | Smooth-scroll (or instant) to the bottom.             |
 | `lock()` / `unlock()`| Engage / release stick-to-bottom lock.                |
 | `setStreaming(bool)` | Toggle `overflow-anchor: none`; arms stick-to-bottom's auto-snap. |

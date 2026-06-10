@@ -300,9 +300,11 @@ describe('createChatScroll', () => {
   })
 
   describe('streaming mode', () => {
-    it('toggles container.style.overflowAnchor', () => {
+    it('toggles container.style.overflowAnchor (restored after the grace)', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
       const { container, content } = buildScrollDom()
       const s = createChatScroll()
       s.mount(container, content)
@@ -310,8 +312,12 @@ describe('createChatScroll', () => {
       expect(container.style.overflowAnchor).toBe('none')
       expect(s.state.streaming).toBe(true)
       s.setStreaming(false)
-      expect(container.style.overflowAnchor).toBe('')
       expect(s.state.streaming).toBe(false)
+      // Anchoring stays disabled through the two-frame grace window so
+      // the final chunk's growth is still followed, then restores.
+      raf.flushFrames()
+      raf.flushFrames()
+      expect(container.style.overflowAnchor).toBe('')
       s.destroy()
     })
   })
@@ -2022,6 +2028,564 @@ describe('createChatScroll', () => {
       s.destroy()
       raf.flushFrames()
       expect(scrollToSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('content flex-shrink pinning', () => {
+    // The container is a column flexbox (gutter below content). A
+    // content element whose children are absolutely positioned (a
+    // virtualizer's total-size wrapper) has min-content height 0 and
+    // default flex-shrink would crush it to the viewport height.
+    it('sets flex-shrink: 0 on the content element at mount', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll()
+      s.mount(container, content)
+      expect(content.style.flexShrink).toBe('0')
+      s.destroy()
+    })
+
+    it('restores the prior flex-shrink on destroy', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      content.style.flexShrink = '2'
+      const s = createChatScroll()
+      s.mount(container, content)
+      expect(content.style.flexShrink).toBe('0')
+      s.destroy()
+      expect(content.style.flexShrink).toBe('2')
+    })
+  })
+
+  describe('streaming-end grace', () => {
+    // The final chunk often renders AFTER the consumer flips their
+    // loading flag (same tick append + flag change; the resize fires
+    // later). The follow must survive that resize or the last growth
+    // is orphaned above the bottom.
+    function buildStreamEnd(): {
+      s: ReturnType<typeof createChatScroll>
+      container: HTMLElement
+      setContentHeight: (h: number) => void
+      ro: ReturnType<typeof installFakeResizeObserver>
+      raf: ReturnType<typeof installFakeRaf>
+    } {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight, setScrollTop } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(900)
+      expect(s.state.locked).toBe(true)
+      return { s, container, setContentHeight, ro, raf }
+    }
+
+    it('follows growth that renders after setStreaming(false)', () => {
+      const { s, container, setContentHeight, ro } = buildStreamEnd()
+      s.setStreaming(false) // flag flips synchronously with the append…
+      setContentHeight(1200) // …but the growth renders a beat later
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1100) // followed to the new bottom
+      s.destroy()
+    })
+
+    it('stops following once the grace expires', () => {
+      const { s, container, setContentHeight, ro, raf } = buildStreamEnd()
+      s.setStreaming(false)
+      raf.flushFrames()
+      raf.flushFrames() // two frames → grace expired
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(900) // post-stream growth is the user's
+      s.destroy()
+    })
+
+    it('keeps overflow-anchor disabled during the grace, restores after', () => {
+      const { s, container, raf } = buildStreamEnd()
+      expect(container.style.overflowAnchor).toBe('none')
+      s.setStreaming(false)
+      expect(container.style.overflowAnchor).toBe('none') // still graced
+      raf.flushFrames()
+      raf.flushFrames()
+      expect(container.style.overflowAnchor).toBe('')
+      s.destroy()
+    })
+
+    it('a new stream during the grace keeps following seamlessly', () => {
+      const { s, container, setContentHeight, ro, raf } = buildStreamEnd()
+      s.setStreaming(false)
+      s.setStreaming(true) // next turn starts immediately
+      raf.flushFrames()
+      raf.flushFrames() // the old grace frames must not turn anchoring off
+      expect(container.style.overflowAnchor).toBe('none')
+      setContentHeight(1300)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1200)
+      s.destroy()
+    })
+
+    it('user wheel-up during the grace still wins immediately', () => {
+      const { s, container, setContentHeight, ro } = buildStreamEnd()
+      s.setStreaming(false)
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      expect(s.state.locked).toBe(false)
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(900) // grace doesn't override the user
+      s.destroy()
+    })
+  })
+
+  describe('scrollToMessage', () => {
+    function buildStick(): {
+      s: ReturnType<typeof createChatScroll>
+      container: HTMLElement
+      content: HTMLElement
+      m1: HTMLElement
+      m2: HTMLElement
+      m3: HTMLElement
+      setScrollTop: (t: number) => void
+      raf: ReturnType<typeof installFakeRaf>
+    } {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 500,
+      })
+      const m3 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 900,
+      })
+      const s = createChatScroll({
+        strategy: 'stick-to-bottom',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      return { s, container, content, m1, m2, m3, setScrollTop, raf }
+    }
+
+    it('brings the message top to the scroll margin', () => {
+      const { s, container, m2 } = buildStick()
+      s.scrollToMessage(m2)
+      expect(container.scrollTop).toBe(488) // 500 - 12
+      expect(m2.style.scrollMarginTop).toBe('12px')
+      s.destroy()
+    })
+
+    it('releases the stick lock (programmatic scrolls get no input release)', () => {
+      const { s, m2 } = buildStick()
+      s.setStreaming(true)
+      expect(s.state.locked).toBe(true)
+      s.scrollToMessage(m2)
+      expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
+
+    it('does NOT re-engage the lock when the target clamps at the bottom', () => {
+      const { s, container, m3, setScrollTop } = buildStick()
+      setScrollTop(0)
+      s.scrollToMessage(m3)
+      expect(container.scrollTop).toBe(800) // clamped to max-scroll
+      expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
+
+    it('clears pinAnchored without dropping the pin (pin-to-top)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const m3 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 900,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(m3)
+      raf.flushFrames()
+      expect(s.state.pinAnchored).toBe(true)
+      s.scrollToMessage(m1)
+      expect(s.state.pinAnchored).toBe(false)
+      expect(s.state.pinActive).toBe(true) // gutter + pinnedY untouched
+      expect(s.state.pinnedY).toBe(888)
+      s.destroy()
+    })
+
+    it('the in-flight target is the reference for relativeMessage', () => {
+      // Smooth mode: the animation is in flight, scrollTop is still at
+      // the start — a second "prev" must walk from the TARGET, not from
+      // the mid-animation position.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      appendMessage(container, content, { role: 'user', height: 40, y: 100 })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 500,
+      })
+      const m3 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 700,
+      })
+      const s = createChatScroll({
+        strategy: 'stick-to-bottom',
+        scrollBehavior: 'smooth',
+      })
+      s.mount(container, content)
+      setScrollTop(800) // at the bottom, reading m3's reply
+      // First prev: geometric reference is m3 (past its top) → snap to it.
+      const t1 = s.relativeMessage('[data-role="user"]', -1)
+      expect(t1).toBe(m3)
+      s.scrollToMessage(t1 as HTMLElement)
+      // Animation in flight, scrollTop unchanged so far.
+      const t2 = s.relativeMessage('[data-role="user"]', -1)
+      expect(t2).toBe(m2) // walked from the in-flight target, not from 800
+      s.destroy()
+    })
+  })
+
+  describe('referenceMessage / relativeMessage', () => {
+    function buildThreeStick(): {
+      s: ReturnType<typeof createChatScroll>
+      m1: HTMLElement
+      m2: HTMLElement
+      m3: HTMLElement
+      setScrollTop: (t: number) => void
+    } {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 500,
+      })
+      const m3 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 900,
+      })
+      const s = createChatScroll({
+        strategy: 'stick-to-bottom',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      return { s, m1, m2, m3, setScrollTop }
+    }
+
+    it('resolves the match nearest the viewport top, with index/count', () => {
+      const { s, m2, setScrollTop } = buildThreeStick()
+      setScrollTop(488) // exactly at m2's margin-adjusted top
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(m2)
+      expect(ref.index).toBe(1)
+      expect(ref.count).toBe(3)
+      expect(ref.past).toBe(false)
+      s.destroy()
+    })
+
+    it('reports past=true mid-reply, and -1 returns the reference itself', () => {
+      const { s, m2, setScrollTop } = buildThreeStick()
+      setScrollTop(700) // below m2's top, above m3's
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(m2)
+      expect(ref.past).toBe(true)
+      expect(s.relativeMessage('[data-role="user"]', -1)).toBe(m2)
+      s.destroy()
+    })
+
+    it('walks upward when AT the reference top', () => {
+      const { s, m1, setScrollTop } = buildThreeStick()
+      setScrollTop(488)
+      expect(s.relativeMessage('[data-role="user"]', -1)).toBe(m1)
+      s.destroy()
+    })
+
+    it('returns el=null above all matches, +1 resolves to the first', () => {
+      const { s, m1, setScrollTop } = buildThreeStick()
+      setScrollTop(0)
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(null)
+      expect(ref.index).toBe(-1)
+      expect(ref.count).toBe(3)
+      expect(s.relativeMessage('[data-role="user"]', 1)).toBe(m1)
+      expect(s.relativeMessage('[data-role="user"]', -1)).toBe(null)
+      s.destroy()
+    })
+
+    it('returns count=0 when the selector matches nothing', () => {
+      const { s } = buildThreeStick()
+      const ref = s.referenceMessage('[data-role="nope"]')
+      expect(ref).toEqual({ el: null, index: -1, count: 0, past: false })
+      s.destroy()
+    })
+
+    it('resolves from the pinned element while anchored (pin-to-top)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      appendMessage(container, content, { role: 'user', height: 40, y: 100 })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(m2)
+      raf.flushFrames()
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(m2)
+      expect(ref.index).toBe(1)
+      expect(ref.past).toBe(false)
+      s.destroy()
+    })
+  })
+
+  describe('initialPosition', () => {
+    it("'bottom' opens at the bottom on mount", () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ initialPosition: 'bottom' })
+      s.mount(container, content)
+      expect(container.scrollTop).toBe(900)
+      expect(s.state.atBottom).toBe(true)
+      s.destroy()
+    })
+
+    it('keeps landing at the bottom while layout settles (pre-interaction growth)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ initialPosition: 'bottom' })
+      s.mount(container, content)
+      setContentHeight(1200) // font swap / hydration growth
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1100)
+      s.destroy()
+    })
+
+    it('stops after user input (wheel)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      // pin-to-top so the stick lock's own follow doesn't mask the check
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        initialPosition: 'bottom',
+      })
+      s.mount(container, content)
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(900) // anchoring ended at the wheel
+      s.destroy()
+    })
+
+    it('stops after an upward scroll with no input events (scrollbar drag)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setContentHeight, setScrollTop, flushScroll } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        initialPosition: 'bottom',
+      })
+      s.mount(container, content)
+      setScrollTop(500)
+      flushScroll() // negative delta → user took over
+      setContentHeight(1200)
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(500)
+      s.destroy()
+    })
+
+    it("default 'none' leaves the initial position alone", () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll()
+      s.mount(container, content)
+      expect(container.scrollTop).toBe(0)
+      s.destroy()
+    })
+
+    it('reset() re-arms the anchoring for the next thread', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        initialPosition: 'bottom',
+      })
+      s.mount(container, content)
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      s.reset() // new thread
+      expect(container.scrollTop).toBe(900)
+      setContentHeight(1300) // the new thread's late layout
+      ro.triggerResize()
+      expect(container.scrollTop).toBe(1200)
+      s.destroy()
+    })
+  })
+
+  describe('restorePosition (self-sufficient)', () => {
+    it('releases the lock so the content-swap resize cannot snap to bottom', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight, setScrollTop } =
+        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(900)
+      expect(s.state.locked).toBe(true)
+      // Switch threads: restore a mid-thread position, then the swap
+      // renders (a resize). Without the internal release, the resize
+      // would snap to the bottom over the restore.
+      s.restorePosition({ scrollTop: 300, wasAtBottom: false })
+      setContentHeight(1400)
+      ro.triggerResize()
+      raf.flushFrames() // deferred re-apply
+      expect(container.scrollTop).toBe(300)
+      expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
+
+    it('re-applies next frame when the destination had not finished laying out', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 150, // half-rendered destination
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.restorePosition({ scrollTop: 700, wasAtBottom: false })
+      expect(container.scrollTop).toBe(50) // clamped by the short content
+      setContentHeight(1000) // layout finishes
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(700)
+      s.destroy()
+    })
+
+    it('wasAtBottom restores to the NEW bottom and re-engages the follow', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.unlock()
+      setContentHeight(1600) // the thread grew while the user was away
+      s.restorePosition({ scrollTop: 900, wasAtBottom: true })
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(1500)
+      expect(s.state.locked).toBe(true)
+      s.destroy()
+    })
+
+    it('a second restore supersedes the first one’s deferred re-apply', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.restorePosition({ scrollTop: 300, wasAtBottom: false })
+      s.restorePosition({ scrollTop: 600, wasAtBottom: false })
+      raf.flushFrames() // the first restore's frame must not clobber
+      expect(container.scrollTop).toBe(600)
+      s.destroy()
     })
   })
 })

@@ -21,7 +21,12 @@ export const stickToBottomStrategy: Strategy = {
 
   onContentResize(ctx) {
     if (!ctx.container) return
-    if (ctx.state.locked && ctx.state.streaming) {
+    // `streamingGrace` covers the resize(s) produced by the final
+    // chunk when the consumer flips streaming off in the same tick as
+    // the last append — the growth renders after the flag change and
+    // would otherwise be orphaned above the bottom. See
+    // `setStreaming` in chat-scroll.ts.
+    if (ctx.state.locked && (ctx.state.streaming || ctx.streamingGrace)) {
       ctx.container.scrollTop = ctx.container.scrollHeight
     }
   },

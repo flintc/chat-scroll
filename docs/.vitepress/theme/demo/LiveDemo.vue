@@ -94,15 +94,12 @@ async function switchThread(id: 'a' | 'b'): Promise<void> {
   positions.set(activeThread.value, sc.savePosition())
   activeThread.value = id
   await nextTick()
-  const saved = positions.get(id)
-  if (saved && !saved.wasAtBottom) {
-    // Release the lock so a resize doesn't snap to bottom before the
-    // restore lands on the next frame.
-    sc.unlock()
-    requestAnimationFrame(() => sc.restorePosition(saved))
-  } else {
-    requestAnimationFrame(() => sc.scrollToBottom())
-  }
+  // restorePosition handles the rest: releases the lock so the swap's
+  // resize can't snap to bottom, re-applies after layout settles, and
+  // a wasAtBottom snapshot (or a first visit) lands at the new bottom.
+  sc.restorePosition(
+    positions.get(id) ?? { scrollTop: 0, wasAtBottom: true },
+  )
 }
 
 // ── Actions ───────────────────────────────────────────────────────
@@ -159,12 +156,11 @@ async function reset(): Promise<void> {
   positions.clear()
   activeThread.value = 'a'
   promptIdx.value = 0
+  // reset() re-arms initialPosition's bottom-anchoring, so the panes
+  // land at the latest message once the seeds re-render.
+  await nextTick()
   paneA.value?.scroll.reset()
   paneB.value?.scroll.reset()
-  // Land at the latest message once the seeds have re-rendered.
-  await nextTick()
-  paneA.value?.snapToLatest()
-  paneB.value?.snapToLatest()
 }
 </script>
 
