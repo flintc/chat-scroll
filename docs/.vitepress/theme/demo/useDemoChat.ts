@@ -1,11 +1,22 @@
-import { getCurrentInstance, onBeforeUnmount, ref, type Ref } from 'vue'
+import {
+  getCurrentInstance,
+  onBeforeUnmount,
+  ref,
+  toValue,
+  type MaybeRefOrGetter,
+  type Ref,
+} from 'vue'
 
 import { ASSISTANT_CHUNKS, REASONING_BODY, type DemoMsg } from './data'
 
 export interface UseDemoChatOptions {
   initial?: DemoMsg[]
-  /** Stream cadence — one chunk appended per interval. */
-  intervalMs?: number
+  /**
+   * Stream cadence — one chunk appended per interval. Reactive: a ref
+   * or getter is re-read before every tick, so changing it mid-stream
+   * takes effect on the next chunk (the demos' speed control).
+   */
+  intervalMs?: MaybeRefOrGetter<number>
   /** Give assistant replies a collapsible reasoning block. */
   withBlocks?: boolean
 }
@@ -27,7 +38,7 @@ export interface UseDemoChatReturn {
  * assistant reply chunk-by-chunk until exhausted.
  */
 export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
-  const interval = opts.intervalMs ?? 55
+  const intervalOf = (): number => toValue(opts.intervalMs) ?? 55
   const initial = opts.initial ?? []
   const messages = ref<DemoMsg[]>([...initial])
   const streaming = ref(false)
@@ -35,11 +46,13 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
   let nextId = 1_000_000
   let assistantId: number | null = null
   let chunkIdx = 0
-  let timer: ReturnType<typeof setInterval> | null = null
+  // Self-scheduling timeout (not setInterval) so the cadence is
+  // re-read on every tick — see UseDemoChatOptions.intervalMs.
+  let timer: ReturnType<typeof setTimeout> | null = null
 
   function clearTimer(): void {
     if (timer !== null) {
-      clearInterval(timer)
+      clearTimeout(timer)
       timer = null
     }
   }
@@ -87,6 +100,16 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
     requestAnimationFrame(() => requestAnimationFrame(finalize))
   }
 
+  function scheduleNextChunk(): void {
+    timer = setTimeout(() => {
+      if (appendChunk()) {
+        scheduleNextChunk()
+      } else {
+        finalizeAfterSettle()
+      }
+    }, intervalOf())
+  }
+
   function submit(text: string): void {
     clearTimer()
     chunkIdx = 0
@@ -96,9 +119,7 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
       { id: nextId++, role: 'user', text },
     ]
     streaming.value = true
-    timer = setInterval(() => {
-      if (!appendChunk()) finalizeAfterSettle()
-    }, interval)
+    scheduleNextChunk()
   }
 
   function stop(): void {

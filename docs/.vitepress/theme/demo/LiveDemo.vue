@@ -33,6 +33,18 @@ const paneB = ref<PaneHandle>(null)
 const showGutter = ref(props.gutter)
 const promptIdx = ref(0)
 
+// ── Stream speed ──────────────────────────────────────────────────
+// Token cadence changes which races matter: slow streams make every
+// snap/recalc individually visible; fast streams stress the input-vs-
+// resnap and animation-vs-growth paths. Re-read per chunk, so flipping
+// it mid-stream applies immediately.
+const SPEEDS = [
+  { label: 'slow', ms: 280 },
+  { label: 'normal', ms: 55 },
+  { label: 'fast', ms: 15 },
+] as const
+const speedMs = ref<number>(55)
+
 // ── Per-scenario chat state ───────────────────────────────────────
 let threadSeedId = 5000
 const threadA: DemoMsg[] = [
@@ -52,6 +64,7 @@ const chatA = useDemoChat({
         ? seedStickConversation()
         : seedLongConversation(),
   withBlocks: props.scenario === 'pin-to-top',
+  intervalMs: () => speedMs.value,
 })
 // Second chat: the stick pane of side-by-side (same conversation as the
 // pin pane, so the comparison is apples-to-apples), or thread B.
@@ -62,6 +75,7 @@ const chatB = useDemoChat({
       : props.scenario === 'side-by-side'
         ? seedLongConversation()
         : seedConversation(),
+  intervalMs: () => speedMs.value,
 })
 
 // ── Thread switching (thread-switch scenario) ─────────────────────
@@ -227,6 +241,14 @@ async function reset(): Promise<void> {
         </button>
       </div>
       <span class="live-demo__spacer" />
+      <label class="live-demo__toggle" title="Chunk cadence of the fake stream">
+        Speed
+        <select v-model.number="speedMs" class="live-demo__select">
+          <option v-for="sp in SPEEDS" :key="sp.ms" :value="sp.ms">
+            {{ sp.label }}
+          </option>
+        </select>
+      </label>
       <label v-if="isPin" class="live-demo__toggle">
         <input v-model="showGutter" type="checkbox" />
         Show gutter
@@ -348,6 +370,15 @@ async function reset(): Promise<void> {
   color: var(--vp-c-text-2);
   cursor: pointer;
   user-select: none;
+}
+.live-demo__select {
+  font-size: 0.8125rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 6px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  cursor: pointer;
 }
 .live-demo__panes {
   display: flex;
