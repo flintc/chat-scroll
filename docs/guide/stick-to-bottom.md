@@ -3,7 +3,7 @@
 The classic chat scroll behavior: stay glued to the bottom as new messages
 arrive, but get out of the way when the user scrolls up to read history.
 
-<LiveDemo scenario="stick-to-bottom" caption="Live demo — auto-follow on append. Scrolling up releases the lock; the ↓ button (or a new send) re-engages it." />
+<LiveDemo scenario="stick-to-bottom" caption="Live demo — auto-follow on append. Scrolling up releases the lock; the ↓ button (or a new send) re-engages it. After a stream, expand the Tool call / Reasoning blocks in earlier replies: the streaming gate keeps the controller out of post-stream interaction." />
 
 ## When to use it
 

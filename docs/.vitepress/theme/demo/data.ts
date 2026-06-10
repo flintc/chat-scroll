@@ -54,8 +54,23 @@ export const REASONING_BODY =
   'answer streams in below. The browser primitives (scroll anchoring, ' +
   'ResizeObserver, smooth scrolling) were not designed around either ' +
   'model, which is why a controller has to arbitrate. Expanding or ' +
-  'collapsing this block resizes the content above or below the pin — ' +
-  'watch the scroll position stay put.'
+  'collapsing this block resizes a settled reply — watch your reading ' +
+  'position (or the pin) stay put while it happens.'
+
+/** Body of the collapsible "tool call" block in assistant replies. */
+export const TOOL_CALL_BODY =
+  'search_docs({ query: "scroll anchoring nested containers" })\n\n' +
+  '→ 3 results\n' +
+  '  1. CSS Scroll Anchoring — overflow-anchor and why it picks\n' +
+  '     arbitrary anchor nodes inside chat transcripts\n' +
+  '  2. ResizeObserver timing — callbacks fire after layout, so a\n' +
+  '     clamp can land a frame before you can correct it\n' +
+  '  3. scrollTop clamping — writes past scrollHeight − clientHeight\n' +
+  '     are silently clamped; grow the scroll range first\n\n' +
+  'This block is here so you can resize a *completed* reply: expand ' +
+  'it mid-stream in the pin demo and the pinned turn below holds; ' +
+  'expand it after a stream in the stick demo and nothing yanks you ' +
+  'to the bottom.'
 
 export interface DemoMsg {
   id: number
@@ -93,10 +108,15 @@ export function seedConversation(): DemoMsg[] {
  * (`pinRelative`) has somewhere to go.
  */
 export function seedLongConversation(): DemoMsg[] {
-  const mk = (role: DemoMsg['role'], text: string): DemoMsg => ({
+  const mk = (
+    role: DemoMsg['role'],
+    text: string,
+    block?: DemoMsg['block'],
+  ): DemoMsg => ({
     id: ++seedId,
     role,
     text,
+    ...(block ? { block } : {}),
   })
   return [
     mk('user', 'What does this library actually do?'),
@@ -106,6 +126,7 @@ export function seedLongConversation(): DemoMsg[] {
         'strategy — stick-to-bottom for group chat, pin-to-top for AI ' +
         'chat — and it handles streaming growth, user interruptions, ' +
         'expandable blocks, and thread switches without fighting the user.',
+      { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
     ),
     mk('user', 'Which strategy should a group chat use?'),
     mk(
@@ -128,6 +149,7 @@ export function seedLongConversation(): DemoMsg[] {
         'Because every user turn is an anchor, prev/next navigation ' +
         'falls out for free: pinRelative() hops the pin between turns — ' +
         'try the ‹ › buttons above.',
+      { title: 'Reasoning', body: REASONING_BODY },
     ),
     mk('user', 'How does prev/next decide where to go?'),
     mk(
@@ -164,10 +186,15 @@ export function seedLongConversation(): DemoMsg[] {
  * behavior is visible from the first interaction.
  */
 export function seedStickConversation(): DemoMsg[] {
-  const mk = (role: DemoMsg['role'], text: string): DemoMsg => ({
+  const mk = (
+    role: DemoMsg['role'],
+    text: string,
+    block?: DemoMsg['block'],
+  ): DemoMsg => ({
     id: ++seedId,
     role,
     text,
+    ...(block ? { block } : {}),
   })
   return [
     mk('user', 'What does stick-to-bottom actually do?'),
@@ -177,6 +204,7 @@ export function seedStickConversation(): DemoMsg[] {
         'message (or stream chunk) pushes older content up and the ' +
         'viewport stays glued to the newest line — the group-chat ' +
         'contract.',
+      { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
     ),
     mk('user', 'And when I scroll up to read something older?'),
     mk(
@@ -205,7 +233,12 @@ export function seedStickConversation(): DemoMsg[] {
       'assistant',
       'Post-stream interaction is yours. The auto-snap is gated on ' +
         'streaming, so expanding a collapsible block in a completed ' +
-        'reply never drags the viewport to the bottom.',
+        'reply never drags the viewport to the bottom.\n\n' +
+        'Prove it here: scroll up and open the "Tool call" or ' +
+        '"Reasoning" blocks in the earlier replies. The content grows, ' +
+        'the controller stays out of it, and your reading position ' +
+        'holds.',
+      { title: 'Reasoning', body: REASONING_BODY },
     ),
   ]
 }

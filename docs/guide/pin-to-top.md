@@ -4,7 +4,7 @@ The pattern made popular by ChatGPT, Claude, and Gemini: when the user sends
 a message, it pins to the top of the viewport so the assistant's response
 streams in directly below.
 
-<LiveDemo scenario="pin-to-top" caption="Live demo — send a message: it pins to the top while the response streams in below. Toggle the reasoning block mid-stream and the pin holds. ‹ Prev / Next › hop the pin between user turns (pinRelative)." />
+<LiveDemo scenario="pin-to-top" caption="Live demo — send a message: it pins to the top while the response streams in below. Expand the Tool call / Reasoning blocks in earlier replies mid-stream — content above the pin resizes and the pin holds. ‹ Prev / Next › hop the pin between user turns (pinRelative)." />
 
 ## When to use it
 

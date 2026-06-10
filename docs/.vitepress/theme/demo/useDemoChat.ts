@@ -47,10 +47,7 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
 
   function appendChunk(): boolean {
     const chunk = ASSISTANT_CHUNKS[chunkIdx]
-    if (chunk === undefined) {
-      finalize()
-      return false
-    }
+    if (chunk === undefined) return false
     if (assistantId === null) {
       assistantId = nextId++
       messages.value = [
@@ -71,17 +68,23 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
       )
     }
     chunkIdx += 1
-    if (chunkIdx >= ASSISTANT_CHUNKS.length) {
-      finalize()
-      return false
-    }
-    return true
+    return chunkIdx < ASSISTANT_CHUNKS.length
   }
 
   function finalize(): void {
     clearTimer()
     streaming.value = false
     assistantId = null
+  }
+
+  // Flip `streaming` only after the final growth has rendered AND the
+  // controller's resize pass has followed it: stick-to-bottom snaps
+  // only while streaming, so finalizing synchronously with the last
+  // chunk orphans that growth above the bottom. Render + RO happen in
+  // the first frame, finalize in the second.
+  function finalizeAfterSettle(): void {
+    clearTimer()
+    requestAnimationFrame(() => requestAnimationFrame(finalize))
   }
 
   function submit(text: string): void {
@@ -94,16 +97,19 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
     ]
     streaming.value = true
     timer = setInterval(() => {
-      appendChunk()
+      if (!appendChunk()) finalizeAfterSettle()
     }, interval)
   }
 
   function stop(): void {
     if (!streaming.value) return
-    // Flush the remaining chunks in one go, then finalize.
+    clearTimer()
+    // Flush the remaining chunks in one go, then finalize after the
+    // burst has been followed.
     while (appendChunk()) {
-      // appendChunk advances chunkIdx; loop ends via finalize()
+      // appendChunk advances chunkIdx until the reply is exhausted
     }
+    finalizeAfterSettle()
   }
 
   function reset(): void {
