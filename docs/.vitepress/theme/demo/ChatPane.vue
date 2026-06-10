@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useChatScroll } from '@chat-scroll/vue'
 import type { ChatScrollStrategy } from '@chat-scroll/vue'
 
@@ -17,6 +18,8 @@ const props = defineProps<{
 
 const TURNS = '[data-role="user"]'
 
+const emit = defineEmits<{ (e: 'scroll'): void }>()
+
 const scroll = useChatScroll({
   strategy: props.strategy,
   // Reactive getter — the adapter mirrors it into setStreaming().
@@ -27,11 +30,21 @@ const scroll = useChatScroll({
 })
 const { state, containerRef, contentRef, scrollToBottom } = scroll
 
+// The adapter keeps the container element private — hold our own
+// alongside its callback ref for parents that need raw geometry
+// (the infinite-history demo's fetch threshold + prepend compensation).
+const chatEl = shallowRef<HTMLElement | null>(null)
+const setContainer = (el: Element | ComponentPublicInstance | null): void => {
+  chatEl.value = el instanceof HTMLElement ? el : null
+  containerRef(el)
+}
+
 // Re-evaluate the nav computed on raw scroll position changes — the
 // library's state only commits on semantic changes (atBottom etc.).
 const scrollTick = ref(0)
 const onPaneScroll = (): void => {
   scrollTick.value++
+  emit('scroll')
 }
 
 /**
@@ -64,16 +77,35 @@ function navTo(direction: -1 | 1): boolean {
     return scroll.pinRelative(TURNS, direction)
   }
   if (direction === 1 && state.value.atBottom) return false
-  const target = scroll.relativeMessage(TURNS, direction)
+  let target = scroll.relativeMessage(TURNS, direction)
   if (!target) return false
+  const el = chatEl.value
+  if (direction === -1 && el && state.value.atBottom) {
+    // Short messages can pack several turns inside the at-bottom
+    // threshold — from the bottom, walk up until the jump is actually
+    // visible (same rule as the virtualization demo). 12 = the
+    // default scrollMargin scrollToMessage lands with.
+    const turns = Array.from(el.querySelectorAll<HTMLElement>(TURNS))
+    const landing = (t: HTMLElement): number =>
+      t.getBoundingClientRect().top -
+      el.getBoundingClientRect().top +
+      el.scrollTop -
+      12
+    let i = turns.indexOf(target)
+    while (i > 0 && landing(turns[i] as HTMLElement) > el.scrollTop - 48) {
+      i -= 1
+    }
+    target = turns[i] ?? target
+  }
   // Releases the follow and resolves rapid clicks against the
   // in-flight target — see the message-navigation recipe.
   scroll.scrollToMessage(target)
   return true
 }
 
-// Parent components (LiveDemo) drive pinning / locking / save-restore.
-defineExpose({ scroll, nav, navTo })
+// Parent components (LiveDemo, InfiniteDemo) drive pinning / locking /
+// save-restore / history paging.
+defineExpose({ scroll, nav, navTo, chatEl })
 </script>
 
 <template>
@@ -86,13 +118,14 @@ defineExpose({ scroll, nav, navTo })
       <div
         class="ld-chat"
         :class="{ 'ld-chat--show-gutter': showGutter }"
-        :ref="containerRef"
+        :ref="setContainer"
         tabindex="0"
         role="log"
         :aria-label="label ? `Conversation — ${label}` : 'Conversation'"
         @scroll.passive="onPaneScroll"
       >
         <div class="ld-messages" :ref="contentRef">
+          <slot name="top" />
           <div
             v-for="m in messages"
             :key="m.id"
@@ -100,9 +133,13 @@ defineExpose({ scroll, nav, navTo })
             :class="`ld-msg--${m.role}`"
             :data-role="m.role"
           >
-            <details v-if="m.block" class="ld-block">
-              <summary>{{ m.block.title }}</summary>
-              <div class="ld-block__body">{{ m.block.body }}</div>
+            <details
+              v-for="(b, bi) in m.blocks"
+              :key="bi"
+              class="ld-block"
+            >
+              <summary>{{ b.title }}</summary>
+              <div class="ld-block__body">{{ b.body }}</div>
             </details>
             <div class="ld-msg__text">{{ m.text }}</div>
           </div>

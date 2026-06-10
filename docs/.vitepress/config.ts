@@ -146,6 +146,10 @@ export default defineConfig({
               text: 'Virtualized lists (TanStack)',
               link: '/recipes/virtualization',
             },
+            {
+              text: 'Infinite history (TanStack Query)',
+              link: '/recipes/infinite-history',
+            },
           ],
         },
       ],

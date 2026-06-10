@@ -69,8 +69,8 @@ export interface DemoMsg {
   id: number
   role: 'user' | 'assistant'
   text: string
-  /** Optional collapsible reasoning block rendered above the text. */
-  block?: { title: string; body: string }
+  /** Collapsible blocks (reasoning, tool calls) rendered above the text. */
+  blocks?: { title: string; body: string }[]
 }
 
 let seedId = 0
@@ -104,12 +104,12 @@ export function seedLongConversation(): DemoMsg[] {
   const mk = (
     role: DemoMsg['role'],
     text: string,
-    block?: DemoMsg['block'],
+    blocks?: DemoMsg['blocks'],
   ): DemoMsg => ({
     id: ++seedId,
     role,
     text,
-    ...(block ? { block } : {}),
+    ...(blocks ? { blocks } : {}),
   })
   return [
     mk('user', 'What does this library actually do?'),
@@ -119,7 +119,7 @@ export function seedLongConversation(): DemoMsg[] {
         'strategy — stick-to-bottom for group chat, pin-to-top for AI ' +
         'chat — and it handles streaming growth, user interruptions, ' +
         'expandable blocks, and thread switches without fighting the user.',
-      { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
+      [{ title: 'Tool call · search_docs', body: TOOL_CALL_BODY }],
     ),
     mk('user', 'Which strategy should a group chat use?'),
     mk(
@@ -141,7 +141,7 @@ export function seedLongConversation(): DemoMsg[] {
         'the answer fills in.\n\n' +
         'Since every question is an anchor, the ‹ › buttons below hop ' +
         'between turns for free.',
-      { title: 'Reasoning', body: REASONING_BODY },
+      [{ title: 'Reasoning', body: REASONING_BODY }],
     ),
     mk('user', 'How does prev/next decide where to go?'),
     mk(
@@ -179,12 +179,12 @@ export function seedStickConversation(): DemoMsg[] {
   const mk = (
     role: DemoMsg['role'],
     text: string,
-    block?: DemoMsg['block'],
+    blocks?: DemoMsg['blocks'],
   ): DemoMsg => ({
     id: ++seedId,
     role,
     text,
-    ...(block ? { block } : {}),
+    ...(blocks ? { blocks } : {}),
   })
   return [
     mk('user', 'What does stick-to-bottom actually do?'),
@@ -194,7 +194,7 @@ export function seedStickConversation(): DemoMsg[] {
         'message (or stream chunk) pushes older content up and the ' +
         'viewport stays glued to the newest line — the group-chat ' +
         'contract.',
-      { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
+      [{ title: 'Tool call · search_docs', body: TOOL_CALL_BODY }],
     ),
     mk('user', 'And when I scroll up to read something older?'),
     mk(
@@ -220,7 +220,7 @@ export function seedStickConversation(): DemoMsg[] {
       'Once the stream ends, the viewport is yours. Scroll up and ' +
         'open the "Tool call" or "Reasoning" blocks in the earlier ' +
         'replies — the content grows, and your reading position holds.',
-      { title: 'Reasoning', body: REASONING_BODY },
+      [{ title: 'Reasoning', body: REASONING_BODY }],
     ),
     mk('user', 'Can I jump between questions here too?'),
     mk(
@@ -285,6 +285,42 @@ export function seedHugeConversation(count: number): DemoMsg[] {
       // Deterministic variety (no RNG): step through lines co-prime
       // to the array length so neighbors rarely repeat.
       text: LINES[(i * 3) % LINES.length] as string,
+    })
+  }
+  return out
+}
+
+/**
+ * Simulated server-paged history for the infinite-history demo.
+ * Page 0 is the oldest; ids are stable per message so pages can load
+ * in any order. Each message carries its global number so prepends
+ * are legible — you can see exactly which page just arrived above.
+ */
+export const HISTORY_PAGES = 12
+export const HISTORY_PER_PAGE = 10
+
+export function seedHistoryPage(page: number): DemoMsg[] {
+  const LINES = [
+    'Quick check — did the export finish overnight?',
+    'It did. All 40k rows landed; the two retries were transient ' +
+      'timeouts, nothing dropped.',
+    'Worth adding an alert for those retries?',
+    'Probably a counter, not an alert — they self-heal. I will add a ' +
+      'dashboard panel so we can watch the trend instead.',
+    'Sounds right. What about the staging deploy?',
+    'Staging is green. One flaky e2e spec, rerun passed — I filed it ' +
+      'so it does not get lost.',
+    'Can you link the run here when you get a sec?',
+    'Linked in the thread above. Short version: 14 minutes end to ' +
+      'end, cache hit rate back over 90% after the runner image fix.',
+  ]
+  const out: DemoMsg[] = []
+  for (let i = 0; i < HISTORY_PER_PAGE; i++) {
+    const n = page * HISTORY_PER_PAGE + i
+    out.push({
+      id: 9_000_000 + n,
+      role: n % 2 === 0 ? 'user' : 'assistant',
+      text: `#${n + 1} · ${LINES[n % LINES.length]}`,
     })
   }
   return out

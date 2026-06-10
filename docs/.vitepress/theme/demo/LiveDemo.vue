@@ -89,7 +89,10 @@ const chatA = useDemoChat({
       : props.scenario === 'stick-to-bottom'
         ? seedStickConversation()
         : seedLongConversation(),
-  withBlocks: props.scenario === 'pin-to-top',
+  // Streamed replies carry collapsible Reasoning + Tool call blocks —
+  // resizable content the strategies must absorb without moving the
+  // reader.
+  withBlocks: true,
   intervalMs: () => speedMs.value,
 })
 // Second chat: the stick pane of side-by-side (same conversation as the
@@ -101,6 +104,7 @@ const chatB = useDemoChat({
       : props.scenario === 'side-by-side'
         ? seedLongConversation()
         : seedConversation(),
+  withBlocks: true,
   intervalMs: () => speedMs.value,
 })
 

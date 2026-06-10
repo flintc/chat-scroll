@@ -17,3 +17,4 @@ streaming-option syntax.
 | [Tight pin (sub-pixel)](./tight-pin)                    | Stabilize the scrollbar for an exact pin under `overflow-y: auto`. |
 | [Prev / next navigation](./message-navigation)          | `cmd+↑` / `cmd+↓` to step between user turns with `pinRelative`. |
 | [Virtualized lists (TanStack)](./virtualization)        | Stick-to-bottom and pin-to-top over a windowed 5,000-message history with `@tanstack/virtual`. |
+| [Infinite history (TanStack Query)](./infinite-history) | Bidirectional `useInfiniteQuery` paging with prepend scroll compensation. |

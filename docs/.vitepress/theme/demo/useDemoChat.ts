@@ -7,7 +7,12 @@ import {
   type Ref,
 } from 'vue'
 
-import { ASSISTANT_CHUNKS, REASONING_BODY, type DemoMsg } from './data'
+import {
+  ASSISTANT_CHUNKS,
+  REASONING_BODY,
+  TOOL_CALL_BODY,
+  type DemoMsg,
+} from './data'
 
 export interface UseDemoChatOptions {
   initial?: DemoMsg[]
@@ -17,7 +22,7 @@ export interface UseDemoChatOptions {
    * takes effect on the next chunk (the demos' speed control).
    */
   intervalMs?: MaybeRefOrGetter<number>
-  /** Give assistant replies a collapsible reasoning block. */
+  /** Give assistant replies collapsible reasoning + tool-call blocks. */
   withBlocks?: boolean
 }
 
@@ -70,7 +75,12 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
           role: 'assistant',
           text: chunk,
           ...(opts.withBlocks
-            ? { block: { title: 'Reasoning', body: REASONING_BODY } }
+            ? {
+                blocks: [
+                  { title: 'Reasoning', body: REASONING_BODY },
+                  { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
+                ],
+              }
             : {}),
         },
       ]
