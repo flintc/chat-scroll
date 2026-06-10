@@ -2,17 +2,19 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import ChatPane from './ChatPane.vue'
-import { PROMPTS, seedConversation } from './data'
+import { PROMPTS, seedConversation, seedStickConversation } from './data'
 import { useDemoChat } from './useDemoChat'
 
 const props = withDefaults(
   defineProps<{
+    strategy?: 'pin-to-top' | 'stick-to-bottom'
     caption?: string
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { height: 420 },
+  { strategy: 'pin-to-top', height: 420 },
 )
+const isPin = props.strategy === 'pin-to-top'
 
 const STATUS_LINES = [
   'Searching the docs…',
@@ -47,7 +49,9 @@ const lines = computed<readonly string[]>(() =>
 )
 
 const chat = useDemoChat({
-  initial: seedConversation(),
+  // The stick variant needs overflow from the start so the follow is
+  // visible on the first send.
+  initial: isPin ? seedConversation() : seedStickConversation(),
   withBlocks: true,
   // The "agent is working" window before the first reply chunk — the
   // status lines below cycle through it.
@@ -86,7 +90,11 @@ function send(): void {
   const prompt = PROMPTS[promptIdx.value % PROMPTS.length]
   promptIdx.value += 1
   chat.submit(prompt)
-  pane.value?.scroll.pinLatest('[data-role="user"]')
+  if (isPin) {
+    pane.value?.scroll.pinLatest('[data-role="user"]')
+  } else {
+    pane.value?.scroll.lock()
+  }
 }
 
 async function reset(): Promise<void> {
@@ -101,8 +109,11 @@ async function reset(): Promise<void> {
   <figure class="agent-demo">
     <div class="agent-demo__settings">
       <span class="agent-demo__hint">
-        Send, then watch the status lines — the pinned question never
-        moves.
+        {{
+          isPin
+            ? 'Send, then watch the status lines — the pinned question never moves.'
+            : 'Send, then watch the follow keep the newest status in view.'
+        }}
       </span>
       <span class="agent-demo__spacer" />
       <label class="agent-demo__toggle">
@@ -117,10 +128,10 @@ async function reset(): Promise<void> {
     <div class="agent-demo__surface" :style="{ height: `${height}px` }">
       <ChatPane
         ref="pane"
-        strategy="pin-to-top"
+        :strategy="strategy"
         :messages="chat.messages.value"
         :streaming="chat.streaming.value"
-        show-gutter
+        :show-gutter="isPin"
       >
         <template #bottom>
           <!-- Fixed mode: a FIXED-HEIGHT slot whose lines animate with
@@ -144,9 +155,14 @@ async function reset(): Promise<void> {
               </span>
             </Transition>
           </div>
+          <!-- Under stick-to-bottom the bottom anchor must shift the
+               transcript when the last element resizes — so the
+               variable area is capped there: max-height + an inner
+               scroll region, which never touches the outer layout. -->
           <div
             v-else-if="working"
             class="agent-demo__slot agent-demo__slot--auto"
+            :class="{ 'agent-demo__slot--capped': !isPin }"
             aria-live="polite"
           >
             <span :key="statusIdx" class="agent-demo__line-auto">
@@ -258,6 +274,13 @@ async function reset(): Promise<void> {
 .agent-demo__slot--auto {
   height: auto;
   overflow: visible;
+}
+/* Stick variant: cap the variable area — growth past ~5 lines scrolls
+   inside the slot instead of shifting the bottom-anchored transcript
+   further. */
+.agent-demo__slot--capped {
+  max-height: 6.2rem;
+  overflow-y: auto;
 }
 .agent-demo__line-auto {
   display: block;

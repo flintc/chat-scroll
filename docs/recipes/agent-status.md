@@ -35,7 +35,9 @@ fade-in). And under `stick-to-bottom` *at the bottom*, a resizing
 last element must visibly shift the transcript — that's the bottom
 anchor doing its job. There, prefer the fixed slot, or cap the area
 with `max-height` plus internal `overflow-y: auto` (an inner scroll
-region never touches the outer layout).
+region never touches the outer layout):
+
+<AgentDemo strategy="stick-to-bottom" :height="380" caption="The same pattern under stick-to-bottom: the follow keeps the newest status in view; with the fixed slot nothing else moves. Toggle Variable-height statuses to see the trade-off — growth shifts the bottom-anchored transcript, capped at ~5 lines by an inner scroll region. Scroll up mid-run and the statuses stop touching you entirely." />
 
 ## The wiring
 
