@@ -103,6 +103,24 @@ is fixed, so neither variant moves the transcript.
 
 ## Notes
 
+- **Long statuses wrap — fixed height doesn't mean one line.** Size
+  the slot for your longest expected line count and clamp the text so
+  an outlier truncates with an ellipsis instead of clipping
+  mid-glyph (the demo's slot is two lines tall, and one of its
+  statuses wraps):
+
+  ```css
+  .status-slot { height: 2.5rem; } /* two lines */
+  .status-line {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  ```
+
+  If statuses are always short, the single-line version is simpler:
+  `white-space: nowrap; text-overflow: ellipsis; overflow: hidden`.
 - **Keeping a permanent record?** If the steps collapse into a
   "Ran 4 steps" disclosure instead of disappearing, that's settled
   content resizing — both strategies already absorb expand/collapse

@@ -17,6 +17,9 @@ const props = withDefaults(
 const STATUS_LINES = [
   'Searching the docs…',
   'Reading 3 results…',
+  // Deliberately long — wraps to two lines inside the fixed slot.
+  'Cross-checking the gutter math against the ResizeObserver timing ' +
+    'notes from the scroll-anchoring spec…',
   'Comparing the two strategies…',
   'Drafting the answer…',
 ] as const
@@ -102,7 +105,9 @@ async function reset(): Promise<void> {
           <div v-if="working" class="agent-demo__slot" aria-live="polite">
             <Transition name="agent-status">
               <span :key="statusIdx" class="agent-demo__line">
-                {{ STATUS_LINES[statusIdx] }}
+                <span class="agent-demo__line-text">
+                  {{ STATUS_LINES[statusIdx] }}
+                </span>
               </span>
             </Transition>
           </div>
@@ -180,10 +185,12 @@ async function reset(): Promise<void> {
 
 /* Fixed height + overflow hidden: the slot never participates in
    layout changes. Lines are absolutely positioned so enter/leave
-   overlap without affecting flow. */
+   overlap without affecting flow. Two lines tall — sized for the
+   longest status — with a clamp so an outlier truncates with an
+   ellipsis instead of clipping mid-glyph. */
 .agent-demo__slot {
   position: relative;
-  height: 1.625rem;
+  height: 2.5rem;
   overflow: hidden;
   align-self: flex-start;
   width: 70%;
@@ -196,6 +203,14 @@ async function reset(): Promise<void> {
   font-size: 0.75rem;
   font-style: italic;
   color: var(--vp-c-text-2);
+}
+.agent-demo__line-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.45;
 }
 .agent-status-enter-active,
 .agent-status-leave-active {
