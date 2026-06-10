@@ -211,6 +211,83 @@ describe('createChatScroll', () => {
       expect(s.state.atBottom).toBe(true)
       s.destroy()
     })
+
+    it('gutter slack does not count — atBottom means the end of the CONTENT is in reach', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 800,
+      })
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.mount(container, content)
+      // Library-owned slack below the content (what an in-flight floor
+      // leaves behind). The content's end is at 800; the user at 200
+      // sees it at the viewport's bottom edge — they ARE at the bottom
+      // of the conversation, even though 300px of gutter remain
+      // scrollable below it.
+      const gutter = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
+      gutter.style.height = '300px'
+      setScrollTop(200)
+      flushScroll()
+      expect(s.state.atBottom).toBe(true)
+      // Scrolled up: the content's end leaves the viewport → false.
+      setScrollTop(100)
+      flushScroll()
+      expect(s.state.atBottom).toBe(false)
+      s.destroy()
+    })
+
+    it('atBottom holds through mid-animation growth under the gutter floor (FAB flicker)', () => {
+      // Regression: send → pinLatest → animation toward the pin while
+      // the reply streams in. The no-shrink floor keeps the gutter
+      // slack during the flight, so a scrollHeight-based measure flaps
+      // with every chunk — the scroll-to-bottom FAB flickered in the
+      // docs demo. Measured against the content's end it stays true:
+      // the user never loses sight of the latest content.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const {
+        container,
+        content,
+        setContentHeight,
+        setScrollTop,
+        flushScroll,
+        resizeContent,
+      } = buildScrollDom({ clientHeight: 600, contentHeight: 800 })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 700,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'smooth',
+      })
+      s.mount(container, content)
+      setScrollTop(200) // at the bottom (800 - 600)
+      flushScroll()
+      expect(s.state.atBottom).toBe(true)
+
+      s.pinMessage(msg)
+      raf.flushFrames() // measurement frame: gutter 488, animation queued
+      expect(s.state.scrollInFlight).toBe(true)
+      expect(container.scrollTop).toBe(200) // not stepped yet
+
+      // A chunk lands mid-flight. Tight gutter would now be 468, but
+      // the floor holds 488 — scrollHeight grows by the chunk.
+      setContentHeight(820)
+      resizeContent()
+      // scrollHeight 1308, slack 488 → 20px from the content's end.
+      expect(s.state.atBottom).toBe(true)
+      s.destroy()
+    })
   })
 
   describe('subscribe / onScrollChange', () => {

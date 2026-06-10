@@ -28,6 +28,10 @@ content. Use it to show / hide a scroll-to-bottom affordance.
 {!state.atBottom && <button onClick={scrollToBottom}>↓</button>}
 ```
 
+The gutter doesn't count: while a pinned message streams a short
+response, the end of the conversation is on screen even though
+scrollable slack remains below it — `atBottom` stays `true`.
+
 ## `pinActive`
 
 - **Type:** `boolean`

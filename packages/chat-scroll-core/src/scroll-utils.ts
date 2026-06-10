@@ -20,14 +20,21 @@ export function resolveScrollBehavior(
 /**
  * True when the container is within `threshold` px of its bottom.
  * `scrollHeight - scrollTop - clientHeight` is the remaining
- * scroll distance.
+ * scroll distance. `endSlack` is subtracted from `scrollHeight`
+ * first — the controller passes the gutter's current height, so
+ * "bottom" always means the end of the *content*, not the end of
+ * controller-owned slack below it.
  */
 export function isAtBottom(
   container: HTMLElement,
   threshold: number,
+  endSlack = 0,
 ): boolean {
   return (
-    container.scrollHeight - container.scrollTop - container.clientHeight <=
+    container.scrollHeight -
+      endSlack -
+      container.scrollTop -
+      container.clientHeight <=
     threshold
   )
 }

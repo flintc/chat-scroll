@@ -23,7 +23,7 @@ const props = withDefaults(
     /** Start with the gutter visualization on (pin scenarios). */
     gutter?: boolean
   }>(),
-  { height: 480, gutter: false },
+  { height: 480, gutter: true },
 )
 
 type PaneHandle = InstanceType<typeof ChatPane> | null
@@ -143,8 +143,10 @@ function finish(): void {
 // the latest turn clamps at the real bottom (no gutter). The
 // reference point is the turn the reader is at in both cases.
 // Disabled states come from the pane's `nav` mirror of that rule.
+// Side-by-side drives both panes, each from its own reference.
 function navTurn(direction: -1 | 1): void {
   paneA.value?.navTo(direction)
+  if (props.scenario === 'side-by-side') paneB.value?.navTo(direction)
 }
 const navState = computed(
   () => paneA.value?.nav ?? { prev: false, next: false, pos: '' },
@@ -166,7 +168,7 @@ async function reset(): Promise<void> {
 
 <template>
   <figure class="live-demo">
-    <div class="live-demo__toolbar">
+    <div class="live-demo__settings">
       <template v-if="scenario === 'thread-switch'">
         <div class="live-demo__tabs" role="tablist" aria-label="Threads">
           <button
@@ -189,49 +191,6 @@ async function reset(): Promise<void> {
           </button>
         </div>
       </template>
-      <button
-        type="button"
-        class="live-demo__btn live-demo__btn--primary live-demo__btn--action"
-        @click="streaming ? finish() : send()"
-      >
-        {{ streaming ? 'Finish stream' : 'Send a message' }}
-      </button>
-      <div
-        v-if="scenario !== 'thread-switch'"
-        class="live-demo__nav"
-        role="group"
-        aria-label="Navigate between user turns"
-      >
-        <button
-          type="button"
-          class="live-demo__btn"
-          :title="
-            isPin
-              ? 'Pin the previous user turn (pinRelative -1)'
-              : 'Scroll the previous user turn to the top'
-          "
-          :disabled="!navState.prev"
-          @click="navTurn(-1)"
-        >
-          ‹ Prev
-        </button>
-        <span class="live-demo__nav-pos" aria-label="Current turn">
-          {{ navState.pos || '–' }}
-        </span>
-        <button
-          type="button"
-          class="live-demo__btn"
-          :title="
-            isPin
-              ? 'Pin the next user turn (pinRelative +1)'
-              : 'Scroll the next user turn to the top'
-          "
-          :disabled="!navState.next"
-          @click="navTurn(1)"
-        >
-          Next ›
-        </button>
-      </div>
       <span class="live-demo__spacer" />
       <label class="live-demo__toggle" title="Chunk cadence of the fake stream">
         Speed
@@ -278,6 +237,51 @@ async function reset(): Promise<void> {
       />
     </div>
 
+    <div class="live-demo__actions">
+      <button
+        type="button"
+        class="live-demo__btn live-demo__btn--primary live-demo__btn--action"
+        @click="streaming ? finish() : send()"
+      >
+        {{ streaming ? 'Finish stream' : 'Send a message' }}
+      </button>
+      <div
+        class="live-demo__nav"
+        role="group"
+        aria-label="Navigate between user turns"
+      >
+        <button
+          type="button"
+          class="live-demo__btn"
+          :title="
+            isPin
+              ? 'Pin the previous user turn (pinRelative -1)'
+              : 'Scroll the previous user turn to the top'
+          "
+          :disabled="!navState.prev"
+          @click="navTurn(-1)"
+        >
+          ‹ Prev
+        </button>
+        <span class="live-demo__nav-pos" aria-label="Current turn">
+          {{ navState.pos || '–' }}
+        </span>
+        <button
+          type="button"
+          class="live-demo__btn"
+          :title="
+            isPin
+              ? 'Pin the next user turn (pinRelative +1)'
+              : 'Scroll the next user turn to the top'
+          "
+          :disabled="!navState.next"
+          @click="navTurn(1)"
+        >
+          Next ›
+        </button>
+      </div>
+    </div>
+
     <figcaption v-if="caption">{{ caption }}</figcaption>
   </figure>
 </template>
@@ -290,12 +294,20 @@ async function reset(): Promise<void> {
   padding: 0.875rem;
   background: var(--vp-c-bg-soft);
 }
-.live-demo__toolbar {
+.live-demo__settings {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
   padding-bottom: 0.75rem;
+}
+.live-demo__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
 }
 .live-demo__spacer {
   flex: 1;
@@ -401,12 +413,6 @@ async function reset(): Promise<void> {
        height — no scroll viewport, nothing to demo. Pin the basis. */
     flex: 0 0 380px;
     height: 380px;
-  }
-  /* Two deterministic toolbar rows: actions, then settings. The
-     spacer becomes the row break. */
-  .live-demo__spacer {
-    flex: 0 0 100%;
-    height: 0;
   }
   .live-demo__btn,
   .live-demo__toggle,

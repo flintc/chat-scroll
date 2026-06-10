@@ -577,6 +577,18 @@ export function createChatScroll(
     })
   }
 
+  // `atBottom` means "the end of the CONTENT is within reach" — the
+  // gutter is controller-owned slack below the content and doesn't
+  // count. Measuring against raw scrollHeight would make `atBottom`
+  // flap during an in-flight pin animation: the no-shrink floor keeps
+  // the gutter slack while streamed chunks land, so the scrollHeight
+  // distance oscillates around the threshold even though the user
+  // never loses sight of the content's end.
+  function measureAtBottom(container: HTMLElement): boolean {
+    const slack = ctx.gutter ? parseFloat(ctx.gutter.style.height) || 0 : 0
+    return isAtBottom(container, options.bottomThreshold, slack)
+  }
+
   // ── Public API ──────────────────────────────────────────────────
   function mount(container: HTMLElement, content: HTMLElement): void {
     if (ctx.container === container && ctx.content === content) return
@@ -610,7 +622,7 @@ export function createChatScroll(
       if (!ctx.container) return
       const now = ctx.container.scrollTop
       const sh = ctx.container.scrollHeight
-      internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
+      internal.atBottom = measureAtBottom(ctx.container)
       // Detect "consumer scrolled the container away from the pin" — a
       // host-app call to `container.scrollTo()` / `scrollBy()` /
       // `scrollIntoView()` that didn't go through the controller. The
@@ -688,10 +700,7 @@ export function createChatScroll(
           ctx.container.scrollTop = ctx.container.scrollHeight
         }
         if (ctx.container) {
-          internal.atBottom = isAtBottom(
-            ctx.container,
-            options.bottomThreshold,
-          )
+          internal.atBottom = measureAtBottom(ctx.container)
         }
         commit()
       })
@@ -719,7 +728,7 @@ export function createChatScroll(
     // user's take-over from the delta-gated checks.
     lastSeenScrollTop = container.scrollTop
     lastSeenScrollHeight = container.scrollHeight
-    internal.atBottom = isAtBottom(container, options.bottomThreshold)
+    internal.atBottom = measureAtBottom(container)
     internal.locked = options.strategy === 'stick-to-bottom'
     if (internal.streaming) container.style.overflowAnchor = 'none'
     commit()
@@ -1106,7 +1115,7 @@ export function createChatScroll(
       ctx.container.scrollTop = ctx.container.scrollHeight
     }
     if (ctx.container) {
-      internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
+      internal.atBottom = measureAtBottom(ctx.container)
     }
     commit()
   }
@@ -1118,7 +1127,7 @@ export function createChatScroll(
     const c = ctx.container
     return {
       scrollTop: c.scrollTop,
-      wasAtBottom: isAtBottom(c, options.bottomThreshold),
+      wasAtBottom: measureAtBottom(c),
     }
   }
 
@@ -1163,7 +1172,7 @@ export function createChatScroll(
       restoreFrame = null
       apply()
       if (ctx.container) {
-        internal.atBottom = isAtBottom(ctx.container, options.bottomThreshold)
+        internal.atBottom = measureAtBottom(ctx.container)
       }
       commit()
     })

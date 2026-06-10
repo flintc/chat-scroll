@@ -74,7 +74,12 @@ export interface ChatScrollOptions {
 }
 
 export interface ChatScrollState {
-  /** True when the user is within `bottomThreshold` of the end. */
+  /**
+   * True when the user is within `bottomThreshold` of the end of the
+   * content. The gutter doesn't count — while pinned with a short
+   * response, the end of the conversation is on screen even though
+   * scrollable slack remains below it.
+   */
   atBottom: boolean
   /**
    * True while a pin-to-top message is set — i.e. the controller has

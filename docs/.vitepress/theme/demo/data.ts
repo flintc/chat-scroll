@@ -47,30 +47,23 @@ export const ASSISTANT_CHUNKS: readonly string[] = [
 
 /** Body of the collapsible "reasoning" block in assistant replies. */
 export const REASONING_BODY =
-  'Considering the two dominant interaction models for streaming chat. ' +
-  'Group messaging anchors attention to the newest line, so the viewport ' +
-  'should follow growth. Long-form assistants anchor attention to the ' +
-  'question being answered, so the viewport should hold still while the ' +
-  'answer streams in below. The browser primitives (scroll anchoring, ' +
-  'ResizeObserver, smooth scrolling) were not designed around either ' +
-  'model, which is why a controller has to arbitrate. Expanding or ' +
-  'collapsing this block resizes a settled reply — watch your reading ' +
-  'position (or the pin) stay put while it happens.'
+  'Group messaging anchors attention to the newest line, so the ' +
+  'viewport should follow growth. Long-form assistants anchor ' +
+  'attention to the question being answered, so the viewport should ' +
+  'hold still while the answer streams in below. Two models, two ' +
+  'strategies.\n\n' +
+  'Expanding or collapsing this block resizes a settled reply — ' +
+  'notice your reading position (or the pin) stays put.'
 
 /** Body of the collapsible "tool call" block in assistant replies. */
 export const TOOL_CALL_BODY =
-  'search_docs({ query: "scroll anchoring nested containers" })\n\n' +
+  'search_docs({ query: "scroll anchoring chat transcripts" })\n\n' +
   '→ 3 results\n' +
-  '  1. CSS Scroll Anchoring — overflow-anchor and why it picks\n' +
-  '     arbitrary anchor nodes inside chat transcripts\n' +
-  '  2. ResizeObserver timing — callbacks fire after layout, so a\n' +
-  '     clamp can land a frame before you can correct it\n' +
-  '  3. scrollTop clamping — writes past scrollHeight − clientHeight\n' +
-  '     are silently clamped; grow the scroll range first\n\n' +
-  'This block is here so you can resize a *completed* reply: expand ' +
-  'it mid-stream in the pin demo and the pinned turn below holds; ' +
-  'expand it after a stream in the stick demo and nothing yanks you ' +
-  'to the bottom.'
+  '  1. CSS Scroll Anchoring — overflow-anchor in transcripts\n' +
+  '  2. ResizeObserver timing — callbacks fire after layout\n' +
+  '  3. scrollTop clamping — grow the scroll range first\n\n' +
+  'Expand this block mid-stream or after a reply settles — the ' +
+  'viewport holds either way.'
 
 export interface DemoMsg {
   id: number
@@ -131,51 +124,48 @@ export function seedLongConversation(): DemoMsg[] {
     mk('user', 'Which strategy should a group chat use?'),
     mk(
       'assistant',
-      'Stick-to-bottom. In group messaging the newest line is what ' +
-        'matters, so the viewport follows growth while the user is at ' +
-        'the bottom and gets out of the way the moment they scroll up ' +
-        'to read history. Sending a message re-engages the follow.\n\n' +
-        'The lock is released by real scroll input only — expanding a ' +
-        'block in a completed reply never yanks you back down.',
+      'Stick-to-bottom. The newest line is what matters, so the ' +
+        'viewport follows growth while you sit at the bottom and gets ' +
+        'out of the way the moment you scroll up to read history. ' +
+        'Sending a message re-engages the follow.\n\n' +
+        'Only real scroll input releases it — expanding a block in a ' +
+        'finished reply never yanks you back down.',
     ),
     mk('user', 'And an AI assistant UI like this one?'),
     mk(
       'assistant',
       'Pin-to-top. Each question anchors at the top of the viewport ' +
         'and the answer streams in below it, so your eyes never chase ' +
-        'the text. A synthetic gutter below the response stops you from ' +
-        'overscrolling into empty space, and it shrinks away as the ' +
-        'answer fills in.\n\n' +
-        'Because every user turn is an anchor, prev/next navigation ' +
-        'falls out for free: pinRelative() hops the pin between turns — ' +
-        'try the ‹ › buttons above.',
+        'the text. The striped gutter below the response keeps you ' +
+        'from overscrolling into empty space, and it shrinks away as ' +
+        'the answer fills in.\n\n' +
+        'Since every question is an anchor, the ‹ › buttons below hop ' +
+        'between turns for free.',
       { title: 'Reasoning', body: REASONING_BODY },
     ),
     mk('user', 'How does prev/next decide where to go?'),
     mk(
       'assistant',
-      'The reference point adapts to where you actually are.\n\n' +
-        'While you are anchored at a pinned turn, ‹ and › are relative ' +
-        'to that turn — press ‹ twice quickly and you move two turns, ' +
-        'because each call resolves against the newest intent rather ' +
-        'than the last settled scroll position.\n\n' +
-        'Once you scroll away, the pin no longer describes what you ' +
-        'are looking at, so navigation switches to the user turn ' +
-        'nearest the top of the viewport — the question whose answer ' +
-        'you are reading. From the middle of a long reply, ‹ first ' +
-        'snaps back to that question, then walks upward; › goes to the ' +
-        'next question below. Editors do the same thing for go-to-' +
-        'previous-change navigation.\n\n' +
-        'The buttons disable at the ends of the conversation: ' +
-        'pinRelative() returns false when there is no target in that ' +
-        'direction, and the toolbar mirrors the same rule to compute ' +
-        'the disabled state and the turn counter you see above.\n\n' +
-        'Everything stays smooth, too. Jumping to an earlier turn ' +
-        'shrinks the gutter, and a naive synchronous shrink would let ' +
-        'the browser clamp the scroll position mid-animation — a ' +
-        'visible teleport. The controller holds the gutter at a no-' +
-        'shrink floor while its scroll animation is in flight and ' +
-        'tightens it again on arrival.',
+      'It navigates from wherever you actually are, so the buttons ' +
+        'always do what they look like they will do.\n\n' +
+        'While a turn is pinned, ‹ and › move relative to it — two ' +
+        'quick presses move two turns. Once you scroll away, they ' +
+        'move relative to the question whose answer you are reading: ' +
+        'from the middle of a long reply, ‹ first snaps back to that ' +
+        'question, then walks upward, the way editors handle ' +
+        'go-to-previous-change.\n\n' +
+        'At the ends of the conversation the buttons disable, and the ' +
+        'counter between them always names the turn you are on — ' +
+        'whether you got there by clicking, scrolling, or sending.\n\n' +
+        'Every jump animates, even while a reply is streaming in and ' +
+        'even if you change direction mid-flight — navigation and ' +
+        'growth never fight, so there are no teleports and no sudden ' +
+        'reflows while you read.\n\n' +
+        'Try it mid-stream, too: send a message, jump back two ' +
+        'questions while the reply is still arriving, read for a ' +
+        'moment, then press › twice to come back and watch the rest ' +
+        'of the answer fill in. The stream never tugs at your reading ' +
+        'position, no matter where in the conversation you are.',
     ),
   ]
 }
@@ -209,64 +199,57 @@ export function seedStickConversation(): DemoMsg[] {
     mk('user', 'And when I scroll up to read something older?'),
     mk(
       'assistant',
-      'The follow releases the moment your input arrives — wheel up, ' +
-        'pan down with a finger, or press ArrowUp/PageUp/Home. It does ' +
-        'NOT wait for the scroll position to leave the bottom: during ' +
-        'a stream the controller re-snaps on every chunk, so a ' +
-        'position-based release would lose that race and yank you ' +
-        'straight back.\n\n' +
+      'The follow releases the moment your input arrives — wheel, ' +
+        'touch, or keyboard. It never waits to see where the scroll ' +
+        'lands, so a stream in full flight cannot win a race against ' +
+        'you and drag the viewport back down.\n\n' +
         'Try it: send a message, then scroll up mid-stream. The text ' +
         'keeps arriving below, but your reading position holds.',
     ),
     mk('user', 'How do I get back to following the stream?'),
     mk(
       'assistant',
-      'Two affordances re-engage the lock: the ↓ button (wired to ' +
-        'scrollToBottom(), which re-locks when the scroll completes) ' +
-        'and sending a message (the demo calls lock() on send). ' +
-        'Scrolling back to the bottom by hand intentionally does not ' +
-        're-lock — reading the latest text and following future text ' +
-        'are different intents.',
+      'The ↓ button takes you back to the bottom and resumes the ' +
+        'follow, and sending a message does the same. Scrolling back ' +
+        'down by hand deliberately does not — reading the latest text ' +
+        'and following future text are different intents.',
     ),
     mk('user', 'What about expanding things after the reply finished?'),
     mk(
       'assistant',
-      'Post-stream interaction is yours. The auto-snap is gated on ' +
-        'streaming, so expanding a collapsible block in a completed ' +
-        'reply never drags the viewport to the bottom.\n\n' +
-        'Prove it here: scroll up and open the "Tool call" or ' +
-        '"Reasoning" blocks in the earlier replies. The content grows, ' +
-        'the controller stays out of it, and your reading position ' +
-        'holds.',
+      'Once the stream ends, the viewport is yours. Scroll up and ' +
+        'open the "Tool call" or "Reasoning" blocks in the earlier ' +
+        'replies — the content grows, and your reading position holds.',
       { title: 'Reasoning', body: REASONING_BODY },
     ),
     mk('user', 'Can I jump between questions here too?'),
     mk(
       'assistant',
-      'Yes — the ‹ Prev / Next › buttons above work in this demo, and ' +
-        'they use no pin machinery at all. Each click finds the user ' +
-        'turn nearest the top of the viewport, releases the follow, ' +
-        'and smooth-scrolls the container until the target turn sits ' +
-        'at the top. Stick-to-bottom navigation is exactly that: plain ' +
-        'scrolling plus unlock().\n\n' +
-        "One honest limitation: without pin-to-top's synthetic gutter " +
-        'there is no way to put a turn at the very top of the viewport ' +
-        'until enough content exists below it — the scroll just clamps ' +
-        'at the real bottom. That is precisely the problem the gutter ' +
-        'solves, and why pinRelative() belongs to the pin strategy.\n\n' +
-        'You will notice it right after a send: the brand-new question ' +
-        'cannot reach the top yet, so Prev steps to the previous ' +
-        'exchange instead. As the reply streams in, scroll room grows ' +
-        'and the newest question becomes a navigation target like any ' +
-        'other turn in the transcript.\n\n' +
-        'The counter between the buttons mirrors the same rule: it ' +
-        'reads the turn at the top of your viewport while you are ' +
-        'reading history, and the latest turn while you are at the ' +
-        'bottom following the stream. And at the bottom you are on the ' +
-        'latest turn by definition, so Next disables — hit the ↓ ' +
-        'button to re-engage the follow, or just send another message: ' +
-        'the demo calls lock() on send, which is the other standard ' +
-        'affordance for returning to the live stream.',
+      'Yes — ‹ Prev / Next › below work here too. Each click scrolls ' +
+        'the adjacent question to the top of the viewport, releasing ' +
+        'the follow on the way, so you can revisit any exchange while ' +
+        'a reply is still streaming in.\n\n' +
+        'One difference from the pin-to-top demo: there is no gutter ' +
+        'here, so a question near the end of the transcript can only ' +
+        'rise as high as the real bottom allows. Right after you send, ' +
+        'the newest question cannot reach the top yet — as the reply ' +
+        'streams in, scroll room grows and it becomes a navigation ' +
+        'target like any other turn.\n\n' +
+        'The counter between the buttons names the question you are ' +
+        'reading. At the bottom you are on the latest turn by ' +
+        'definition, so it reads 5/5 and Next disables; the ↓ button ' +
+        'or another send returns you to the live stream.\n\n' +
+        '‹ also adapts to where you are: from the middle of a long ' +
+        'answer it first scrolls back to the question you are reading, ' +
+        'then walks upward one exchange per press — the convention ' +
+        'editors use for go-to-previous-change.\n\n' +
+        'Keyboard works too. Focus the transcript and ArrowUp, PageUp, ' +
+        'or Home release the follow exactly like the wheel does, while ' +
+        'the reply keeps growing below your reading position.\n\n' +
+        'That is the whole tour. Send a message to watch the follow ' +
+        'track a stream, scroll up mid-reply to take over, and use the ' +
+        'speed selector to slow the chunks down enough to see each ' +
+        'step happen.',
     ),
   ]
 }
@@ -279,20 +262,18 @@ export function seedStickConversation(): DemoMsg[] {
 export function seedHugeConversation(count: number): DemoMsg[] {
   const LINES = [
     'Quick question — does this hold up at scale?',
-    'It does. The controller only ever reads container-level scroll ' +
-      'metrics, so it has no idea (and no need to know) how many rows ' +
-      'are actually mounted.',
-    'Scroll position math is all relative to the container, so a ' +
-      'windowed list behaves exactly like a fully rendered one.',
-    'Right — the virtualizer owns which rows exist, chat-scroll owns ' +
-      'where the viewport sits. Different jobs, one scroll element.',
-    'The total-size wrapper is the content element here, so every ' +
-      'estimate refinement and every re-measure flows through the ' +
-      'same ResizeObserver as ordinary content growth.',
+    'It does. Only the rows near the viewport exist in the DOM; the ' +
+      'counter above shows how few that is at any moment.',
+    'Scroll behavior is unchanged, though — a windowed list scrolls ' +
+      'exactly like a fully rendered one.',
+    'Right — the virtualizer decides which rows exist, chat-scroll ' +
+      'decides where the viewport sits. Different jobs, one scroll ' +
+      'element.',
+    'Row heights vary and get re-measured as you scroll, and the ' +
+      'viewport position absorbs it without jumping.',
     'Makes sense.',
-    'And the input-driven lock release works untouched, because the ' +
-      'wheel and touch listeners sit on the container — which is real ' +
-      'DOM regardless of windowing.',
+    'Scrolling up to read mid-stream works exactly like the regular ' +
+      'demos — the follow releases the moment you move.',
     'Try the "Jump to #1" button: five thousand rows away, only a ' +
       'couple dozen are ever in the DOM.',
   ]
@@ -321,11 +302,11 @@ export function seedAltThread(): DemoMsg[] {
     mk(
       'assistant',
       'This is thread B. Scroll somewhere mid-thread, switch back to ' +
-        'thread A, then return here: your reading position is restored ' +
-        'per-thread via savePosition()/restorePosition().\n\n' +
-        'Positions are measured from the top of content unless you were ' +
-        'at the bottom, in which case restoration re-snaps to the (new) ' +
-        'bottom. Try it with the tabs above.',
+        'thread A, then return here: your reading position comes back ' +
+        'with you, per thread.\n\n' +
+        'Positions are measured from the top of the content unless you ' +
+        'were at the bottom, in which case returning re-snaps to the ' +
+        '(new) bottom. Try it with the tabs above.',
     ),
     mk('user', 'Why measure from the top and not the bottom?'),
     mk(
@@ -341,24 +322,20 @@ export function seedAltThread(): DemoMsg[] {
     mk('user', 'What about the thread I was following live?'),
     mk(
       'assistant',
-      'That is the wasAtBottom flag. If you were at the bottom when you ' +
-        'left, you almost certainly want the NEW bottom when you return ' +
-        '— not the pixel offset of the old one. Restoration forks on ' +
-        'that flag so both intents work.\n\n' +
-        'The same flag is also why the demo lands at the latest message ' +
-        'the first time you open a thread: with no saved position, ' +
-        'jumping to the bottom is the sensible default.',
+      'If you were at the bottom when you left, you almost certainly ' +
+        'want the new bottom when you return — not the pixel offset of ' +
+        'the old one. Restoration distinguishes the two, so both ' +
+        'intents work.\n\n' +
+        'That is also why a thread opens at its latest message the ' +
+        'first time you visit: with no saved position, the bottom is ' +
+        'the sensible default.',
     ),
     mk('user', 'Anything to watch out for when wiring this up?'),
     mk(
       'assistant',
-      'Timing. Restore only after the returning thread has rendered — ' +
-        'defer with nextTick or requestAnimationFrame, or the write ' +
-        'clamps against half-laid-out content.\n\n' +
-        'And with stick-to-bottom, release the lock before the deferred ' +
-        'restore: the content swap fires a resize, and a still-engaged ' +
-        'lock would snap to the bottom before your restore lands. The ' +
-        'multi-thread recipe shows the full sequence.',
+      'Just one thing: restore after the returning thread has ' +
+        'rendered. Swap the messages in, then hand the saved position ' +
+        'back — the multi-thread recipe is a dozen lines end to end.',
     ),
   ]
 }

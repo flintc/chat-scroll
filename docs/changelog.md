@@ -42,6 +42,11 @@
 
 ### Fixed
 
+- **`atBottom` no longer counts the gutter.** It now measures against
+  the end of the content, as documented — the gutter is
+  controller-owned slack, not content. Previously the no-shrink floor
+  during a pin animation made `atBottom` flap with every streamed
+  chunk, flickering scroll-to-bottom buttons bound to it.
 - **Keyboard/mouse parity for in-chat interactions.** Scroll keys
   consumed by the focused element are now treated as interaction, not
   scroll intent: Space on a button / `<summary>` / link (it activates

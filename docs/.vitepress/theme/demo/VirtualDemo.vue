@@ -22,7 +22,7 @@ const isPin = props.strategy === 'pin-to-top'
 
 const chat = useDemoChat({ initial: seedHugeConversation(props.count) })
 const promptIdx = ref(0)
-const showGutter = ref(false)
+const showGutter = ref(isPin)
 
 const scroll = useChatScroll({
   strategy: props.strategy,
@@ -143,11 +143,13 @@ async function reset(): Promise<void> {
   scroll.reset()
 }
 
-// ── Prev / next turn navigation (pin-to-top) ───────────────────────
+// ── Prev / next turn navigation ────────────────────────────────────
 // Same reference rule as the unvirtualized demos, computed in index
 // space: the pinned turn while anchored, otherwise the user turn
 // nearest the viewport top. Virtual items carry their offsets, and
 // the turn being read is by definition near the viewport — mounted.
+// Pin-to-top hops the pin; stick-to-bottom releases the follow and
+// scrolls the target row to the top via the virtualizer.
 const scrollTick = ref(0)
 const onPaneScroll = (): void => {
   scrollTick.value++
@@ -189,17 +191,53 @@ function refTurn(): { idx: number; midReply: boolean } {
 }
 
 function navTurn(dir: -1 | 1): void {
+  if (!isPin && dir === 1 && state.value.atBottom) return
   const users = userIndexes.value
   const { idx, midReply } = refTurn()
   const pos = users.indexOf(idx)
-  const target =
+  let target =
     dir === 1
       ? users[pos + 1]
       : midReply && !state.value.pinAnchored
         ? users[pos]
         : users[pos - 1]
   if (target === undefined) return
-  void pinIndex(target)
+  if (isPin) {
+    void pinIndex(target)
+    return
+  }
+  // Release the follow and land the row 12px below the viewport top —
+  // the same margin the other demos use, so the row reads as "at the
+  // turn" (not 12px past it) for the next navigation.
+  scroll.unlock()
+  const v = virtualizer.value
+  if (state.value.atBottom) {
+    // Short rows can put several turns inside the at-bottom threshold;
+    // from the bottom, walk up until the jump is actually visible.
+    const st = chatEl.value?.scrollTop ?? 0
+    let p = users.indexOf(target)
+    while (p > 0) {
+      const [off] = v.getOffsetForIndex(target, 'start') ?? [0]
+      if (off - 12 <= st - 48) break
+      p -= 1
+      target = users[p] as number
+    }
+  }
+  stickTo(target)
+}
+
+// Land `index` at the navigation margin, re-applying for a few frames:
+// the first scroll mounts new rows whose measurements shift the
+// offsets, so a single write can fall short of the target.
+function stickTo(index: number, attempt = 0): void {
+  const [off] = virtualizer.value.getOffsetForIndex(index, 'start') ?? [0]
+  const top = Math.max(0, off - 12)
+  if (Math.abs((chatEl.value?.scrollTop ?? 0) - top) > 2) {
+    virtualizer.value.scrollToOffset(top)
+  }
+  if (attempt < 3) {
+    requestAnimationFrame(() => stickTo(index, attempt + 1))
+  }
 }
 
 const navState = computed(() => {
@@ -209,8 +247,14 @@ const navState = computed(() => {
   if (users.length === 0) return { prev: false, next: false, pos: '' }
   const { idx, midReply } = refTurn()
   const pos = users.indexOf(idx)
+  const prev = (midReply && !state.value.pinAnchored ? pos : pos - 1) >= 0
+  // Stick: being at the bottom means being on the latest turn — the
+  // tail turns can't reach the viewport top (no gutter).
+  if (!isPin && state.value.atBottom) {
+    return { prev, next: false, pos: `${users.length}/${users.length}` }
+  }
   return {
-    prev: (midReply && !state.value.pinAnchored ? pos : pos - 1) >= 0,
+    prev,
     next: pos + 1 < users.length,
     pos: pos >= 0 ? `${pos + 1}/${users.length}` : '',
   }
@@ -219,50 +263,12 @@ const navState = computed(() => {
 
 <template>
   <figure class="virtual-demo">
-    <div class="virtual-demo__toolbar">
-      <button
-        type="button"
-        class="virtual-demo__btn virtual-demo__btn--action"
-        @click="chat.streaming.value ? chat.stop() : send()"
-      >
-        {{ chat.streaming.value ? 'Finish stream' : 'Send a message' }}
-      </button>
-      <div
-        v-if="isPin"
-        class="virtual-demo__nav"
-        role="group"
-        aria-label="Navigate between user turns"
-      >
-        <button
-          type="button"
-          class="virtual-demo__btn"
-          title="Pin the previous user turn"
-          :disabled="!navState.prev"
-          @click="navTurn(-1)"
-        >
-          ‹ Prev
-        </button>
-        <span class="virtual-demo__nav-pos" aria-label="Current turn">
-          {{ navState.pos || '–' }}
-        </span>
-        <button
-          type="button"
-          class="virtual-demo__btn"
-          title="Pin the next user turn"
-          :disabled="!navState.next"
-          @click="navTurn(1)"
-        >
-          Next ›
-        </button>
-      </div>
-      <button type="button" class="virtual-demo__btn" @click="jumpToTop">
-        Jump to #1
-      </button>
-      <span class="virtual-demo__spacer" />
+    <div class="virtual-demo__settings">
       <span class="virtual-demo__count">
         rendering {{ rows.length }} of
         {{ chat.messages.value.length.toLocaleString() }} rows
       </span>
+      <span class="virtual-demo__spacer" />
       <label v-if="isPin" class="virtual-demo__toggle">
         <input v-model="showGutter" type="checkbox" />
         Show gutter
@@ -319,6 +325,54 @@ const navState = computed(() => {
       </button>
     </div>
 
+    <div class="virtual-demo__actions">
+      <button
+        type="button"
+        class="virtual-demo__btn virtual-demo__btn--action"
+        @click="chat.streaming.value ? chat.stop() : send()"
+      >
+        {{ chat.streaming.value ? 'Finish stream' : 'Send a message' }}
+      </button>
+      <div
+        class="virtual-demo__nav"
+        role="group"
+        aria-label="Navigate between user turns"
+      >
+        <button
+          type="button"
+          class="virtual-demo__btn"
+          :title="
+            isPin
+              ? 'Pin the previous user turn'
+              : 'Scroll the previous user turn to the top'
+          "
+          :disabled="!navState.prev"
+          @click="navTurn(-1)"
+        >
+          ‹ Prev
+        </button>
+        <span class="virtual-demo__nav-pos" aria-label="Current turn">
+          {{ navState.pos || '–' }}
+        </span>
+        <button
+          type="button"
+          class="virtual-demo__btn"
+          :title="
+            isPin
+              ? 'Pin the next user turn'
+              : 'Scroll the next user turn to the top'
+          "
+          :disabled="!navState.next"
+          @click="navTurn(1)"
+        >
+          Next ›
+        </button>
+      </div>
+      <button type="button" class="virtual-demo__btn" @click="jumpToTop">
+        Jump to #1
+      </button>
+    </div>
+
     <div class="virtual-demo__status">
       <span class="vd-chip" :class="{ 'vd-chip--on': state.atBottom }">
         atBottom
@@ -354,12 +408,20 @@ const navState = computed(() => {
   padding: 0.875rem;
   background: var(--vp-c-bg-soft);
 }
-.virtual-demo__toolbar {
+.virtual-demo__settings {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
   padding-bottom: 0.75rem;
+}
+.virtual-demo__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
 }
 .virtual-demo__spacer {
   flex: 1;
