@@ -91,4 +91,7 @@ const offset = pRect.top - cRect.top
 ## See also
 
 - [Pin-to-top guide](../guide/pin-to-top)
+- [Overlay composer](./composer-overlay) — reserves a `padding-bottom`
+  band for a floating composer; the same gutter contract makes the pin
+  stay tight as that band changes
 - [`calcGutterHeight` reference](../reference/core#calcgutterheight)

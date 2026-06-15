@@ -131,6 +131,10 @@ export default defineConfig({
               link: '/recipes/scroll-fab',
             },
             {
+              text: 'Overlay composer (fixed/absolute)',
+              link: '/recipes/composer-overlay',
+            },
+            {
               text: 'Multi-thread switching',
               link: '/recipes/multi-thread',
             },

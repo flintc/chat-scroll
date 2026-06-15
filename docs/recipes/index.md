@@ -13,6 +13,7 @@ streaming-option syntax.
 | [AI chat with streaming](./ai-streaming)                | Pin-to-top, streaming, bulk loads, no effects in the happy path. |
 | [Slack-style scroll lock](./slack-style)                | Stick-to-bottom with unread indicator and `lock` on send. |
 | [Scroll-to-bottom button](./scroll-fab)                 | Floating action button driven by `state.atBottom`. |
+| [Overlay composer (fixed/absolute)](./composer-overlay) | Reserve the band an out-of-flow composer overlays so the last message clears it. |
 | [Multi-thread switching](./multi-thread)                | `key` remount vs persistent instance + save/restore. |
 | [Tight pin (sub-pixel)](./tight-pin)                    | Stabilize the scrollbar for an exact pin under `overflow-y: auto`. |
 | [Prev / next navigation](./message-navigation)          | `cmd+↑` / `cmd+↓` to step between user turns with `pinRelative`. |

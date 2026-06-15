@@ -42,6 +42,16 @@
 
 ### Fixed
 
+- **The container's own `padding-bottom` now recalculates the gutter at
+  runtime.** The controller already subtracted container padding from
+  the gutter math, but only re-ran on a border-box resize — so growing
+  the container's `padding-bottom` (the way you reserve space for a
+  `position: fixed`/`absolute` composer that just got taller) left the
+  gutter stale under `box-sizing: border-box`, where the border box
+  doesn't move. The controller now also observes the container's content
+  box, so a padding change re-tightens the pin (or re-snaps the bottom)
+  on the same frame. See the new
+  [overlay-composer recipe](/recipes/composer-overlay).
 - **`atBottom` no longer counts the gutter.** It now measures against
   the end of the content, as documented — the gutter is
   controller-owned slack, not content. Previously the no-shrink floor
