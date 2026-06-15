@@ -33,6 +33,13 @@ export const stickToBottomStrategy: Strategy = {
 
   onScroll(ctx) {
     if (!ctx.container) return
+    // The gutter, when `bottomInset` reserves space for an overlay
+    // composer, is controller-owned slack below the content — "at
+    // bottom" means the content's end is reachable, not the end of that
+    // reserved band. Pass it as `endSlack` so the release threshold is
+    // measured against the content, exactly like the controller's own
+    // at-bottom detection. 0 (no gutter) reproduces the old check.
+    const slack = ctx.gutter ? parseFloat(ctx.gutter.style.height) || 0 : 0
     // Position-based lock release — the BACKUP for inputs that emit no
     // wheel/touch/key events (scrollbar drags); those inputs release
     // the lock at input time in the controller. Gated on the viewport
@@ -45,7 +52,7 @@ export const stickToBottomStrategy: Strategy = {
     if (
       ctx.state.locked &&
       ctx.scrollDelta < 0 &&
-      !isAtBottom(ctx.container, ctx.options.bottomThreshold)
+      !isAtBottom(ctx.container, ctx.options.bottomThreshold, slack)
     ) {
       ctx.state.locked = false
     }

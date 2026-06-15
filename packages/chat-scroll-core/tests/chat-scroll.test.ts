@@ -860,7 +860,7 @@ describe('createChatScroll', () => {
           scrollInFlight: true,
           pinnedY: 88,
         },
-        options: { bottomThreshold: 40, scrollMargin: 12 },
+        options: { bottomThreshold: 40, scrollMargin: 12, bottomInset: 0 },
         pinAnimationInterrupted: false,
         scrollDelta: 0,
       }
@@ -2905,6 +2905,148 @@ describe('createChatScroll', () => {
       const { s, content } = buildLockedStick()
       keyOn(content, 'ArrowUp')
       expect(s.state.locked).toBe(false)
+      s.destroy()
+    })
+  })
+
+  describe('bottomInset (overlay-composer reservation)', () => {
+    it('defaults to 0 and is exposed on resolved options', () => {
+      expect(createChatScroll({ strategy: 'pin-to-top' }).options.bottomInset).toBe(0)
+      expect(
+        createChatScroll({ strategy: 'pin-to-top', bottomInset: 96 }).options
+          .bottomInset,
+      ).toBe(96)
+    })
+
+    it('pin-to-top with no pin: the gutter reserves exactly bottomInset', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, maxScroll } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'pin-to-top', bottomInset: 80 })
+      s.mount(container, content)
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('80px')
+      // 80px of extra scroll room below the content so the last message
+      // can clear the composer (1000 + 80 - 600).
+      expect(maxScroll()).toBe(480)
+      s.destroy()
+    })
+
+    it('pin-to-top, short response: tight-pin contract holds and the gutter is ≥ inset', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, maxScroll } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 700,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        bottomInset: 80,
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // pinnedY = 300 - 12 = 288. tight = 288 + 600 - 700 = 188 (> inset),
+      // so the gutter is the tight value and maxScroll === pinnedY exactly.
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('188px')
+      expect(maxScroll()).toBe(288)
+      s.destroy()
+    })
+
+    it('pin-to-top, long response: gutter floored at inset (room to scroll the tail past the pin)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, maxScroll } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        bottomInset: 80,
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // pinnedY = 88. tight = max(0, 88 + 600 - 1400) = 0 → floored to 80.
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('80px')
+      expect(maxScroll()).toBe(880) // 1400 + 80 - 600
+      s.destroy()
+    })
+
+    it('stick-to-bottom: the gutter is a pure inset spacer; the bottom clears it', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom', bottomInset: 80 })
+      s.mount(container, content)
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('80px')
+      s.lock() // snap to the bottom
+      // maxScroll = 1000 + 80 - 600 = 480; the content end (1000) then sits
+      // at viewport y = 1000 - 480 = 520 = clientHeight - inset → above it.
+      expect(container.scrollTop).toBe(480)
+      expect(s.state.atBottom).toBe(true)
+      s.destroy()
+    })
+
+    it('live setOptions re-reserves and re-snaps a locked stick viewport', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.lock()
+      expect(container.scrollTop).toBe(400) // no inset yet (1000 - 600)
+      // The composer grew — bump the inset. The gutter grows and the
+      // locked viewport re-snaps to the new bottom.
+      s.setOptions({ bottomInset: 80 })
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('80px')
+      expect(container.scrollTop).toBe(480)
+      expect(s.state.atBottom).toBe(true)
+      s.destroy()
+    })
+
+    it('live setOptions re-reserves under pin-to-top with no pin', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1000,
+      })
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.mount(container, content)
+      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      expect(g.style.height).toBe('0px')
+      s.setOptions({ bottomInset: 64 })
+      expect(g.style.height).toBe('64px')
       s.destroy()
     })
   })

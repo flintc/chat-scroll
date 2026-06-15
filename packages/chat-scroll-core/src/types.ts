@@ -33,6 +33,23 @@ export interface ChatScrollOptions {
   scrollMargin?: number
 
   /**
+   * Height in px of an obstruction overlaying the **bottom** of the
+   * viewport — typically a `position: fixed`/`absolute` composer that
+   * floats over the messages instead of sitting in flow below them.
+   *
+   * The controller reserves this much space below the content (in its
+   * own gutter element — it does **not** touch your container's padding),
+   * so the last message can scroll clear of the obstruction and
+   * `atBottom` flips only once it has. Works under both strategies.
+   *
+   * Update it live as the composer's height changes (e.g. from a
+   * `ResizeObserver` on the composer, passed back through this option).
+   * See the "Overlay composer" recipe in the docs.
+   * @default 0
+   */
+  bottomInset?: number
+
+  /**
    * Scroll behavior.
    * - `'auto'` respects `prefers-reduced-motion`.
    * - `'smooth'` always smooth.

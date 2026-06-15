@@ -15,6 +15,7 @@ const DEFAULTS = {
   strategy: 'stick-to-bottom' as const,
   bottomThreshold: 40,
   scrollMargin: 12,
+  bottomInset: 0,
   scrollBehavior: 'auto' as const,
   scrollDurationMs: 320,
   initialPosition: 'none' as const,
@@ -48,6 +49,7 @@ export function createChatScroll(
     strategy: opts.strategy ?? DEFAULTS.strategy,
     bottomThreshold: opts.bottomThreshold ?? DEFAULTS.bottomThreshold,
     scrollMargin: opts.scrollMargin ?? DEFAULTS.scrollMargin,
+    bottomInset: opts.bottomInset ?? DEFAULTS.bottomInset,
     scrollBehavior: opts.scrollBehavior ?? DEFAULTS.scrollBehavior,
     scrollDurationMs: opts.scrollDurationMs ?? DEFAULTS.scrollDurationMs,
     initialPosition: opts.initialPosition ?? DEFAULTS.initialPosition,
@@ -80,6 +82,7 @@ export function createChatScroll(
     options: {
       bottomThreshold: options.bottomThreshold,
       scrollMargin: options.scrollMargin,
+      bottomInset: options.bottomInset,
     },
     pinAnimationInterrupted: false,
     scrollDelta: 0,
@@ -597,6 +600,26 @@ export function createChatScroll(
     return isAtBottom(container, options.bottomThreshold, slack)
   }
 
+  // Size the gutter to reserve `bottomInset` of space below the content
+  // for an obstruction overlaying the bottom of the viewport (an
+  // out-of-flow composer). The reservation lives in the controller-owned
+  // gutter — we never touch the consumer's container padding.
+  //   - pin-to-top: folded into `recalcGutter` (gutter = max(pinReserve,
+  //     inset)), so the pin still lands at the top and there's always at
+  //     least `inset` of room below the last message.
+  //   - stick-to-bottom: the gutter is otherwise unused, so it becomes a
+  //     pure `inset`-tall spacer; snapping to the bottom then lands the
+  //     reserved band behind the composer and the last message above it.
+  // Idempotent — `setGutterHeight` no-ops when the value is unchanged.
+  function applyBottomReservation(): void {
+    if (!ctx.container || !ctx.gutter) return
+    if (options.strategy === 'pin-to-top') {
+      recalcGutter(ctx)
+    } else {
+      setGutterHeight(ctx.gutter, options.bottomInset)
+    }
+  }
+
   // ── Public API ──────────────────────────────────────────────────
   function mount(container: HTMLElement, content: HTMLElement): void {
     if (ctx.container === container && ctx.content === content) return
@@ -748,6 +771,11 @@ export function createChatScroll(
       paddingObserver.observe(container, { box: 'content-box' })
     }
 
+    // Reserve the bottom-inset band before the initial snap, so an
+    // `initialPosition: 'bottom'` land reads the reserved scrollHeight
+    // and the first paint already clears the composer.
+    applyBottomReservation()
+
     initialAnchoring = options.initialPosition === 'bottom'
     if (initialAnchoring) {
       container.scrollTop = container.scrollHeight
@@ -767,6 +795,7 @@ export function createChatScroll(
 
   function setOptions(next: Partial<ChatScrollOptions>): void {
     const prevStrategy = options.strategy
+    const prevInset = options.bottomInset
     // Ignore keys whose value is `undefined` — adapters sync options by
     // passing every key on every render, with `undefined` for options
     // the consumer never set. Spreading those verbatim would clobber
@@ -781,14 +810,34 @@ export function createChatScroll(
     }
     ctx.options.bottomThreshold = options.bottomThreshold
     ctx.options.scrollMargin = options.scrollMargin
+    ctx.options.bottomInset = options.bottomInset
 
-    if (next.strategy && next.strategy !== prevStrategy) {
+    const strategyChanged = Boolean(next.strategy && next.strategy !== prevStrategy)
+    if (strategyChanged) {
       strategy.reset(ctx)
       strategy = STRATEGIES[options.strategy]
       internal.locked = options.strategy === 'stick-to-bottom'
       internal.pinActive = false
-      commit()
     }
+
+    // Re-reserve when the obstruction height changes (a composer growing
+    // to a second line) or the strategy switched. The gutter math reads
+    // the new inset; a still-locked stick viewport re-snaps so a growing
+    // composer doesn't push the latest message behind itself.
+    if (strategyChanged || options.bottomInset !== prevInset) {
+      applyBottomReservation()
+      if (
+        options.bottomInset !== prevInset &&
+        options.strategy === 'stick-to-bottom' &&
+        internal.locked &&
+        ctx.container
+      ) {
+        ctx.container.scrollTop = ctx.container.scrollHeight
+        internal.atBottom = measureAtBottom(ctx.container)
+      }
+    }
+
+    if (strategyChanged) commit()
   }
 
   function pinMessage(el: HTMLElement): void {
@@ -1139,6 +1188,9 @@ export function createChatScroll(
       restoreFrame = null
     }
     strategy.reset(ctx)
+    // Re-reserve the bottom-inset band: a strategy's `reset` zeroes the
+    // gutter, but the overlay composer is still there on the new thread.
+    applyBottomReservation()
     // A reset is a fresh thread — re-arm the initial-position anchoring
     // so the new content opens at the latest message too.
     initialAnchoring = options.initialPosition === 'bottom'

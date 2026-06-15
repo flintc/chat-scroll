@@ -114,6 +114,7 @@ export function useChatScroll(
           strategy: next.strategy,
           bottomThreshold: next.bottomThreshold,
           scrollMargin: next.scrollMargin,
+          bottomInset: next.bottomInset,
           scrollBehavior: next.scrollBehavior,
           scrollDurationMs: next.scrollDurationMs,
         })

@@ -93,6 +93,7 @@ export function useChatScroll(
       strategy: opts.strategy,
       bottomThreshold: opts.bottomThreshold,
       scrollMargin: opts.scrollMargin,
+      bottomInset: opts.bottomInset,
       scrollBehavior: opts.scrollBehavior,
       scrollDurationMs: opts.scrollDurationMs,
     })
@@ -101,6 +102,7 @@ export function useChatScroll(
     opts.strategy,
     opts.bottomThreshold,
     opts.scrollMargin,
+    opts.bottomInset,
     opts.scrollBehavior,
     opts.scrollDurationMs,
   ])

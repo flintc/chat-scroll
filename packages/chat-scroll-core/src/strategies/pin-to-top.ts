@@ -67,8 +67,14 @@ export function refreshPinnedY(ctx: StrategyContext): number {
 
 export function recalcGutter(ctx: StrategyContext): void {
   if (!ctx.container || !ctx.content || !ctx.gutter) return
+  // Floor for a bottom-overlaying obstruction (an out-of-flow composer):
+  // the gutter is never shorter than `bottomInset`, so the last message
+  // can always scroll clear of the composer. With no obstruction this is
+  // 0 and the math below is unchanged.
+  const inset = ctx.options.bottomInset
   if (ctx.state.pinnedY < 0) {
-    setGutterHeight(ctx.gutter, 0)
+    // No pin — the gutter is pure obstruction reservation (or 0).
+    setGutterHeight(ctx.gutter, inset)
     return
   }
   // `ctx.state.pinAnchored` is the authoritative "user is at the pin"
@@ -91,12 +97,17 @@ export function recalcGutter(ctx: StrategyContext): void {
   refreshPinnedY(ctx)
 
   // Size the gutter against the refreshed `pinnedY` so `scrollHeight`
-  // is large enough to accommodate `scrollTop = pinnedY` below.
-  const tight = calcGutterHeight({
-    container: ctx.container,
-    gutter: ctx.gutter,
-    pinnedY: ctx.state.pinnedY,
-  })
+  // is large enough to accommodate `scrollTop = pinnedY` below — but
+  // never shorter than the obstruction inset, so a long response's tail
+  // can still scroll above the composer.
+  const tight = Math.max(
+    inset,
+    calcGutterHeight({
+      container: ctx.container,
+      gutter: ctx.gutter,
+      pinnedY: ctx.state.pinnedY,
+    }),
+  )
   // While a controller-owned scroll animation is in flight the gutter
   // may GROW but never SHRINK. Shrinking drops `scrollHeight`, and when
   // the current `scrollTop` sits beyond the new max-scroll the browser

@@ -44,6 +44,13 @@ export interface StrategyContext {
   options: {
     bottomThreshold: number
     scrollMargin: number
+    /**
+     * Height of a bottom-overlaying obstruction (an out-of-flow
+     * composer). Reserved below the content via the gutter so the last
+     * message clears it. 0 when there's no overlay. See
+     * `ChatScrollOptions.bottomInset`.
+     */
+    bottomInset: number
   }
 
   /**
