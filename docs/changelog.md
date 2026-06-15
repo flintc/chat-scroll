@@ -4,6 +4,14 @@
 
 ### Added
 
+- **`bottomInset` option**: reserve space for an obstruction overlaying
+  the bottom of the viewport — a `position: fixed`/`absolute` composer
+  floating over the messages. The controller folds it into its own
+  gutter (it never touches your container padding), so the last message
+  clears the composer and `atBottom` accounts for it, under both
+  strategies. Live-updatable from a `ResizeObserver` on the composer.
+  See the [overlay-composer recipe](/recipes/composer-overlay).
+
 - **`referenceMessage(selector)` and `relativeMessage(selector, ±1)`**
   on the instance and every adapter: the reference-point resolution
   `pinRelative` uses internally, exposed as pure queries.

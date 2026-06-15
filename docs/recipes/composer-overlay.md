@@ -6,69 +6,36 @@ plenty of designs lift the composer **out of flow** instead: a
 `position: absolute` bar floating over the bottom of the messages, or a
 `position: fixed` input pinned above the mobile keyboard. Now the
 composer overlaps the viewport rather than shortening it, and the
-controller still measures the full height — so the newest messages
+controller would still measure the full height — so the newest messages
 render *behind* the composer with no way to scroll them clear.
 
-The fix is one line of CSS plus a height measurement. This recipe
-covers the layout, why it satisfies both strategies, and the
-dynamic-height plumbing.
+Tell the controller how tall the obstruction is with **`bottomInset`**
+and it reserves exactly that much room below the content — in its own
+gutter, without touching your stylesheet.
 
-## The problem, precisely
+<ComposerDemo caption="Toggle “Reserve space” off and the last line ducks behind the composer; on, it sits just above it. Grow the composer and the reservation tracks it — under both strategies." />
 
-`chat-scroll` makes the container the scroll port and measures its
-`clientHeight`. An overlay composer is **not** part of that
-measurement — it sits on top. So:
+## Reserve the band with `bottomInset`
 
-- **stick-to-bottom** snaps the last message to the bottom of the
-  viewport… which is the bottom edge that the composer covers. The
-  latest line is hidden.
-- **pin-to-top** sizes the gutter so the pinned message can reach the
-  top. The top is fine — but as a long response streams past the
-  bottom, its newest text scrolls into the band the composer occupies.
+Pass the composer's height as `bottomInset`. The controller folds it
+into the gutter it already manages, so:
 
-Both reduce to the same thing: the bottom *N* pixels of the viewport
-are obscured, and nothing reserves them.
+- the pinned message still lands exactly at the top (the tight-pin
+  contract is unchanged);
+- there's always at least the composer's height of scrollable room
+  below the last message, so it can clear the composer;
+- `atBottom` flips only once the last message *has* cleared it.
 
-## Reserve the band
-
-Give the scroll container a `padding-bottom` equal to the composer's
-height. That's it. The gutter math already subtracts container padding
-(it's part of the [tight-pin contract](./tight-pin)), so the pin still
-lands exactly at the top; and the padding gives the last message
-somewhere to scroll so it clears the composer.
-
-```
-┌─ chat-shell (position: relative) ─┐
-│ ┌─ chat-scroll (the scroll port) ─┐ │
-│ │  …messages…                     │ │
-│ │  last message                   │ │  ← can now scroll to here
-│ │ · · · · · · · · · · · · · · · · │ │  ← padding-bottom (reserved)
-│ ├─────────────────────────────────┤ │
-│ │  composer  (absolute, bottom:0) │ │  ← overlays the reserved band
-│ └─────────────────────────────────┘ │
-└──────────────────────────────────────┘
-```
-
-The composer is a **sibling** of the scroll container, both children
-of a `position: relative` shell — not a child of the scroller (a child
-would scroll away with the content). The shell is the composer's
-containing block.
-
-## React
+It works the same under both strategies, and the library never writes to
+your container's padding — the reservation lives entirely in its gutter.
 
 ```tsx
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useChatScroll } from '@chat-scroll/react'
 
 export function ChatView({ messages, loading, onSend }: Props) {
-  const scroll = useChatScroll({
-    strategy: 'pin-to-top', // identical wiring for 'stick-to-bottom'
-    streaming: loading,
-  })
-
-  // Measure the composer's live height and publish it as a CSS variable.
-  // A textarea that wraps to a second line, an attachment row appearing,
-  // a safe-area inset — all of it flows through here.
+  // Measure the composer's live height — a textarea wrapping to a second
+  // line, an attachment row appearing, a safe-area inset all flow here.
   const composerRef = useRef<HTMLDivElement>(null)
   const [composerH, setComposerH] = useState(0)
   useLayoutEffect(() => {
@@ -80,6 +47,12 @@ export function ChatView({ messages, loading, onSend }: Props) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  const scroll = useChatScroll({
+    strategy: 'pin-to-top', // identical wiring for 'stick-to-bottom'
+    streaming: loading,
+    bottomInset: composerH, // ← reserve the band the composer overlays
+  })
 
   function handleSend(text: string) {
     onSend(text)
@@ -113,7 +86,18 @@ export function ChatView({ messages, loading, onSend }: Props) {
 }
 ```
 
-## CSS
+`bottomInset` is a plain reactive option, so the adapters forward it for
+you — set the state and the controller re-reserves on the same frame.
+(Driving it imperatively instead? `scroll.instance.setOptions({
+bottomInset })` does the same thing.)
+
+## Layout
+
+The composer is a **sibling** of the scroll container — not a child (a
+child would scroll away with the content) — and both live under a
+`position: relative` shell that is the composer's containing block. Note
+there's **no `padding-bottom` on the scroller**: `bottomInset` handles
+the reservation.
 
 ```css
 .chat-shell {
@@ -127,10 +111,6 @@ export function ChatView({ messages, loading, onSend }: Props) {
 .chat-scroll {
   flex: 1;
   min-height: 0;
-  /* Reserve the band the composer overlays. chat-scroll's gutter math
-     subtracts this, so the pin still lands exactly at the top, and the
-     last message can scroll clear of the composer. */
-  padding-bottom: var(--composer-h, 0px);
   /* Exact pin even when the scrollbar toggles — see the tight-pin recipe. */
   scrollbar-gutter: stable;
 }
@@ -142,7 +122,7 @@ export function ChatView({ messages, loading, onSend }: Props) {
   bottom: 0;
 }
 
-/* Float the scroll-to-bottom button ABOVE the composer, not behind it. */
+/* The CSS var is only here so the FAB can float ABOVE the composer. */
 .scroll-fab {
   position: absolute;
   right: 1rem;
@@ -150,41 +130,42 @@ export function ChatView({ messages, loading, onSend }: Props) {
 }
 ```
 
+```
+
+┌─ chat-shell (position: relative) ─┐
+│ ┌─ chat-scroll (the scroll port) ─┐ │
+│ │  …messages…                     │ │
+│ │  last message                   │ │  ← reachable: clears the composer
+│ │ · · · · · · gutter · · · · · · ·│ │  ← bottomInset reserved here
+│ ├─────────────────────────────────┤ │
+│ │  composer  (absolute, bottom:0) │ │  ← overlays the reserved band
+│ └─────────────────────────────────┘ │
+└──────────────────────────────────────┘
+```
+
 ## Why it works under both strategies
 
-The reserved band is below the content in scroll space, so the math
-falls out of the existing contracts:
+`bottomInset` is reserved as controller-owned slack below the content,
+so the math falls out of the existing contracts:
 
-- **pin-to-top.** The gutter formula is
-  `pinnedY + clientHeight − gutterTop − paddingBottom`. The extra
-  `padding-bottom` is subtracted right back out, so
-  `scrollHeight − clientHeight === pinnedY` still holds — the pin is
-  exactly as tight as before. What changes is that there's now always
-  at least the composer's height of scrollable room below the last
-  message, so a long streamed response can be scrolled until its tail
-  sits just above the composer.
-- **stick-to-bottom.** Snapping to the absolute bottom
-  (`scrollTop = scrollHeight`) now lands the empty reserved band at the
-  bottom of the viewport — i.e. behind the composer — and the last real
-  message one band-height up, fully visible above it.
+- **pin-to-top.** The gutter is sized to `max(pinReserve, bottomInset)`.
+  When the response is short the pin reserve dominates and the pin lands
+  tight at the top, exactly as before; when it's long enough that the
+  reserve would collapse to zero, the `bottomInset` floor keeps a
+  composer's height of room so the tail can scroll out from behind the
+  bar.
+- **stick-to-bottom.** The gutter is otherwise unused, so it becomes a
+  pure `bottomInset`-tall spacer. Snapping to the bottom lands that
+  empty band behind the composer and the last real message one
+  band-height up, fully visible above it.
 
 ## Dynamic height is automatic
 
 When the composer grows — the textarea wraps, an attachment chip
-appears — the `ResizeObserver` updates `--composer-h`, which changes
-the container's `padding-bottom`. **You don't need to tell
-`chat-scroll`.** It watches the container's content box, so a change to
-the container's own padding triggers a gutter recalc (pin-to-top) or a
-re-snap (stick-to-bottom) on the same frame. The pin stays tight and
-the bottom stays glued while the composer resizes underneath.
-
-::: tip Equivalent: pad the content instead
-Putting the `padding-bottom` on the **content** element (`contentRef`)
-works identically — it folds into the same math — and some teams prefer
-it because the reserved space reads as "after the last message" rather
-than "viewport chrome." Pick whichever matches your mental model;
-`chat-scroll` reacts to both.
-:::
+appears — the `ResizeObserver` updates `composerH`, the option changes,
+and the controller re-reserves (and re-snaps a locked stick viewport) on
+the same frame. The pin stays tight and the bottom stays glued while the
+composer resizes underneath. You don't poll or re-measure anything else.
 
 ## `position: fixed` variant (mobile, above the keyboard)
 
@@ -202,36 +183,55 @@ visual viewport so it rides above the on-screen keyboard:
 }
 ```
 
-The reservation is unchanged — the container still gets
-`padding-bottom: var(--composer-h)`, and `--composer-h` is measured
-from the composer's full height (the safe-area padding included,
-because it's part of the element's border box). Two things to keep in
-mind, both orthogonal to `chat-scroll`:
+`bottomInset` is unchanged — it's still the composer's measured height
+(safe-area padding included, since that's part of the element's border
+box). Two things to keep in mind, both orthogonal to `chat-scroll`:
 
-- **Width.** A fixed element is positioned against the viewport, not
-  the shell — if your chat isn't full-bleed (a centered column, a
-  desktop sidebar layout), constrain the composer's `left`/`right` to
-  match, or keep `position: absolute` with the shell as its containing
-  block. Absolute is the better default whenever the chat lives inside
-  an app layout.
-- **The keyboard.** Use `<meta name="viewport"
-  content="… interactive-widget=resizes-content">` (and/or the
-  `visualViewport` API) so the browser resizes the layout when the
-  keyboard opens. That resizes the shell, which resizes the scroll
-  port — and `chat-scroll`'s observers handle the rest.
+- **Width.** A fixed element is positioned against the viewport, not the
+  shell — if your chat isn't full-bleed (a centered column, a desktop
+  sidebar), constrain the composer's `left`/`right` to match, or keep
+  `position: absolute` with the shell as its containing block. Absolute
+  is the better default inside an app layout.
+- **The keyboard.** Use `<meta name="viewport" content="…
+  interactive-widget=resizes-content">` (and/or the `visualViewport`
+  API) so the browser resizes the layout when the keyboard opens. That
+  resizes the shell, which resizes the scroll port — and `chat-scroll`'s
+  observers handle the rest.
+
+## Pure-CSS alternative (no `bottomInset`)
+
+Prefer to keep the reservation in your stylesheet — or not using an
+adapter option? Put a `padding-bottom` equal to the composer height on
+the **scroll container** instead. The gutter math subtracts container
+padding (the [tight-pin contract](./tight-pin)), so the pin stays tight,
+and the controller observes the container's content box — so the
+reservation still re-tightens when the composer grows.
+
+```css
+.chat-scroll {
+  padding-bottom: var(--composer-h, 0px);
+}
+```
+
+```tsx
+// …no `bottomInset` option; the CSS var (set from `composerH`) does it.
+const scroll = useChatScroll({ strategy: 'pin-to-top', streaming: loading })
+```
+
+`bottomInset` and the padding approach are equivalent in the math; the
+option just keeps the reservation out of your CSS and doesn't depend on
+the controller observing a padding mutation. Use whichever fits.
 
 ## Gotchas
 
 - **Don't nest the composer inside the scroll container.** It would
   become part of the scrollable content and scroll away. Keep it an
-  overlay sibling under the positioned shell. (Some other recipes show
-  `<Composer>` inside `.chat` for brevity — that assumes an in-flow
-  composer; an overlay one belongs outside the scroller.)
+  overlay sibling under the positioned shell.
 - **Mind the FAB.** Offset the scroll-to-bottom button by the composer
   height (`bottom: calc(var(--composer-h) + …)`) so it doesn't hide
-  behind it. `state.atBottom` already accounts for the reserved band:
-  it measures the end of the *content*, so the button hides exactly
-  when the last message has cleared the composer.
+  behind it. `state.atBottom` already accounts for the reserved band —
+  it measures the end of the *content*, so the button hides exactly when
+  the last message has cleared the composer.
 - **Stabilize the scrollbar** with `scrollbar-gutter: stable` (or
   `overflow-y: scroll`) for a sub-pixel-exact pin — see
   [Tight pin](./tight-pin).
@@ -241,3 +241,4 @@ mind, both orthogonal to `chat-scroll`:
 - [Pin-to-top guide](../guide/pin-to-top)
 - [Tight pin (sub-pixel)](./tight-pin) — the gutter contract this builds on
 - [Scroll-to-bottom button](./scroll-fab) — the FAB referenced above
+- [`bottomInset` option reference](../reference/options#bottominset)

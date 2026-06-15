@@ -5,6 +5,7 @@ interface ChatScrollOptions {
   strategy?: 'pin-to-top' | 'stick-to-bottom'
   bottomThreshold?: number
   scrollMargin?: number
+  bottomInset?: number
   scrollBehavior?: 'auto' | 'smooth' | 'instant'
   scrollDurationMs?: number
   onScrollChange?: (state: ChatScrollState) => void
@@ -41,6 +42,24 @@ The gap kept above a message brought to the viewport top — pins
 it, and the gutter math accounts for it. Live-updatable via
 `setOptions`; the [home page demo](/) exposes it as the **Margin**
 control.
+
+## `bottomInset`
+
+- **Type:** `number` (pixels)
+- **Default:** `0`
+
+Height of an obstruction overlaying the **bottom** of the viewport —
+typically a `position: fixed`/`absolute` composer that floats over the
+messages instead of sitting in flow below them. The controller reserves
+this much space below the content in its own gutter (it does **not**
+touch your container's padding), so the last message can scroll clear of
+the obstruction and `atBottom` flips only once it has. Works under both
+strategies.
+
+Live-updatable via `setOptions`, so feed it the composer's measured
+height from a `ResizeObserver` and it tracks growth (a textarea wrapping,
+an attachment row) on the same frame. See the
+[overlay-composer recipe](/recipes/composer-overlay).
 
 ## `scrollBehavior`
 
