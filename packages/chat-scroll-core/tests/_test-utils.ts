@@ -242,19 +242,29 @@ export function buildScrollDom(opts?: {
  * Install a fake ResizeObserver that lets the test trigger callbacks
  * manually via `triggerResize()`.
  */
+export interface FakeResizeObservation {
+  target: Element
+  box?: ResizeObserverBoxOptions
+}
+
 export function installFakeResizeObserver(): {
   triggerResize: () => void
   uninstall: () => void
   callbacks: () => Set<ResizeObserverCallback>
+  /** Every `observe(target, options)` call across all instances. */
+  observations: () => FakeResizeObservation[]
 } {
   const callbacks = new Set<ResizeObserverCallback>()
+  const observations: FakeResizeObservation[] = []
   const original = globalThis.ResizeObserver
 
   class FakeResizeObserver implements ResizeObserver {
     constructor(cb: ResizeObserverCallback) {
       callbacks.add(cb)
     }
-    observe(): void {}
+    observe(target: Element, options?: ResizeObserverOptions): void {
+      observations.push({ target, box: options?.box })
+    }
     unobserve(): void {}
     disconnect(): void {
       callbacks.forEach(() => {})
@@ -275,6 +285,7 @@ export function installFakeResizeObserver(): {
         original
     },
     callbacks: () => callbacks,
+    observations: () => observations,
   }
 }
 

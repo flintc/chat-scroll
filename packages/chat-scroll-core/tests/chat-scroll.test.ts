@@ -135,6 +135,34 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('observes the container content box so its own padding-bottom changes recalc', () => {
+      // The gutter formula reads container.clientHeight + paddingBottom,
+      // so a runtime change to the container's OWN padding (reserving
+      // space for an overlaid composer that grew) must trigger a recalc.
+      // Under box-sizing: border-box that padding change leaves the
+      // border box untouched but shrinks the content box — so we must
+      // observe the container's content box, not just its border box.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.mount(container, content)
+      const obs = ro.observations()
+      expect(
+        obs.some((o) => o.target === content && o.box === 'border-box'),
+      ).toBe(true)
+      expect(
+        obs.some((o) => o.target === container && o.box === 'border-box'),
+      ).toBe(true)
+      expect(
+        obs.some((o) => o.target === container && o.box === 'content-box'),
+      ).toBe(true)
+      // Both observers share one callback reference — tests/tooling that
+      // count callbacks still see a single logical handler.
+      expect(ro.callbacks().size).toBe(1)
+      s.destroy()
+    })
+
     it('idempotent — same args is a no-op', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)

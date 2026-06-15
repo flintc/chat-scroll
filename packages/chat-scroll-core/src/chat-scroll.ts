@@ -104,6 +104,10 @@ export function createChatScroll(
 
   // ── DOM bindings ────────────────────────────────────────────────
   let resizeObserver: ResizeObserver | null = null
+  // Second observer, watching the container's CONTENT box, so a change
+  // to the container's own padding re-triggers the gutter recalc. See
+  // the `mount()` setup for why one observer can't cover both boxes.
+  let paddingObserver: ResizeObserver | null = null
   let scrollListener: (() => void) | null = null
   let userInputListeners: Array<{ type: string; fn: () => void }> = []
   let pendingPinFrame: number | null = null
@@ -238,6 +242,10 @@ export function createChatScroll(
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null
+    }
+    if (paddingObserver) {
+      paddingObserver.disconnect()
+      paddingObserver = null
     }
     if (scrollListener && ctx.container) {
       ctx.container.removeEventListener('scroll', scrollListener)
@@ -691,7 +699,12 @@ export function createChatScroll(
     attachUserInputCancellers(container)
 
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
+      // Shared by both observers below. Idempotent — it recomputes from
+      // live geometry — so a resize that trips both observers in the same
+      // delivery just recalculates twice, harmlessly. Reusing one
+      // function reference (rather than two closures) also keeps a single
+      // logical callback for tests/tooling that count them.
+      const handleResize = (): void => {
         strategy.onContentResize(ctx)
         if (initialAnchoring && ctx.container) {
           // `initialPosition: 'bottom'`: keep landing at the latest
@@ -703,18 +716,36 @@ export function createChatScroll(
           internal.atBottom = measureAtBottom(ctx.container)
         }
         commit()
-      })
-      // Observe BOTH content and container, and ask for the BORDER box.
+      }
+      resizeObserver = new ResizeObserver(handleResize)
+      // Content + container, BORDER box:
       // - Content border-box catches consumer padding changes on the
-      //   content element: those grow scrollHeight but leave the
-      //   content-box (the default) the same, so a content-box observer
-      //   wouldn't fire and the gutter would go stale.
-      // - Container border-box catches viewport resizes AND container
-      //   padding mutations (clientHeight changes either way), which
-      //   the gutter formula reads directly. Without this the pin drifts
-      //   on window resize / device-orientation change.
+      //   content element (e.g. a `padding-bottom` reserved for an
+      //   overlaid composer): those grow scrollHeight but leave the
+      //   content-box the same, so a content-box observer wouldn't fire
+      //   and the gutter would go stale.
+      // - Container border-box catches viewport resizes and any change
+      //   to the container's outer box (window resize, device-
+      //   orientation change, a flex parent reflowing).
       resizeObserver.observe(content, { box: 'border-box' })
       resizeObserver.observe(container, { box: 'border-box' })
+      // Second observer for the container's CONTENT box. The gutter
+      // formula reads `container.clientHeight` and `paddingBottom`
+      // directly, so a change to the container's OWN padding must
+      // recompute. The motivating case is reserving space for a
+      // `position: fixed` / `absolute` composer by growing the
+      // container's `padding-bottom` as the composer grows (see the
+      // "Overlay composer" recipe). Under the common `box-sizing:
+      // border-box` — and any flex-sized viewport — that padding change
+      // leaves the container's BORDER box untouched (so the border-box
+      // observation above never fires) while shrinking its content box
+      // (so this one does). Both are needed: border-box alone misses
+      // padding changes under border-box sizing; content-box alone
+      // misses them under an explicitly-height'd content-box-sized
+      // container. A single ResizeObserver can't watch one target with
+      // two boxes, hence the second instance.
+      paddingObserver = new ResizeObserver(handleResize)
+      paddingObserver.observe(container, { box: 'content-box' })
     }
 
     initialAnchoring = options.initialPosition === 'bottom'
