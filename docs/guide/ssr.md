@@ -26,8 +26,7 @@ when called from Node.
 
 ### Next.js (App Router) / React Server Components
 
-Mark the chat component as a client component — that's the only
-ceremony needed:
+Mark the chat component as a client component — that's all you need:
 
 ```tsx
 'use client'
@@ -46,8 +45,8 @@ React handles the boundary.
 ### Nuxt / Vue SSR
 
 `useChatScroll` from `@chat-scroll/vue` is safe in `<script setup>`.
-The mount runs only after the `:ref` resolves, which is post-
-hydration. No directive or special check needed.
+The mount runs only after the `:ref` resolves, post-hydration — no
+directive or special check needed.
 
 ### SolidStart
 
@@ -57,7 +56,7 @@ The mount defers to ref callbacks, which only fire client-side.
 ## Manual SSR check (vanilla)
 
 If you call the core outside an adapter — e.g. inside a web component
-that might be defined on the server — and you want belt-and-braces:
+that might be defined on the server — and you want an explicit guard:
 
 ```ts
 const scroll = createChatScroll(options)

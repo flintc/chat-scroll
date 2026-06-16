@@ -178,7 +178,7 @@ virtualizer.scrollToIndex(0, { align: 'start' })
 ```
 
 Prev/next under stick-to-bottom is the same idea as the
-[message-navigation recipe](/recipes/message-navigation#stick-to-bottom-same-buttons-no-pin),
+[message-navigation recipe](./message-navigation#stick-to-bottom-same-buttons-no-pin),
 resolved in index space: find the adjacent user turn in the data, then
 `unlock()` and scroll to `getOffsetForIndex(target, 'start')` minus
 your margin.

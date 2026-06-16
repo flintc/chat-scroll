@@ -1,8 +1,7 @@
 # Lower-level utilities
 
-`@chat-scroll/core` is more than `createChatScroll`. The same module
-exports a handful of utilities used internally by the strategies — and
-they're available to consumers who want to build something the
+`@chat-scroll/core` also exports the utilities the built-in strategies
+use internally. They're available to consumers building behavior the
 built-in strategies don't cover.
 
 This is the **escape hatch**, not the recommended path. Most apps will
@@ -87,8 +86,8 @@ function pinAndBound(
 The real `pin-to-top` strategy adds re-anchor logic for layout
 changes during streaming, smooth-scroll animation that tracks live
 `pinnedY`, user-input detection that releases the pin, and a great
-deal more. The shape above is enough to demonstrate that the gutter
-math and at-bottom detection are usable on their own.
+deal more. The shape above shows the gutter math and at-bottom
+detection are usable on their own.
 
 ## Pluggable strategies — roadmap
 

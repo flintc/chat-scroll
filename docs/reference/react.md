@@ -17,12 +17,11 @@ function useChatScroll(
 ```ts
 interface UseChatScrollOptions extends ChatScrollOptions {
   /**
-   * Reactive streaming flag. When provided, the adapter mirrors this
-   * value into the controller via `setStreaming` whenever it changes.
+   * Reactive streaming flag. The adapter mirrors its value into the
+   * controller via `setStreaming` whenever it changes.
    * Use when an upstream source already owns the request lifecycle
-   * (e.g. `useChat`'s `isLoading`, an agent SDK's `isRunning`,
-   * TanStack Query's `isFetching`). Omit to drive `setStreaming`
-   * imperatively from event handlers.
+   * (e.g. `useChat`'s `isLoading`, an agent SDK's `isRunning`). Omit to
+   * drive `setStreaming` imperatively from event handlers.
    */
   streaming?: boolean
 }

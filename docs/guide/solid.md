@@ -69,7 +69,7 @@ What's worth noticing:
 
 ```ts
 interface CreateChatScrollOptions extends ChatScrollOptions {
-  /** Mirrors an upstream signal accessor into setStreaming. */
+  /** Forwarded to setStreaming when the value changes. */
   streaming?: Accessor<boolean>
 }
 
@@ -172,4 +172,4 @@ helpers instead.
 Safe on the server. `createChatScroll` constructs the instance during
 setup; the core doesn't touch `document` / `window` at construction.
 `mount()` runs only after `ref` resolves, which fires client-side.
-SolidStart works without ceremony.
+SolidStart needs no extra setup.

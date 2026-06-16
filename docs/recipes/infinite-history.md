@@ -4,8 +4,8 @@ Real chats don't load the whole transcript. Fetch the newest page,
 open at the bottom, and page older history in as the reader scrolls
 up. [TanStack Query's](https://tanstack.com/query)
 bidirectional `useInfiniteQuery` handles the fetching and caching;
-this recipe adds the scroll wiring — including the one genuinely
-tricky step, keeping the viewport still while older messages prepend.
+this recipe adds the scroll wiring — including the tricky part:
+keeping the viewport still while older messages prepend.
 
 <InfiniteDemo caption="Scroll to the top to pull older pages from a simulated server (600ms latency). The messages under your eyes never move when a page lands above them. Send a message to see the bottom side keep working at the same time." />
 
@@ -117,8 +117,8 @@ export function ChatHistory({ threadId }: { threadId: string }) {
 - **Reader scrolls up.** The stick lock releases on the input itself;
   near the top, `fetchPreviousPage` fires.
 - **Page lands.** The layout effect shifts `scrollTop` by exactly the
-  prepended height, before paint — the messages under the reader's
-  eyes don't move.
+  prepended height, before paint — the messages the reader is
+  looking at don't move.
 - **Meanwhile, at the bottom.** Appends are untouched by any of this:
   the lock follows new messages when the reader is at the bottom, and
   leaves them alone when they're up in history.

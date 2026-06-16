@@ -17,7 +17,7 @@ import { useChatScroll } from '@chat-scroll/react'
 export function Chat({ messages, isLoading, sendMessage }) {
   const scroll = useChatScroll({
     strategy: 'pin-to-top',
-    streaming: isLoading, // mirrors upstream into setStreaming
+    streaming: isLoading, // adapter mirrors this into setStreaming
   })
 
   function handleSend(text: string) {
@@ -62,7 +62,7 @@ What's worth noticing:
 
 ```ts
 interface UseChatScrollOptions extends ChatScrollOptions {
-  /** Mirrored into setStreaming on every render. */
+  /** Forwarded to setStreaming when the value changes. */
   streaming?: boolean
 }
 
@@ -102,13 +102,13 @@ interface UseChatScrollReturn {
 that calls `setStreaming(opts.streaming)` whenever the value changes.
 
 Pass it when an upstream source already owns the request lifecycle —
-`useChat`'s `isLoading`, an agent SDK's `isRunning`, TanStack Query's
-`isFetching`. Omit it and call `scroll.setStreaming(true / false)`
-imperatively from your send / stream-end handlers when you own the
-events directly. Both shapes are valid; pick the one whose source of
-truth is closer to where start / end actually happen.
+`useChat`'s `isLoading`, an agent SDK's `isRunning`. Omit it and call
+`scroll.setStreaming(true / false)` imperatively from your send /
+stream-end handlers when you own the events directly. Both shapes are
+valid; pick the one whose source of truth is closer to where the
+events fire.
 
-Don't do both on the same instance — the controlled prop wins on the
+Don't do both on the same instance — the reactive option wins on the
 next render and overwrites your imperative call.
 
 ## State access

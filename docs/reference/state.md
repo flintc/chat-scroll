@@ -12,7 +12,7 @@ interface ChatScrollState {
 }
 ```
 
-The state object is **`Object.frozen`** and **identity-stable** —
+The state object is frozen with **`Object.freeze`** and **identity-stable** —
 `instance.state` returns the same reference until something actually
 changes, then a new frozen object replaces it. This makes it safe to use
 with React's `useSyncExternalStore`, Vue's `watch`, Solid's signals, etc.
@@ -82,7 +82,7 @@ Released by upward scroll-driving **input** — wheel-up, a downward
 touch pan, ArrowUp / PageUp / Home / Shift+Space — the moment the input
 arrives. (Releasing on the resulting scroll position alone would race
 the controller's own re-snap during a stream and lose; input is the
-ground truth.) A position-based check backs this up for inputs that
+authoritative signal.) A position-based check backs this up for inputs that
 emit no wheel/touch/key events, like scrollbar drags: it releases when
 the viewport moves *up* past `bottomThreshold`.
 

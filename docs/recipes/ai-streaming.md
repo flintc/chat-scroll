@@ -31,7 +31,7 @@ export function ChatView({
 }) {
   const scroll = useChatScroll({
     strategy: 'pin-to-top',
-    streaming: loading, // overflow-anchor on/off, automatically
+    streaming: loading, // adapter mirrors this into setStreaming
   })
 
   function handleSend(text: string) {
@@ -72,7 +72,7 @@ What you get:
 - User message snaps to the top on send.
 - Response streams in below; no scroll movement while it runs.
 - User can scroll freely during streaming (the pin only re-anchors
-  while they're still at it; wheel / touch / arrow keys release).
+  while the user is still at it; wheel / touch / arrow keys release).
 - Dynamic gutter holds the user message exactly at the top of the
   viewport when scrolled to the bottom.
 - A scroll-to-bottom button when they've drifted away.
@@ -127,7 +127,7 @@ useEffect(() => {
 ```
 
 `pinLatest` still belongs in `handleSend`. Don't pile both into one
-effect — the send handler always wins on the read race, and an
+effect — the send handler runs first and sets the pin, and an
 effect that does two unrelated things is harder to reason about.
 
 ## Thread switching
@@ -136,7 +136,7 @@ Use [`key={threadId}`](../guide/pin-to-top#thread-switching) on the
 component. A new thread means a fresh instance, no clearing needed.
 If you need to preserve scroll positions across visits, see the
 [multi-thread recipe](./multi-thread) — that's where the persistent
-instance + `savePosition` / `restorePosition` pair earns its keep.
+instance plus the `savePosition` / `restorePosition` pair pays off.
 
 ## Expandable blocks (thinking, tool calls)
 

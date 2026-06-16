@@ -28,7 +28,7 @@ Two known geometry leaks:
 - **Scrollbar appearing/disappearing.** With `overflow-y: auto`, the
   scrollbar's arrival changes `clientHeight` mid-calculation. Set
   `scrollbar-gutter: stable` (or `overflow-y: scroll`) on the
-  container. See [Tight pin](/recipes/tight-pin) for the full story.
+  container. See [Tight pin](../recipes/tight-pin) for the full story.
 - **CSS transforms.** The gutter math reads `getBoundingClientRect()`,
   which returns *visual* pixels, while `scrollTop` is in *layout*
   pixels. A `transform: scale(...)` on the container or any ancestor
@@ -41,7 +41,7 @@ The auto-snap is gated on `locked && streaming` — both must be true.
 The usual miss is the streaming flag: pass the adapter's reactive
 `streaming` option or call `setStreaming(true)` when the request
 starts. The gate exists so post-stream interactions (expanding a
-tool-call block) don't yank the user to the bottom — see
+tool-call block) don't snap the user to the bottom — see
 [Stick to bottom](./stick-to-bottom#how-it-works).
 
 Also remember the lock releases when the user scrolls up (by design)
@@ -84,7 +84,7 @@ Check *what kind* of event the interaction produces:
   viewport *and keep* the pin armed, re-pin afterwards with
   `pinMessage()`.
 
-See [`pinAnchored`](/reference/state#pinanchored) for the complete
+See [`pinAnchored`](../reference/state#pinanchored) for the complete
 clear/preserve matrix.
 
 ## Restored scroll position is wrong after new messages
@@ -101,8 +101,8 @@ it can't restore against content that hasn't been swapped in yet.
 Always give images / embeds an intrinsic size (`width`/`height`
 attributes or `aspect-ratio`). The controller compensates for content
 resizing above the pin, but a page full of zero-height-then-tall images
-churns the geometry on every load and makes any scroll logic feel
-jittery — that's true with or without this library.
+reshapes the layout on every load and makes any scroll logic jittery —
+with or without this library.
 
 ## Multiple chats on one page
 

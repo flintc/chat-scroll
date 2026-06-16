@@ -38,7 +38,7 @@ hidden — there's nothing below to scroll to.
 The click also does the right strategy-specific thing:
 
 - **pin-to-top** — clears `pinAnchored`, so the next content resize
-  doesn't yank the user back up to the pin.
+  doesn't pull the user back up to the pin.
 - **stick-to-bottom** — re-engages the lock once the scroll completes,
   so a mid-stream click resumes following the stream.
 

@@ -34,9 +34,9 @@ window.addEventListener('beforeunload', () => scroll.destroy())
 ```
 
 The framework adapters do exactly this internally — `createChatScroll`
-+ `mount` + state subscription + cleanup. Skipping the adapter is a
-real option when you don't have a framework to mediate, or when you're
-embedding chat into a web component / custom shell.
++ `mount` + state subscription + cleanup. Skip the adapter when you
+have no framework to mediate, or when you're embedding chat into a web
+component / custom shell.
 
 ## Driving state from outside
 

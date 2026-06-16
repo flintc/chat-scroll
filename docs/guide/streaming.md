@@ -5,7 +5,7 @@ mutates dozens of times per second. Browsers respond by **scroll
 anchoring**: they try to keep a "stable" node visible across layout
 changes. That's helpful for static pages (an image loads, content
 above shifts down, the user's reading position doesn't drift), but in
-an actively-managed chat it fights both built-in strategies.
+an actively-managed chat it conflicts with both built-in strategies.
 
 `chat-scroll` handles this with a single toggle:
 
@@ -21,8 +21,8 @@ scroll.setStreaming(false)
 
 1. Sets `overflow-anchor: none` on the container. The browser stops
    anchoring scroll to arbitrary nodes during DOM mutation, so the
-   controller's pin/lock math isn't fighting an invisible second
-   writer.
+   controller's pin/lock math isn't competing with the browser for
+   `scrollTop`.
 2. For `stick-to-bottom` specifically, **arms the auto-snap**. The
    strategy only re-pins `scrollTop` to `scrollHeight` when
    `streaming && locked` are both true. Outside a stream, expanding a
@@ -32,22 +32,22 @@ scroll.setStreaming(false)
 period**. The final chunk's growth typically renders *after* your
 loading flag flips (the append and the flag change land in the same
 tick; the resize fires later), and without the grace stick-to-bottom
-would stop following one resize too early, orphaning the last chunk
+would stop following one resize too early, leaving the last chunk
 above the bottom. Flip the flag synchronously with the last append —
 the controller handles the ordering, and user input during the grace
 still wins immediately.
 
 ## Two shapes for the same lifecycle
 
-You can drive `setStreaming` two ways. Pick whichever has the
-shorter wire to your stream's start / end events.
+You can drive `setStreaming` two ways. Pick whichever is closer to
+your stream's start / end events.
 
 ### Reactive: hand the flag to the adapter
 
 When an upstream source already exposes a loading boolean — `useChat`'s
-`isLoading`, an agent SDK's `isRunning`, TanStack Query's
-`isFetching` — pass it as the `streaming` option. The adapter installs
-the watcher and calls `setStreaming` on change.
+`isLoading`, an agent SDK's `isRunning` — pass it as the `streaming`
+option. The adapter installs the watcher and calls `setStreaming` on
+change.
 
 ::: code-group
 
@@ -90,7 +90,7 @@ async function handleSend(text: string) {
 This is the right shape for **vanilla / custom transports** and any
 case where the surrounding code already needs to do other work at the
 stream boundaries (focus the composer, log analytics, save a
-transcript). One handler, all the work.
+transcript).
 
 ### Don't do both at once
 
@@ -106,7 +106,7 @@ collapsible thinking block in a completed reply expands, anchoring
 keeps the reading position stable around it. If a late-arriving image
 shifts content down, anchoring keeps your eye on the line you were
 reading. We turn it off only while the controller is actively
-fighting for `scrollTop`.
+managing `scrollTop`.
 
 ## Reading state
 
@@ -114,7 +114,7 @@ fighting for `scrollTop`.
 scroll.state.streaming // boolean
 ```
 
-Mirrors the last `setStreaming()` call — whether driven by the
-controlled option or by an imperative call. Useful for a "…is typing"
+Mirrors the last `setStreaming()` call — whether driven by the reactive
+`streaming` option or by an imperative call. Useful for a "…is typing"
 indicator or test assertions. (For UI, an upstream loading flag is
 usually the cleaner source.)

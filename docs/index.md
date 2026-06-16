@@ -59,7 +59,7 @@ import { useChatScroll } from '@chat-scroll/react'
 export function Chat({ messages, isLoading, sendMessage }) {
   const scroll = useChatScroll({
     strategy: 'pin-to-top',
-    streaming: isLoading, // mirrors upstream loading flag
+    streaming: isLoading, // adapter mirrors this into setStreaming
   })
 
   function handleSend(text: string) {
@@ -173,14 +173,10 @@ lives. The adapter mirrors `isLoading` into `setStreaming` for you.
 
 ## Why?
 
-Every chat UI reinvents scroll behavior — pin messages, auto-scroll,
-detect scroll intent, show a scroll-to-bottom affordance — and the
-implementations end up inlined into components and coupled to one
-framework.
+Chat UIs reinvent the same scroll behavior over and over, inlined into
+components and coupled to one framework.
 
 `chat-scroll` extracts the scroll math and DOM orchestration into a
 framework-agnostic core. The framework layer is _"give me refs, tell
-me when to clean up, expose reactive state"_ — the same
-options/instance/adapter pattern as
-[`@tanstack/virtual`](https://tanstack.com/virtual) and
-[`@tanstack/table`](https://tanstack.com/table).
+me when to clean up, expose reactive state"_ — an options-and-instance
+core that each adapter wraps in a few lines.

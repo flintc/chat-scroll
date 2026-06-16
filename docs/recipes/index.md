@@ -1,7 +1,7 @@
 # Recipes
 
-Worked patterns end-to-end. Each shows how a real product uses one
-strategy plus the surrounding wiring (compose, FAB, restore, …).
+Complete patterns, end to end. Each shows how a real product uses one
+strategy plus the surrounding wiring (composer, FAB, restore).
 
 All examples are written in React. Vue and Solid translate one-for-one;
 see the framework guides ([React](../guide/react) / [Vue](../guide/vue)

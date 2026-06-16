@@ -8,6 +8,7 @@ interface ChatScrollOptions {
   bottomInset?: number
   scrollBehavior?: 'auto' | 'smooth' | 'instant'
   scrollDurationMs?: number
+  initialPosition?: 'bottom' | 'none'
   onScrollChange?: (state: ChatScrollState) => void
 }
 ```
@@ -59,7 +60,7 @@ strategies.
 Live-updatable via `setOptions`, so feed it the composer's measured
 height from a `ResizeObserver` and it tracks growth (a textarea wrapping,
 an attachment row) on the same frame. See the
-[overlay-composer recipe](/recipes/composer-overlay).
+[Overlay composer recipe](../recipes/composer-overlay).
 
 ## `scrollBehavior`
 
@@ -96,7 +97,7 @@ mount (and again on `reset()`), and keeps re-landing there on every
 content resize — hydration, web-font swap, late-loading images — until
 the first user input, the first upward scroll, or the first
 programmatic scroll call. This replaces the mount + rAF + `fonts.ready`
-snap dance chats otherwise hand-roll.
+sequence chat UIs usually wire up by hand.
 
 Evaluated at `mount()` / `reset()` time; not live-updatable via
 `setOptions`.

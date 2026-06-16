@@ -4,7 +4,7 @@ The pattern from ChatGPT, Claude, and Gemini: when the user sends a
 message, it pins to the top of the viewport and the response streams in
 below it.
 
-<LiveDemo scenario="pin-to-top" caption="Send a message: it pins to the top while the response streams in below. Expand a Tool call / Reasoning block in an earlier reply mid-stream — the pin holds. ‹ Prev / Next › hop the pin between turns." />
+<LiveDemo scenario="pin-to-top" caption="Send a message: it pins to the top while the reply streams in below the way an LLM delivers it — reasoning first, then a tool call (watch its arguments assemble), then the answer. Expand a Tool call / Reasoning block in an earlier reply mid-stream — the pin holds. ‹ Prev / Next › hop the pin between turns." />
 
 ## When to use it
 
@@ -60,14 +60,14 @@ function handleSend(text: string) {
 ```
 
 `pinLatest(selector)` finds the last matching element and pins it on
-the next animation frame, so you can call it the same tick you append
+the next animation frame, so you can call it in the same tick you append
 the message. If you already have the element, use
 `scroll.pinMessage(el)`.
 
 ::: tip If you can't hook the send
 When messages arrive from a source you don't control (a chat hook, a
 WebSocket push), the signal lives in the data: an effect watching
-`messages.at(-1)?.role === 'user'` is the honest shape. Prefer the
+`messages.at(-1)?.role === 'user'` is the right fit. Prefer the
 handler when you have one.
 :::
 
@@ -108,7 +108,7 @@ while they're anchored at it, relative to the turn nearest the
 viewport top once they've scrolled away. At the ends of the list
 `pinRelative` returns `false` and pins nothing — wire that to your
 disabled states. Full semantics in the
-[message-navigation recipe](/recipes/message-navigation).
+[message-navigation recipe](../recipes/message-navigation).
 
 ## Bulk loads
 

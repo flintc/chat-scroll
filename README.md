@@ -1,7 +1,7 @@
 # chat-scroll
 
 > Headless scroll management for chat UIs. Framework-agnostic core with thin
-> adapters for React, Vue, and Solid — modeled on TanStack.
+> adapters for React, Vue, and Solid.
 
 [![CI](https://github.com/flintc/chat-scroll/actions/workflows/ci.yml/badge.svg)](https://github.com/flintc/chat-scroll/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-online-3b82f6)](https://flintc.github.io/chat-scroll/)
@@ -35,7 +35,7 @@ import { useChatScroll } from '@chat-scroll/react'
 function Chat({ messages, loading, sendMessage }) {
   const scroll = useChatScroll({
     strategy: 'pin-to-top',
-    streaming: loading, // reactive — mirrors your loading flag
+    streaming: loading, // adapter mirrors this into setStreaming
   })
 
   function handleSend(text) {

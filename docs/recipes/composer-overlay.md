@@ -200,8 +200,8 @@ box). Two things to keep in mind, both orthogonal to `chat-scroll`:
 
 ## Pure-CSS alternative (no `bottomInset`)
 
-Prefer to keep the reservation in your stylesheet — or not using an
-adapter option? Put a `padding-bottom` equal to the composer height on
+Prefer to keep the reservation in your stylesheet, or not use an adapter
+option at all? Put a `padding-bottom` equal to the composer height on
 the **scroll container** instead. The gutter math subtracts container
 padding (the [tight-pin contract](./tight-pin)), so the pin stays tight,
 and the controller observes the container's content box — so the

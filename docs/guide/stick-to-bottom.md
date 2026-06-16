@@ -24,17 +24,18 @@ true.
    locked snaps to the bottom — the viewport follows the tokens.
 3. **User scrolls up mid-stream.** The lock releases the moment the
    _input_ arrives (wheel-up, downward touch pan, ArrowUp / PageUp /
-   Home), so the stream can't race the release and swallow the scroll.
+   Home), so the lock releases before the next stream resize can re-pin
+   the viewport and override the user's scroll.
    A position check backs this up for inputs that emit no events, like
    scrollbar drags.
 4. **Stream ends.** Flip your flag synchronously with the last append —
    the controller follows resizes for a two-frame grace so the final
-   chunk isn't orphaned, then goes inert.
+   chunk still lands at the bottom, then goes inert.
 5. **User sends.** Call `scroll.lock()` — both flags are true again and
    the cycle repeats.
 
 ::: warning Why the streaming gate matters
-Without it, expanding a collapsible block in a past reply would yank
+Without it, expanding a collapsible block in a past reply would jump
 the user to the bottom by the block's expanded height. The gate makes
 the contract explicit: the controller follows the stream; the user
 owns post-stream interaction.
@@ -48,7 +49,7 @@ and call `lock()` from your send handler:
 ```tsx
 const scroll = useChatScroll({
   strategy: 'stick-to-bottom',
-  streaming: isLoading, // adapter mirrors into setStreaming
+  streaming: isLoading, // adapter mirrors this into setStreaming
 })
 
 function handleSend(text: string) {

@@ -47,9 +47,8 @@ everything from the core. Vanilla / non-framework users can install
 
 ## Design principles
 
-**Modeled on TanStack.** The same options-and-instance pattern that powers
-[`@tanstack/virtual`](https://tanstack.com/virtual),
-[`@tanstack/table`](https://tanstack.com/table), and friends:
+**Options and instance.** A core class configured by options, with thin
+framework adapters wrapped around it:
 
 - A core class is fully usable without any framework.
 - Options are passed at construction and updatable at any time via

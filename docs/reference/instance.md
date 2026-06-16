@@ -67,7 +67,7 @@ and instant from a UI toggle without reconstructing the instance.
 offset (`pinnedY`), recalculates the gutter so the user can't scroll
 past where the response will arrive, and smooth-scrolls to the pin.
 The animation re-reads its target every frame, so content resizing
-mid-flight doesn't make it land short; with
+mid-animation doesn't leave it short of the pin; with
 `prefers-reduced-motion: reduce` (or `scrollBehavior: 'instant'`) the
 write is synchronous. Work is deferred to the next animation frame so
 layout has settled. No-op under `stick-to-bottom`.
@@ -108,7 +108,7 @@ re-pins the turn being read, then walks upward. It therefore works
 before any pin exists. The matched set is queried fresh on every call.
 
 For the same UX under `stick-to-bottom`, see the
-[message-navigation recipe](/recipes/message-navigation#stick-to-bottom-same-buttons-no-pin).
+[message-navigation recipe](../recipes/message-navigation#stick-to-bottom-same-buttons-no-pin).
 
 ### `getPinnedElement()`
 
@@ -179,7 +179,7 @@ Strategy-aware side effects:
 
 - `pin-to-top`: clears `pinAnchored` — jumping to the bottom is the
   user's explicit "move away from the pin" affordance, so subsequent
-  resizes won't yank them back.
+  resizes won't re-anchor them to the pin.
 - `stick-to-bottom`: re-engages the lock once the scroll completes
   (skipped if the user aborts the animation with a wheel/touch). A FAB
   wired to `scrollToBottom()` therefore resumes following the stream —

@@ -43,7 +43,7 @@ A strategy is a behavior policy. Two are built in:
   content arrives. User scroll-up breaks the lock; calling `lock()` (e.g.
   on send, alongside `setStreaming(true)`) re-engages it. Outside a stream
   the strategy is inert, so users can expand collapsible blocks without
-  being yanked back.
+  the container scrolling them back to the bottom.
 
 Both share infrastructure: the container styles, the at-bottom detection,
 streaming mode, and the gutter element. They differ only in the
@@ -70,7 +70,7 @@ pin" button while the user is still at the pin. The full surface is in
 the [State reference](../reference/state).
 
 The state object is **identity-stable** — it only swaps for a new
-`Object.frozen` snapshot when something changes. That's what keeps
+`Object.freeze`d snapshot when something changes. That's what keeps
 `useSyncExternalStore`, Vue's `watch`, and Solid's `createEffect` from
 firing on every tick.
 
@@ -84,7 +84,7 @@ firing on every tick.
 | `getPinnedElement()` | The pinned element (incl. one pending its measurement frame), or `null`. |
 | `referenceMessage(sel)` | The match the user is at — `{ el, index, count, past }` — for counters and disabled states. Both strategies. |
 | `relativeMessage(sel, ±1)` | The element a prev/next navigation would target (pure query; `null` at the edges). |
-| `scrollToMessage(el)` | Animated scroll bringing `el` to the viewport top; releases the follow first. Both strategies. |
+| `scrollToMessage(el)` | Animated scroll bringing `el` to the viewport top; releases the lock first. Both strategies. |
 | `scrollToBottom()`   | Smooth-scroll (or instant) to the bottom.             |
 | `lock()` / `unlock()`| Engage / release stick-to-bottom lock.                |
 | `setStreaming(bool)` | Toggle `overflow-anchor: none`; arms stick-to-bottom's auto-snap. |

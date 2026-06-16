@@ -120,7 +120,7 @@ is fixed, so neither variant moves the transcript.
 - **Statuses cycle.** In the fixed slot: zero layout change, zero
   scroll involvement. At natural height: each resize is absorbed by
   the pin and the gutter. Either way the reader can scroll away
-  mid-run and nothing tugs at them.
+  mid-run and the scroll position holds.
 - **The answer arrives.** The slot unmounts, the reply streams in
   below the pinned question — the normal
   [streaming flow](./ai-streaming) from here.

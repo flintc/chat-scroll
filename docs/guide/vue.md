@@ -72,7 +72,7 @@ What's worth noticing:
 
 ```ts
 interface UseChatScrollOptions extends ChatScrollOptions {
-  /** Mirrors an upstream ref / getter / value into setStreaming. */
+  /** Forwarded to setStreaming when the value changes. */
   streaming?: MaybeRefOrGetter<boolean>
 }
 
@@ -200,4 +200,4 @@ helpers instead.
 Safe on the server. `useChatScroll` constructs the instance inside
 `<script setup>`; the core doesn't touch `document` / `window` at
 construction. `mount()` runs only after `:ref` resolves, which fires
-client-side. Nuxt and any Vue SSR framework work without ceremony.
+client-side. Nuxt and any Vue SSR framework need no extra setup.

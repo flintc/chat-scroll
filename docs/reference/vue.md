@@ -18,8 +18,8 @@ function useChatScroll(
 interface UseChatScrollOptions extends ChatScrollOptions {
   /**
    * Reactive streaming flag. Accepts a plain boolean, a `Ref<boolean>`,
-   * or a getter. The adapter mirrors its current value into the
-   * controller via `setStreaming` whenever it changes. Omit to drive
+   * or a getter. The adapter mirrors its value into the controller
+   * via `setStreaming` whenever it changes. Omit to drive
    * `setStreaming` imperatively from event handlers.
    */
   streaming?: MaybeRefOrGetter<boolean>
