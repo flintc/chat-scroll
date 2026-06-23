@@ -1,7 +1,7 @@
 /**
  * @chat-scroll/core — public type surface
  *
- * Mirrors TanStack's options/state/instance pattern:
+ * The options/state/instance shape:
  *   ChatScrollOptions → createChatScroll(opts) → ChatScrollInstance
  */
 
