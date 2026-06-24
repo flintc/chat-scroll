@@ -3,7 +3,7 @@
  * scenario without relying on real time. Every scenario must implement
  * the keys it needs and leave the rest as no-ops.
  */
-import type { ChatScrollBehavior } from '@chat-scroll/core'
+import type { ChatScrollBehavior, PinClamp } from '@chat-scroll/core'
 
 export interface DemoApi {
   /** Pull the next assistant micro-chunk. Returns true if there's more. */
@@ -39,6 +39,12 @@ export interface DemoApi {
   collapseBlock?: (index: number) => void
   /** Set the controller's scroll behavior (smooth / instant / auto). */
   setScrollBehavior?: (behavior: ChatScrollBehavior) => void
+  /**
+   * Enable/disable the tall-message pin clamp at runtime (pin-to-top).
+   * Pass `undefined` to turn it off. Used by the tall-user-message probe
+   * to compare clamped vs. unclamped anchoring cross-engine.
+   */
+  setPinClamp?: (clamp: PinClamp | undefined) => void
 }
 
 declare global {

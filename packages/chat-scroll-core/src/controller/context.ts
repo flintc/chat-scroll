@@ -1,12 +1,17 @@
 import { pinToTopStrategy } from '../strategies/pin-to-top'
 import { stickToBottomStrategy } from '../strategies/stick-to-bottom'
 import type { Strategy, StrategyContext } from '../strategies/types'
-import type { ChatScrollOptions, ChatScrollState } from '../types'
+import type { ChatScrollOptions, ChatScrollState, PinClamp } from '../types'
 
-/** Resolved options — every option present, plus the optional callback. */
+/**
+ * Resolved options — every option present, plus the optional callback and
+ * the optional `pinClamp` (which has no default; `undefined` means "off",
+ * so it can't be made `Required` without forcing a value).
+ */
 export type ResolvedOptions = Required<
-  Omit<ChatScrollOptions, 'onScrollChange'>
+  Omit<ChatScrollOptions, 'onScrollChange' | 'pinClamp'>
 > & {
+  pinClamp?: PinClamp
   onScrollChange?: ChatScrollOptions['onScrollChange']
 }
 
@@ -150,6 +155,8 @@ export function createControllerContext(
     scrollBehavior: opts.scrollBehavior ?? DEFAULTS.scrollBehavior,
     scrollDurationMs: opts.scrollDurationMs ?? DEFAULTS.scrollDurationMs,
     initialPosition: opts.initialPosition ?? DEFAULTS.initialPosition,
+    // No default — `undefined` means the clamp is off (backward compatible).
+    pinClamp: opts.pinClamp,
     onScrollChange: opts.onScrollChange,
   }
 
@@ -174,6 +181,7 @@ export function createControllerContext(
       bottomThreshold: options.bottomThreshold,
       scrollMargin: options.scrollMargin,
       bottomInset: options.bottomInset,
+      pinClamp: options.pinClamp,
     },
     pinAnimationInterrupted: false,
     scrollDelta: 0,

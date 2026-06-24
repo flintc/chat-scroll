@@ -124,6 +124,7 @@ export function createChatScroll(
     cc.ctx.options.bottomThreshold = cc.options.bottomThreshold
     cc.ctx.options.scrollMargin = cc.options.scrollMargin
     cc.ctx.options.bottomInset = cc.options.bottomInset
+    cc.ctx.options.pinClamp = cc.options.pinClamp
 
     const strategyChanged = Boolean(
       next.strategy && next.strategy !== prevStrategy,

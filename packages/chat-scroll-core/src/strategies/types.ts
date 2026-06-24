@@ -1,4 +1,4 @@
-import type { ChatScrollState } from '../types'
+import type { ChatScrollState, PinClamp } from '../types'
 
 /**
  * Internal context handed to a strategy. Strategies are mostly stateless —
@@ -51,6 +51,13 @@ export interface StrategyContext {
      * `ChatScrollOptions.bottomInset`.
      */
     bottomInset: number
+    /**
+     * Clamp config for over-tall pinned messages, or `undefined` when off.
+     * Applied to the derived `pinnedY` in the pin-to-top strategy so a
+     * very tall pin is over-scrolled to leave the response room. See
+     * `ChatScrollOptions.pinClamp`.
+     */
+    pinClamp?: PinClamp
   }
 
   /**

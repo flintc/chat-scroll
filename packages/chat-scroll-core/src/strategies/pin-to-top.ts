@@ -1,6 +1,50 @@
 import { calcGutterHeight, setGutterHeight } from '../gutter'
 import { offsetWithin } from '../scroll-utils'
+import type { PinClamp } from '../types'
 import type { Strategy, StrategyContext } from './types'
+
+/**
+ * Extra offset (px) to push the pin's anchor DOWN by, over-scrolling a
+ * tall message so only `clamp.visibleHeight` of it stays at the viewport
+ * top. Zero when no clamp is configured or the element is at/below the
+ * threshold — i.e. the normal "pin the whole message" behavior.
+ *
+ * `elementHeight` is the pinned element's measured height (border box,
+ * from `getBoundingClientRect().height`). The result is floored at 0 so a
+ * clamp configured with `visibleHeight > tallerThan` (or larger than the
+ * element) never pulls the anchor upward.
+ */
+export function clampOffset(
+  elementHeight: number,
+  clamp: PinClamp | undefined,
+): number {
+  if (!clamp || elementHeight <= clamp.tallerThan) return 0
+  return Math.max(0, elementHeight - clamp.visibleHeight)
+}
+
+/**
+ * The single source of truth for the pinned element's target `pinnedY`.
+ * Used by BOTH the initial pin (`pinMessage`) and every live refresh
+ * (`refreshPinnedY`) so the clamp is applied identically and persists
+ * across content resizes:
+ *
+ *   pinnedY = max(0, offsetWithin(el) - margin + clampOffset(height, clamp))
+ *
+ * Reading the height live each time is deliberate — a user message's
+ * height is stable, but keeping the read here (rather than baking a
+ * one-shot value at pin time) means the clamp survives every recalc and
+ * tracks the element if it ever does reflow.
+ */
+export function computePinnedY(
+  el: HTMLElement,
+  container: HTMLElement,
+  margin: number,
+  clamp: PinClamp | undefined,
+): number {
+  const offset = offsetWithin(el, container)
+  const extra = clampOffset(el.getBoundingClientRect().height, clamp)
+  return Math.max(0, offset - margin + extra)
+}
 
 /**
  * Pin-to-top strategy (AI chat).
@@ -56,9 +100,14 @@ export function refreshPinnedY(ctx: StrategyContext): number {
     ctx.state.pinActive = false
     return 0
   }
-  const live = Math.max(
-    0,
-    offsetWithin(ctx.pinnedEl, ctx.container) - ctx.pinnedMargin,
+  // Re-derive through the shared helper so the tall-message clamp is
+  // re-applied on every resize. Without this, a clamped tall pin would
+  // un-clamp itself the first time content above it shifted.
+  const live = computePinnedY(
+    ctx.pinnedEl,
+    ctx.container,
+    ctx.pinnedMargin,
+    ctx.options.pinClamp,
   )
   const delta = live - ctx.state.pinnedY
   ctx.state.pinnedY = live

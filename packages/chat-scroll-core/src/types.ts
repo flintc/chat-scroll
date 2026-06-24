@@ -9,6 +9,20 @@ export type ChatScrollStrategy = 'pin-to-top' | 'stick-to-bottom'
 
 export type ChatScrollBehavior = 'auto' | 'smooth' | 'instant'
 
+/**
+ * Clamp configuration for an over-tall pinned message (pin-to-top). When
+ * the pinned element is taller than `tallerThan` px, it is over-scrolled
+ * so only `visibleHeight` px remain visible at the viewport top — the rest
+ * of the message sits above the viewport, leaving the streaming response
+ * the rest of the room. Both values are px. See `ChatScrollOptions.pinClamp`.
+ */
+export interface PinClamp {
+  /** Height threshold (px). Messages at or below this pin normally. */
+  tallerThan: number
+  /** How many px of the message stay visible at the top once clamped. */
+  visibleHeight: number
+}
+
 export interface ChatScrollOptions {
   /**
    * Scroll strategy.
@@ -82,6 +96,19 @@ export interface ChatScrollOptions {
    * @default 'none'
    */
   initialPosition?: 'bottom' | 'none'
+
+  /**
+   * Clamp an over-tall pinned message so the response keeps room. When the
+   * pinned element is taller than `tallerThan` px, anchor it so only
+   * `visibleHeight` px remain visible at the top (over-scrolling the rest
+   * above the viewport). Only used with `'pin-to-top'`. Omit to disable
+   * (the current behavior — the whole message pins at `scrollMargin`).
+   *
+   * A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }`
+   * (≈ 10em / 6em at 16px, matching assistant-ui's `topAnchorMessageClamp`).
+   * @default undefined
+   */
+  pinClamp?: PinClamp
 
   /**
    * Called when state changes. Framework adapters use this to publish
@@ -198,7 +225,10 @@ export interface ChatScrollInstance {
   readonly state: ChatScrollState
 
   /** Current resolved options. */
-  readonly options: Required<Omit<ChatScrollOptions, 'onScrollChange'>> & {
+  readonly options: Required<
+    Omit<ChatScrollOptions, 'onScrollChange' | 'pinClamp'>
+  > & {
+    pinClamp?: PinClamp
     onScrollChange?: ChatScrollOptions['onScrollChange']
   }
 

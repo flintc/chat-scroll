@@ -208,6 +208,9 @@ export function mountPinToTop(root: HTMLElement): () => void {
     setScrollBehavior(behavior): void {
       playback.setScrollBehavior(behavior)
     },
+    setPinClamp(clamp): void {
+      scroll.setOptions({ pinClamp: clamp })
+    },
     showCue,
   }
   window.__demo = api

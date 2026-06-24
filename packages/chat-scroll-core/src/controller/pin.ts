@@ -1,6 +1,5 @@
-import { offsetWithin } from '../scroll-utils'
 import { shouldReduceMotion } from '../smooth-scroll'
-import { recalcGutter } from '../strategies/pin-to-top'
+import { computePinnedY, recalcGutter } from '../strategies/pin-to-top'
 import type { ControllerContext } from './context'
 import { startAnimatedScroll } from './scroll-animation'
 import { commit } from './store'
@@ -22,8 +21,15 @@ export function pinMessage(cc: ControllerContext, el: HTMLElement): void {
     cc.navTargetEl = null
     cc.initialAnchoring = false
     el.style.scrollMarginTop = `${cc.options.scrollMargin}px`
-    const offset = offsetWithin(el, container)
-    cc.internal.pinnedY = Math.max(0, offset - cc.options.scrollMargin)
+    // Centralized pin math (shared with `refreshPinnedY`) so the
+    // tall-message clamp is applied on the initial pin too — not just on
+    // later resizes.
+    cc.internal.pinnedY = computePinnedY(
+      el,
+      container,
+      cc.options.scrollMargin,
+      cc.options.pinClamp,
+    )
     cc.ctx.pinnedEl = el
     cc.ctx.pinnedMargin = cc.options.scrollMargin
     cc.internal.pinAnchored = true

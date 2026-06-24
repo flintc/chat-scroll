@@ -6,6 +6,7 @@ interface ChatScrollOptions {
   bottomThreshold?: number
   scrollMargin?: number
   bottomInset?: number
+  pinClamp?: { tallerThan: number; visibleHeight: number }
   scrollBehavior?: 'auto' | 'smooth' | 'instant'
   scrollDurationMs?: number
   initialPosition?: 'bottom' | 'none'
@@ -43,6 +44,39 @@ The gap kept above a message brought to the viewport top — pins
 it, and the gutter math accounts for it. Live-updatable via
 `setOptions`; the [home page demo](/) exposes it as the **Margin**
 control.
+
+## `pinClamp`
+
+- **Type:** `{ tallerThan: number; visibleHeight: number }` (pixels)
+- **Default:** `undefined` (off)
+- **Strategy:** `pin-to-top` only.
+
+Clamps an over-tall pinned message so the streaming response keeps room.
+By default a pinned user message is anchored with its **top** at
+`scrollMargin` from the viewport top — fine for short prompts, but a long
+pasted prompt or code block then fills (or overflows) the viewport and the
+answer lands off-screen.
+
+With `pinClamp` set, when the pinned element is taller than `tallerThan`
+px the controller intentionally **over-scrolls** it so only
+`visibleHeight` px of the message remain visible at the top — just enough
+question for context, with the rest of the viewport free for the reply.
+Messages at or below the threshold are unaffected. The effective anchor is:
+
+```
+pinnedY = max(0, offset − scrollMargin + max(0, height − visibleHeight))
+```
+
+so `scrollMargin` still applies on top of the clamp (the visible slice is
+`visibleHeight + scrollMargin`). The clamp is re-applied on every content
+resize, so it persists while content above the pin shifts, and it rides
+the same JS scroll-correction as the normal pin — it holds cross-engine
+(Chromium **and** WebKit) with no drift.
+
+A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }` (≈ 10em /
+6em at a 16px base). Live-updatable via `setOptions`; values are plain px
+numbers to match the rest of the option surface (no CSS-length parsing).
+Mirrors assistant-ui's `topAnchorMessageClamp`.
 
 ## `bottomInset`
 
