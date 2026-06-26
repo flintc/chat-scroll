@@ -1,5 +1,5 @@
 import type { ControllerContext } from './context'
-import { commit } from './store'
+import { commit, reconcileOverflowAnchor } from './store'
 
 export function cancelStreamingGrace(cc: ControllerContext): void {
   if (cc.streamingGraceFrame !== null) {
@@ -14,7 +14,10 @@ export function setStreaming(cc: ControllerContext, streaming: boolean): void {
   cc.internal.streaming = streaming
   if (streaming) {
     cancelStreamingGrace(cc)
-    if (cc.ctx.container) cc.ctx.container.style.overflowAnchor = 'none'
+    // `overflow-anchor` follows the controller's active-management state, not
+    // streaming alone — reconcile picks `none` here only if we're locked /
+    // pinned / animating. See `reconcileOverflowAnchor`.
+    reconcileOverflowAnchor(cc)
     commit(cc)
     return
   }
@@ -24,8 +27,9 @@ export function setStreaming(cc: ControllerContext, streaming: boolean): void {
     // tick, but the resulting ResizeObserver callback fires later. Without the
     // grace, stick-to-bottom stops snapping one resize too early and that last
     // growth is orphaned above the bottom. Keep following (and keep
-    // `overflow-anchor: none`) for two frames; real user input still wins
-    // immediately because the lock release runs at input time.
+    // `overflow-anchor: none` while locked/pinned) for two frames; real user
+    // input still wins immediately because the lock release runs at input
+    // time and reconciles the anchor with it.
     cc.ctx.streamingGrace = true
     if (cc.streamingGraceFrame !== null) {
       cancelAnimationFrame(cc.streamingGraceFrame)
@@ -34,11 +38,12 @@ export function setStreaming(cc: ControllerContext, streaming: boolean): void {
       cc.streamingGraceFrame = requestAnimationFrame(() => {
         cc.streamingGraceFrame = null
         cc.ctx.streamingGrace = false
-        if (cc.ctx.container) cc.ctx.container.style.overflowAnchor = ''
+        // The grace flip isn't part of ChatScrollState, so it won't reconcile
+        // through `commit` — do it directly.
+        reconcileOverflowAnchor(cc)
       })
     })
-  } else if (cc.ctx.container) {
-    cc.ctx.container.style.overflowAnchor = ''
   }
+  reconcileOverflowAnchor(cc)
   commit(cc)
 }

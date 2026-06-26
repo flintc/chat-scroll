@@ -425,6 +425,64 @@ describe('createChatScroll', () => {
       expect(container.style.overflowAnchor).toBe('')
       s.destroy()
     })
+
+    it('hands overflow-anchor back when the user scrolls away mid-stream (stick)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll() // stick-to-bottom, starts locked
+      s.mount(container, content)
+      s.setStreaming(true)
+      // Locked at the bottom → the controller owns scrollTop → disable the
+      // browser's anchoring so the two don't fight.
+      expect(container.style.overflowAnchor).toBe('none')
+      // Reader scrolls away mid-stream (lock releases). The controller no
+      // longer drives scrollTop, so the browser's own anchoring must come
+      // back to keep their place when content grows above them.
+      s.unlock()
+      expect(container.style.overflowAnchor).toBe('')
+      // Re-engaging follow hands scrollTop back to the controller.
+      s.lock()
+      expect(container.style.overflowAnchor).toBe('none')
+      s.destroy()
+    })
+
+    it('hands overflow-anchor back when the user leaves the pin mid-stream (pin-to-top)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 900,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // Anchored on the pin → the controller owns scrollTop → none.
+      expect(s.state.pinAnchored).toBe(true)
+      expect(container.style.overflowAnchor).toBe('none')
+      // Reader wheels away from the pin to read the answer — anchoring goes
+      // back to the browser so a late image above doesn't shift their place.
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      expect(s.state.pinAnchored).toBe(false)
+      expect(container.style.overflowAnchor).toBe('')
+      s.destroy()
+    })
   })
 
   describe('pin-to-top strategy', () => {

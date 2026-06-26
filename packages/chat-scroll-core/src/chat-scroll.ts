@@ -25,7 +25,7 @@ import {
   measureAtBottom,
 } from './controller/reservation'
 import { startAnimatedScroll } from './controller/scroll-animation'
-import { commit, subscribe } from './controller/store'
+import { commit, reconcileOverflowAnchor, subscribe } from './controller/store'
 import { cancelStreamingGrace, setStreaming } from './controller/streaming'
 
 /**
@@ -102,7 +102,9 @@ export function createChatScroll(
     cc.lastSeenScrollHeight = container.scrollHeight
     cc.internal.atBottom = measureAtBottom(cc)
     cc.internal.locked = cc.options.strategy === 'stick-to-bottom'
-    if (cc.internal.streaming) container.style.overflowAnchor = 'none'
+    // Set `overflow-anchor` from the controller's active-management state
+    // (mounting mid-stream while already locked/pinned → `none`).
+    reconcileOverflowAnchor(cc)
     commit(cc)
   }
 

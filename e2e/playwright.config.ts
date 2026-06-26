@@ -89,7 +89,7 @@ export default defineConfig({
     {
       name: 'webkit',
       testMatch:
-        /specs\/vanilla\/(scroll-bound-tight|pin-to-top|pin-expandable-tap|pin-expandable-edges|pin-expandable-stress|pin-expandable-extreme|probe-tall-user-message)\.spec\.ts/,
+        /specs\/vanilla\/(scroll-bound-tight|pin-to-top|pin-expandable-tap|pin-expandable-edges|pin-expandable-stress|pin-expandable-extreme|probe-tall-user-message|probe-late-image-above-mid-stream)\.spec\.ts/,
       use: {
         ...devices['Desktop Safari'],
         baseURL: 'http://localhost:3110',
