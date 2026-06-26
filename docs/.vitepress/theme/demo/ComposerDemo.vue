@@ -34,10 +34,24 @@ const PROMPTS = [
 const REPLY =
   'Good question. The controller reserves the obscured band in its own ' +
   'gutter element, so the last line of this reply can always scroll out ' +
-  'from behind the composer. Notice that nothing here touches the ' +
-  'container padding — the library owns the reservation, and it tracks ' +
-  'the composer height as it changes. Scroll to the very bottom and the ' +
-  'final words sit just above the input, never under it.'
+  'from behind the composer. Nothing here touches the container padding — ' +
+  'the library owns the reservation, and it tracks the composer height as ' +
+  'it changes.\n\n' +
+  'Keep reading and watch the mechanics. As this answer grows past the ' +
+  'bottom of the viewport the scroll-to-bottom button fades in, and the ' +
+  'gutter underneath holds exactly the composer’s height in reserve. ' +
+  'However long the reply runs, the final words never end up stranded ' +
+  'underneath the input.\n\n' +
+  'Flip “Reserve space” off to feel the difference: the last line slides ' +
+  'under the composer with no way to reach it, and the bar turns red to ' +
+  'flag it. Turn it back on and that line lifts to sit just above the ' +
+  'bar. Grow the composer to two or three lines and the reserved band ' +
+  'tracks it on the same frame — the pin stays tight and the bottom ' +
+  'stays glued under either strategy.\n\n' +
+  'That is the whole feature: one option, measured from your real ' +
+  'composer, reconciled with the gutter the library already manages. ' +
+  'Scroll to the very bottom now and the final words sit just above the ' +
+  'input, never under it.'
 
 // ── Controls ──────────────────────────────────────────────────────
 const strategy = ref<ChatScrollStrategy>('pin-to-top')

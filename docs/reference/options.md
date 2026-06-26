@@ -74,9 +74,11 @@ the same JS scroll-correction as the normal pin — it holds cross-engine
 (Chromium **and** WebKit) with no drift.
 
 A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }` (≈ 10em /
-6em at a 16px base). Live-updatable via `setOptions`; values are plain px
-numbers to match the rest of the option surface (no CSS-length parsing).
-Mirrors assistant-ui's `topAnchorMessageClamp`.
+6em at a 16px base). Live-updatable via `setOptions`; the [home page
+demo](/) exposes it as the **Clamp tall** toggle (send the long first
+prompt, then flip it). Values are plain px numbers to match the rest of
+the option surface (no CSS-length parsing). Mirrors assistant-ui's
+`topAnchorMessageClamp`.
 
 ## `bottomInset`
 

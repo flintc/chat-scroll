@@ -5,6 +5,7 @@ import type { ChatScrollBehavior, ScrollPosition } from '@chat-scroll/vue'
 import ChatPane from './ChatPane.vue'
 import {
   ASSISTANT_CHUNKS,
+  LONG_PROMPT,
   PROMPTS,
   seedAltThread,
   seedConversation,
@@ -53,6 +54,20 @@ const MARGINS = [0, 12, 32, 64] as const
 const marginPx = ref<number>(12)
 const motion = ref<ChatScrollBehavior>('auto')
 
+// pinClamp — over-scroll an over-tall pinned question so the streaming
+// answer keeps room. The preset mirrors the docs (≈10em / 6em). "Off"
+// can't be `pinClamp: undefined` (setOptions ignores undefined keys, so
+// it never clears) — it's a clamp with a threshold no message reaches,
+// which makes clampOffset a no-op.
+const CLAMP_ON = { tallerThan: 160, visibleHeight: 96 }
+const CLAMP_OFF = { tallerThan: Number.MAX_SAFE_INTEGER, visibleHeight: 0 }
+const clampTall = ref(false)
+
+// The home (side-by-side) demo leads with a tall pasted question so the
+// Clamp tall control has an over-tall pin to act on; other scenarios
+// keep the short canonical rotation.
+const sidePrompts: readonly string[] = [LONG_PROMPT, ...PROMPTS]
+
 function panes(): PaneHandle[] {
   return [paneA.value, paneB.value]
 }
@@ -68,6 +83,18 @@ watch(marginPx, (m) => {
 watch(motion, (b) => {
   for (const pane of panes()) {
     pane?.scroll.instance.setOptions({ scrollBehavior: b })
+  }
+})
+// Apply the clamp live and re-pin the current turn so the pinned message
+// visibly snaps to the new (clamped or full) anchor — same pattern as the
+// margin watch. pin-to-top only; the stick pane ignores pinClamp.
+watch(clampTall, (on) => {
+  for (const pane of panes()) {
+    const sc = pane?.scroll
+    if (!sc) continue
+    sc.instance.setOptions({ pinClamp: on ? CLAMP_ON : CLAMP_OFF })
+    const el = sc.getPinnedElement()
+    if (el) sc.pinMessage(el)
   }
 })
 
@@ -138,7 +165,9 @@ const streaming = computed(
 )
 
 function send(): void {
-  const prompt = PROMPTS[promptIdx.value % PROMPTS.length]
+  const list: readonly string[] =
+    props.scenario === 'side-by-side' ? sidePrompts : PROMPTS
+  const prompt = list[promptIdx.value % list.length]
   promptIdx.value += 1
 
   if (props.scenario === 'side-by-side') {
@@ -262,6 +291,13 @@ async function reset(): Promise<void> {
             <option value="smooth">smooth</option>
             <option value="instant">instant</option>
           </select>
+        </label>
+        <label
+          class="live-demo__toggle"
+          title="pinClamp — over-scroll an over-tall pinned question so the reply keeps room"
+        >
+          <input v-model="clampTall" type="checkbox" />
+          Clamp tall
         </label>
       </template>
       <label v-if="isPin" class="live-demo__toggle">

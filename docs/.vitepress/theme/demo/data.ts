@@ -10,6 +10,28 @@ export const PROMPTS = [
   'How do the two strategies differ in practice?',
 ] as const
 
+/**
+ * A deliberately long, pasted-in question — tall enough to overflow a
+ * pin pane on its own. The home demo leads with it so the `pinClamp`
+ * control has an over-tall pinned turn to act on (a short prompt pins
+ * fine and the clamp is a no-op, by design).
+ */
+export const LONG_PROMPT =
+  'Here is the whole thing I am stuck on — pasting it so you have the ' +
+  'full picture:\n\n' +
+  'I render a streaming assistant reply under each user turn. On every ' +
+  'chunk the viewport snaps to the bottom and I lose my place, so ' +
+  'reading a long answer is impossible.\n\n' +
+  'function onChunk(delta) {\n' +
+  '  setText((t) => t + delta)\n' +
+  '  el.scrollTop = el.scrollHeight  // <- this is what I tried\n' +
+  '}\n\n' +
+  'What I actually want: the question I just asked should stay pinned at ' +
+  'the top of the viewport while the answer streams in below it, the way ' +
+  'ChatGPT and Claude behave. How do I get that without hand-writing a ' +
+  'scroll effect that fights the user — and what happens when the pasted ' +
+  'question itself is taller than the viewport?'
+
 /** One tick of the fake stream appends one chunk. */
 export const ASSISTANT_CHUNKS: readonly string[] = [
   "It's tricky because ",
