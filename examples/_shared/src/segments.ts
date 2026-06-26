@@ -20,9 +20,9 @@ export type MicroChunk =
       type: 'block-open'
       kind: 'tool'
       name: string
-      args: string
       defaultOpen: boolean
     }
+  | { type: 'block-args'; text: string }
   | { type: 'block-body'; text: string }
   | { type: 'block-close' }
 
@@ -33,6 +33,12 @@ export interface ExpandOptions {
    * stress test of the controller. Default 24.
    */
   bodyChunkChars?: number
+  /**
+   * Approx. characters per micro-chunk for streamed tool args —
+   * smaller than bodies so the call visibly assembles in the summary
+   * the way LLM APIs deliver tool-call argument deltas. Default 12.
+   */
+  argsChunkChars?: number
 }
 
 /**
@@ -66,6 +72,7 @@ export function expandSegments(
   opts: ExpandOptions = {},
 ): MicroChunk[] {
   const bodyChunkChars = opts.bodyChunkChars ?? 24
+  const argsChunkChars = opts.argsChunkChars ?? 12
   const out: MicroChunk[] = []
   for (const seg of segments) {
     if (seg.type === 'text') {
@@ -85,14 +92,18 @@ export function expandSegments(
       out.push({ type: 'block-close' })
       continue
     }
-    // tool
+    // tool — the call's arguments stream into the summary first (LLM
+    // APIs deliver tool calls as argument deltas), then the result
+    // streams into the body once the call "runs".
     out.push({
       type: 'block-open',
       kind: 'tool',
       name: seg.name,
-      args: seg.args,
       defaultOpen: Boolean(seg.defaultOpen),
     })
+    for (const ch of chunkString(seg.args, argsChunkChars)) {
+      out.push({ type: 'block-args', text: ch })
+    }
     for (const ch of chunkString(seg.result, bodyChunkChars)) {
       out.push({ type: 'block-body', text: ch })
     }

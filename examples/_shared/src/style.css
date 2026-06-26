@@ -79,26 +79,47 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
 
 .msg {
   max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 14px;
   line-height: 1.45;
-  white-space: pre-wrap;
 }
 .msg--user {
   align-self: flex-end;
   background: var(--user);
   color: var(--user-fg);
+  padding: 10px 14px;
+  border-radius: 14px;
   border-bottom-right-radius: 4px;
+  white-space: pre-wrap;
 }
 .msg--bot {
   align-self: flex-start;
   background: var(--bot);
   color: var(--bot-fg);
   border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 14px;
   border-bottom-left-radius: 4px;
+  white-space: pre-wrap;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* A plain reply stays a single bubble. When the reply carries thinking
+   / tool cards, demote the bubble to a transparent column so the cards
+   stack ABOVE the answer and only the answer text stays bubbled — the
+   ChatGPT/Claude layout. (Text without cards may sit directly in
+   `.msg--bot` or in a `.msg__text` run; both render as one bubble.) */
+.msg--bot:has(.block) {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.msg--bot:has(.block) .msg__text {
+  background: var(--bot);
+  color: var(--bot-fg);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
 }
 
 /* Expandable block inside a bot message — thinking / tool call.

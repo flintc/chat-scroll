@@ -9,23 +9,28 @@ import {
 
 import {
   ASSISTANT_CHUNKS,
-  REASONING_BODY,
-  TOOL_CALL_BODY,
+  buildReplyEvents,
+  type DemoEvent,
   type DemoMsg,
 } from './data'
 
 export interface UseDemoChatOptions {
   initial?: DemoMsg[]
   /**
-   * Stream cadence — one chunk appended per interval. Reactive: a ref
+   * Stream cadence — one event applied per interval. Reactive: a ref
    * or getter is re-read before every tick, so changing it mid-stream
    * takes effect on the next chunk (the demos' speed control).
    */
   intervalMs?: MaybeRefOrGetter<number>
-  /** Give assistant replies collapsible reasoning + tool-call blocks. */
+  /**
+   * Stream the reply the way LLM APIs deliver a turn: the Reasoning
+   * block streams its body first, then the tool call arrives (its
+   * arguments stream into the summary, the result into the body),
+   * then the answer text streams. Without this the reply is text-only.
+   */
   withBlocks?: boolean
   /**
-   * Delay before the FIRST reply chunk — the window where an agent
+   * Delay before the FIRST reply event — the window where an agent
    * narrates its progress (the agent-status demo). Defaults to the
    * regular cadence.
    */
@@ -43,10 +48,34 @@ export interface UseDemoChatReturn {
   reset: () => void
 }
 
+/** Apply one streamed event to the in-flight assistant message. */
+function applyEvent(msg: DemoMsg, e: DemoEvent): DemoMsg {
+  if (e.type === 'text') return { ...msg, text: msg.text + e.text }
+  const blocks = (msg.blocks ?? []).slice()
+  const i = blocks.length - 1
+  const last = blocks[i]
+  if (e.type === 'block-open') {
+    blocks.push({
+      kind: e.kind,
+      title: e.title,
+      ...(e.kind === 'tool' ? { args: '' } : {}),
+      body: '',
+      streaming: true,
+    })
+  } else if (e.type === 'block-args' && last) {
+    blocks[i] = { ...last, args: (last.args ?? '') + e.text }
+  } else if (e.type === 'block-body' && last) {
+    blocks[i] = { ...last, body: last.body + e.text }
+  } else if (e.type === 'block-close' && last) {
+    blocks[i] = { ...last, streaming: false }
+  }
+  return { ...msg, blocks }
+}
+
 /**
  * Minimal stand-in for `useChat` & friends, used by the live docs demos.
  * Timer-driven: `submit()` appends the user turn and streams the canned
- * assistant reply chunk-by-chunk until exhausted.
+ * assistant reply event-by-event until exhausted.
  */
 export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
   const intervalOf = (): number => toValue(opts.intervalMs) ?? 55
@@ -56,7 +85,8 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
 
   let nextId = 1_000_000
   let assistantId: number | null = null
-  let chunkIdx = 0
+  let events: DemoEvent[] = []
+  let eventIdx = 0
   // Self-scheduling timeout (not setInterval) so the cadence is
   // re-read on every tick — see UseDemoChatOptions.intervalMs.
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -69,35 +99,26 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
   }
   if (getCurrentInstance()) onBeforeUnmount(clearTimer)
 
-  function appendChunk(): boolean {
-    const chunk = ASSISTANT_CHUNKS[chunkIdx]
-    if (chunk === undefined) return false
+  function applyNextEvent(): boolean {
+    const e = events[eventIdx]
+    if (e === undefined) return false
     if (assistantId === null) {
       assistantId = nextId++
-      messages.value = [
-        ...messages.value,
-        {
-          id: assistantId,
-          role: 'assistant',
-          text: chunk,
-          ...(opts.withBlocks
-            ? {
-                blocks: [
-                  { title: 'Reasoning', body: REASONING_BODY },
-                  { title: 'Tool call · search_docs', body: TOOL_CALL_BODY },
-                ],
-              }
-            : {}),
-        },
-      ]
+      const fresh: DemoMsg = {
+        id: assistantId,
+        role: 'assistant',
+        text: '',
+        ...(opts.withBlocks ? { blocks: [] } : {}),
+      }
+      messages.value = [...messages.value, applyEvent(fresh, e)]
     } else {
       const id = assistantId
       messages.value = messages.value.map((m) =>
-        m.id === id ? { ...m, text: m.text + chunk } : m,
+        m.id === id ? applyEvent(m, e) : m,
       )
     }
-    chunkIdx += 1
-    return chunkIdx < ASSISTANT_CHUNKS.length
+    eventIdx += 1
+    return eventIdx < events.length
   }
 
   // Flipping `streaming` synchronously with the final growth is safe:
@@ -109,14 +130,14 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
     assistantId = null
   }
 
-  function scheduleNextChunk(): void {
+  function scheduleNextEvent(): void {
     const delay =
-      chunkIdx === 0
+      eventIdx === 0
         ? (toValue(opts.firstChunkDelayMs) ?? intervalOf())
         : intervalOf()
     timer = setTimeout(() => {
-      if (appendChunk()) {
-        scheduleNextChunk()
+      if (applyNextEvent()) {
+        scheduleNextEvent()
       } else {
         finalize()
       }
@@ -125,23 +146,26 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
 
   function submit(text: string): void {
     clearTimer()
-    chunkIdx = 0
+    events = opts.withBlocks
+      ? buildReplyEvents()
+      : ASSISTANT_CHUNKS.map((t) => ({ type: 'text', text: t }))
+    eventIdx = 0
     assistantId = null
     messages.value = [
       ...messages.value,
       { id: nextId++, role: 'user', text },
     ]
     streaming.value = true
-    scheduleNextChunk()
+    scheduleNextEvent()
   }
 
   function stop(): void {
     if (!streaming.value) return
     clearTimer()
-    // Flush the remaining chunks in one go; the controller's
+    // Flush the remaining events in one go; the controller's
     // streaming-end grace follows the burst.
-    while (appendChunk()) {
-      // appendChunk advances chunkIdx until the reply is exhausted
+    while (applyNextEvent()) {
+      // applyNextEvent advances eventIdx until the reply is exhausted
     }
     finalize()
   }
@@ -150,7 +174,8 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
     clearTimer()
     streaming.value = false
     assistantId = null
-    chunkIdx = 0
+    events = []
+    eventIdx = 0
     messages.value = [...initial]
   }
 

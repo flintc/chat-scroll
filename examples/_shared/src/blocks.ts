@@ -16,6 +16,8 @@ export interface CreatedBlock {
   wrap: HTMLElement
   body: HTMLElement
   appendBody: (text: string) => void
+  /** Append streamed tool-call argument text to the summary. */
+  appendArgs: (text: string) => void
 }
 
 export interface CreateBlockOptions {
@@ -25,7 +27,7 @@ export interface CreateBlockOptions {
   index: number
   /** Thinking summary OR tool function name. */
   title: string
-  /** Tool args (e.g. `{ query: "..." }`). Ignored for thinking. */
+  /** Initial tool args — usually empty, streamed in via `appendArgs`. */
   args?: string
 }
 
@@ -79,13 +81,40 @@ export function createBlock(opts: CreateBlockOptions): CreatedBlock {
   bodyWrap.appendChild(body)
   wrap.appendChild(bodyWrap)
 
+  const argsEl = wrap.querySelector<HTMLElement>('.block__args')
+
   return {
     wrap,
     body,
     appendBody(text: string) {
       textTarget.textContent = (textTarget.textContent ?? '') + text
     },
+    appendArgs(text: string) {
+      if (argsEl) argsEl.textContent = (argsEl.textContent ?? '') + text
+    },
   }
+}
+
+/**
+ * Place a seed turn's text. A bot turn is a transparent column whose
+ * answer lives in a `.msg__text` bubble, so thinking / tool cards can
+ * stack above it; a user turn is itself the bubble, so its text goes
+ * straight in. Keeps seeded turns consistent with streamed ones (the
+ * streamer also emits text into `.msg__text` runs).
+ */
+export function appendTurnText(
+  el: HTMLElement,
+  role: 'user' | 'bot',
+  text: string,
+): void {
+  if (role === 'user') {
+    el.textContent = text
+    return
+  }
+  const body = document.createElement('div')
+  body.className = 'msg__text'
+  body.textContent = text
+  el.appendChild(body)
 }
 
 export function setBlockOpen(wrap: HTMLElement, open: boolean): void {

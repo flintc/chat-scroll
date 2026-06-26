@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { ChatScrollBehavior, ScrollPosition } from '@chat-scroll/vue'
 
 import ChatPane from './ChatPane.vue'
@@ -50,8 +50,10 @@ const speedMs = ref<number>(55)
 // scrollMargin and scrollBehavior, applied to the running instances
 // via setOptions. A margin change re-pins the current element so the
 // pinned turn visibly slides to the new offset.
-const MARGINS = [0, 12, 32, 64] as const
-const marginPx = ref<number>(12)
+const MARGINS = [0, 12, 32, 64, 100, 160] as const
+// Default the gap kept above the pinned turn to a generous 100px, so the
+// home demo opens with real top breathing room above the question.
+const marginPx = ref<number>(100)
 const motion = ref<ChatScrollBehavior>('auto')
 
 // pinClamp — over-scroll an over-tall pinned question so the streaming
@@ -61,7 +63,9 @@ const motion = ref<ChatScrollBehavior>('auto')
 // which makes clampOffset a no-op.
 const CLAMP_ON = { tallerThan: 160, visibleHeight: 96 }
 const CLAMP_OFF = { tallerThan: Number.MAX_SAFE_INTEGER, visibleHeight: 0 }
-const clampTall = ref(false)
+// On by default in the home demo — the lead prompt is over-tall, so the
+// clamp is what makes the answer visible without a manual toggle.
+const clampTall = ref(true)
 
 // The home (side-by-side) demo leads with a tall pasted question so the
 // Clamp tall control has an over-tall pin to act on; other scenarios
@@ -71,7 +75,7 @@ const sidePrompts: readonly string[] = [LONG_PROMPT, ...PROMPTS]
 function panes(): PaneHandle[] {
   return [paneA.value, paneB.value]
 }
-watch(marginPx, (m) => {
+function applyMargin(m: number): void {
   for (const pane of panes()) {
     const sc = pane?.scroll
     if (!sc) continue
@@ -79,7 +83,8 @@ watch(marginPx, (m) => {
     const el = sc.getPinnedElement()
     if (el) sc.pinMessage(el)
   }
-})
+}
+watch(marginPx, applyMargin)
 watch(motion, (b) => {
   for (const pane of panes()) {
     pane?.scroll.instance.setOptions({ scrollBehavior: b })
@@ -88,7 +93,7 @@ watch(motion, (b) => {
 // Apply the clamp live and re-pin the current turn so the pinned message
 // visibly snaps to the new (clamped or full) anchor — same pattern as the
 // margin watch. pin-to-top only; the stick pane ignores pinClamp.
-watch(clampTall, (on) => {
+function applyClamp(on: boolean): void {
   for (const pane of panes()) {
     const sc = pane?.scroll
     if (!sc) continue
@@ -96,6 +101,15 @@ watch(clampTall, (on) => {
     const el = sc.getPinnedElement()
     if (el) sc.pinMessage(el)
   }
+}
+watch(clampTall, applyClamp)
+// The watches only fire on change, so seed the panes with the demo's
+// non-library defaults (100px margin + clamp on) once they're mounted.
+// Home demo only.
+onMounted(() => {
+  if (props.scenario !== 'side-by-side') return
+  applyMargin(marginPx.value)
+  applyClamp(clampTall.value)
 })
 
 // ── Per-scenario chat state ───────────────────────────────────────
@@ -116,9 +130,9 @@ const chatA = useDemoChat({
       : props.scenario === 'stick-to-bottom'
         ? seedStickConversation()
         : seedLongConversation(),
-  // Streamed replies carry collapsible Reasoning + Tool call blocks —
-  // resizable content the strategies must absorb without moving the
-  // reader.
+  // Replies stream LLM-style: the Reasoning block first, then a tool
+  // call (args, then result), then the answer — collapsible, resizable
+  // content the strategies must absorb without moving the reader.
   withBlocks: true,
   intervalMs: () => speedMs.value,
 })
@@ -226,7 +240,10 @@ async function reset(): Promise<void> {
 </script>
 
 <template>
-  <figure class="live-demo">
+  <figure
+    class="live-demo"
+    :class="{ 'live-demo--side': scenario === 'side-by-side' }"
+  >
     <div class="live-demo__settings">
       <template v-if="scenario === 'thread-switch'">
         <div class="live-demo__tabs" role="tablist" aria-label="Threads">
@@ -304,7 +321,14 @@ async function reset(): Promise<void> {
         <input v-model="showGutter" type="checkbox" />
         Show gutter
       </label>
-      <button type="button" class="live-demo__btn" @click="reset">
+      <!-- The home (side-by-side) demo keeps Reset down with the action
+           bar; every other scenario keeps it here in the toolbar. -->
+      <button
+        v-if="scenario !== 'side-by-side'"
+        type="button"
+        class="live-demo__btn"
+        @click="reset"
+      >
         Reset
       </button>
     </div>
@@ -380,6 +404,14 @@ async function reset(): Promise<void> {
           Next ›
         </button>
       </div>
+      <button
+        v-if="scenario === 'side-by-side'"
+        type="button"
+        class="live-demo__btn"
+        @click="reset"
+      >
+        Reset
+      </button>
     </div>
 
     <figcaption v-if="caption">{{ caption }}</figcaption>
@@ -503,6 +535,21 @@ async function reset(): Promise<void> {
   color: var(--vp-c-text-2);
 }
 @media (max-width: 640px) {
+  /* On a phone the two panes stack to ~760px, burying the Send / Prev /
+     Next bar far below the fold. Hoist it above the panes so the
+     primary controls are reachable without scrolling past both. Scoped
+     to the home page's side-by-side demo (the only stacked-panes case
+     where the toolbar would otherwise be unreachable). */
+  .live-demo--side {
+    display: flex;
+    flex-direction: column;
+  }
+  .live-demo--side .live-demo__settings {
+    order: -2;
+  }
+  .live-demo--side .live-demo__actions {
+    order: -1;
+  }
   .live-demo__panes {
     flex-direction: column;
     height: auto !important;

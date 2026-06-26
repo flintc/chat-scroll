@@ -97,11 +97,15 @@ function applyMicroChunk(msg: RichMessage, c: MicroChunk): RichMessage {
         : {
             type: 'tool',
             name: c.name,
-            args: c.args,
+            args: '',
             result: '',
             defaultOpen: c.defaultOpen,
           },
     )
+  } else if (c.type === 'block-args') {
+    if (last?.type === 'tool') {
+      parts[i] = { ...last, args: last.args + c.text }
+    }
   } else if (c.type === 'block-body') {
     if (last?.type === 'thinking') {
       parts[i] = { ...last, body: last.body + c.text }

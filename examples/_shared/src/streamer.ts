@@ -65,11 +65,14 @@ export function createBotStreamer(
               defaultOpen: c.defaultOpen,
               index: blockIndex,
               title: c.name,
-              args: c.args,
             })
       bot.appendChild(created.wrap)
       blockBody = created
       blockIndex += 1
+      return
+    }
+    if (c.type === 'block-args') {
+      blockBody?.appendArgs(c.text)
       return
     }
     if (c.type === 'block-body') {

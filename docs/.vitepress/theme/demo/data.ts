@@ -17,20 +17,32 @@ export const PROMPTS = [
  * fine and the clamp is a no-op, by design).
  */
 export const LONG_PROMPT =
-  'Here is the whole thing I am stuck on — pasting it so you have the ' +
-  'full picture:\n\n' +
+  'Here is the whole thing I am stuck on — pasting the full context so ' +
+  'you have everything:\n\n' +
   'I render a streaming assistant reply under each user turn. On every ' +
   'chunk the viewport snaps to the bottom and I lose my place, so ' +
-  'reading a long answer is impossible.\n\n' +
+  'reading a long answer while it is still streaming is basically ' +
+  'impossible — the text I am reading keeps getting yanked away.\n\n' +
+  'This is the scroll effect I wired up, and I think it is the whole ' +
+  'problem:\n\n' +
   'function onChunk(delta) {\n' +
-  '  setText((t) => t + delta)\n' +
-  '  el.scrollTop = el.scrollHeight  // <- this is what I tried\n' +
+  '  setMessages((prev) => appendDelta(prev, delta))\n' +
+  '  // runs on every token — fights the user constantly\n' +
+  '  requestAnimationFrame(() => {\n' +
+  '    el.scrollTop = el.scrollHeight\n' +
+  '  })\n' +
   '}\n\n' +
+  'I have also tried a few hacks around it: debouncing the scroll, only ' +
+  'scrolling when "near" the bottom, and listening for wheel events to ' +
+  'cancel it. Each one fixes one case and breaks another — expanding a ' +
+  'reasoning block jumps the page, switching threads loses my spot, and ' +
+  'on mobile the keyboard opening triggers yet another snap.\n\n' +
   'What I actually want: the question I just asked should stay pinned at ' +
-  'the top of the viewport while the answer streams in below it, the way ' +
-  'ChatGPT and Claude behave. How do I get that without hand-writing a ' +
-  'scroll effect that fights the user — and what happens when the pasted ' +
-  'question itself is taller than the viewport?'
+  'the top of the viewport while the answer streams in below it, exactly ' +
+  'the way ChatGPT and Claude behave. How do I get that without ' +
+  'hand-writing a scroll effect that fights the user on every frame — ' +
+  'and, the part I really cannot figure out, what is supposed to happen ' +
+  'when the pasted question itself is taller than the viewport?'
 
 /** One tick of the fake stream appends one chunk. */
 export const ASSISTANT_CHUNKS: readonly string[] = [
@@ -77,9 +89,12 @@ export const REASONING_BODY =
   'Expanding or collapsing this block resizes a settled reply — ' +
   'notice your reading position (or the pin) stays put.'
 
-/** Body of the collapsible "tool call" block in assistant replies. */
+/** Arguments of the "tool call" block — streamed into its summary. */
+export const TOOL_CALL_ARGS =
+  '{ query: "scroll anchoring chat transcripts" }'
+
+/** Result body of the collapsible "tool call" block. */
 export const TOOL_CALL_BODY =
-  'search_docs({ query: "scroll anchoring chat transcripts" })\n\n' +
   '→ 3 results\n' +
   '  1. CSS Scroll Anchoring — overflow-anchor in transcripts\n' +
   '  2. ResizeObserver timing — callbacks fire after layout\n' +
@@ -87,12 +102,75 @@ export const TOOL_CALL_BODY =
   'Expand this block mid-stream or after a reply settles — the ' +
   'viewport holds either way.'
 
+/** Collapsible block (reasoning or tool call) rendered above the text. */
+export interface DemoBlock {
+  kind: 'reasoning' | 'tool'
+  /** Reasoning label OR tool function name. */
+  title: string
+  /** Tool call arguments — grow while the call streams in. */
+  args?: string
+  body: string
+  /** True while this block's content is still arriving. */
+  streaming?: boolean
+}
+
 export interface DemoMsg {
   id: number
   role: 'user' | 'assistant'
   text: string
   /** Collapsible blocks (reasoning, tool calls) rendered above the text. */
-  blocks?: { title: string; body: string }[]
+  blocks?: DemoBlock[]
+}
+
+/**
+ * One streamed event of an assistant turn. Mirrors how LLM APIs
+ * deliver a turn: reasoning deltas first, then a tool call (its
+ * arguments stream token by token, the result follows), then the
+ * answer text. `useDemoChat` consumes one event per tick.
+ */
+export type DemoEvent =
+  | { type: 'text'; text: string }
+  | { type: 'block-open'; kind: DemoBlock['kind']; title: string }
+  | { type: 'block-args'; text: string }
+  | { type: 'block-body'; text: string }
+  | { type: 'block-close' }
+
+/** Split on word boundaries into chunks of roughly `chars` characters. */
+function chunk(s: string, chars: number): string[] {
+  const out: string[] = []
+  let buf = ''
+  for (const part of s.split(/(\s+)/)) {
+    if (buf.length + part.length >= chars && buf.length > 0) {
+      out.push(buf)
+      buf = ''
+    }
+    buf += part
+  }
+  if (buf.length > 0) out.push(buf)
+  return out
+}
+
+/**
+ * The canned assistant turn as a stream of events: reasoning streams
+ * first, then the tool call (args, then result), then the answer.
+ */
+export function buildReplyEvents(): DemoEvent[] {
+  return [
+    { type: 'block-open', kind: 'reasoning', title: 'Reasoning' },
+    ...chunk(REASONING_BODY, 24).map(
+      (text): DemoEvent => ({ type: 'block-body', text }),
+    ),
+    { type: 'block-close' },
+    { type: 'block-open', kind: 'tool', title: 'search_docs' },
+    ...chunk(TOOL_CALL_ARGS, 12).map(
+      (text): DemoEvent => ({ type: 'block-args', text }),
+    ),
+    ...chunk(TOOL_CALL_BODY, 24).map(
+      (text): DemoEvent => ({ type: 'block-body', text }),
+    ),
+    { type: 'block-close' },
+    ...ASSISTANT_CHUNKS.map((text): DemoEvent => ({ type: 'text', text })),
+  ]
 }
 
 let seedId = 0
@@ -118,9 +196,12 @@ export function seedConversation(): DemoMsg[] {
 }
 
 /**
- * A longer settled conversation with several user turns — gives the
- * pin-to-top demos enough history that prev/next turn navigation
- * (`pinRelative`) has somewhere to go.
+ * A short, natural settled conversation with several user turns. It
+ * gives the pin-to-top demos enough history for prev/next navigation
+ * (`pinRelative`) to have somewhere to go, while ending on a brief,
+ * inviting reply — so the demo opens on a clean exchange rather than
+ * the tail of a wall of agent text. The long content arrives on demand,
+ * when you press Send.
  */
 export function seedLongConversation(): DemoMsg[] {
   const mk = (
@@ -137,65 +218,57 @@ export function seedLongConversation(): DemoMsg[] {
     mk('user', 'What does this library actually do?'),
     mk(
       'assistant',
-      'It owns the scroll position of a chat viewport. You pick a ' +
-        'strategy — stick-to-bottom for group chat, pin-to-top for AI ' +
-        'chat — and it handles streaming growth, user interruptions, ' +
-        'expandable blocks, and thread switches without fighting the user.',
-      [{ title: 'Tool call · search_docs', body: TOOL_CALL_BODY }],
+      'It owns the scroll position of a chat viewport. Pick a strategy ' +
+        '— stick-to-bottom for group chat, pin-to-top for AI chat — and ' +
+        'it keeps the right thing on screen as messages stream in.',
+      [
+        {
+          kind: 'tool',
+          title: 'search_docs',
+          args: TOOL_CALL_ARGS,
+          body: TOOL_CALL_BODY,
+        },
+      ],
     ),
-    mk('user', 'Which strategy should a group chat use?'),
+    mk('user', 'Which one should a group chat use?'),
     mk(
       'assistant',
-      'Stick-to-bottom. The newest line is what matters, so the ' +
-        'viewport follows growth while you sit at the bottom and gets ' +
-        'out of the way the moment you scroll up to read history. ' +
-        'Sending a message re-engages the follow.\n\n' +
-        'Only real scroll input releases it — expanding a block in a ' +
-        'finished reply never yanks you back down.',
+      'Stick-to-bottom: the viewport follows new messages while you sit ' +
+        'at the bottom, and steps aside the moment you scroll up to read.',
     ),
-    mk('user', 'And an AI assistant UI like this one?'),
+    mk('user', 'And an assistant UI like this one?'),
     mk(
       'assistant',
-      'Pin-to-top. Each question anchors at the top of the viewport ' +
-        'and the answer streams in below it, so your eyes never chase ' +
-        'the text. The striped gutter below the response keeps you ' +
-        'from overscrolling into empty space, and it shrinks away as ' +
-        'the answer fills in.\n\n' +
-        'Since every question is an anchor, the ‹ › buttons below hop ' +
-        'between turns for free.',
-      [{ title: 'Reasoning', body: REASONING_BODY }],
+      'Pin-to-top. Your question anchors at the top and the answer ' +
+        'streams in below it, so your eyes stay put instead of chasing ' +
+        'the text down the page.\n\n' +
+        'The striped gutter underneath gives the answer room to grow, ' +
+        'then shrinks as it fills — so you never overscroll past the ' +
+        'reply into empty space.',
+      [{ kind: 'reasoning', title: 'Reasoning', body: REASONING_BODY }],
     ),
-    mk('user', 'How does prev/next decide where to go?'),
+    mk('user', 'How do the ‹ › buttons pick a turn?'),
     mk(
       'assistant',
-      'It navigates from wherever you actually are, so the buttons ' +
-        'always do what they look like they will do.\n\n' +
-        'While a turn is pinned, ‹ and › move relative to it — two ' +
-        'quick presses move two turns. Once you scroll away, they ' +
-        'move relative to the question whose answer you are reading: ' +
-        'from the middle of a long reply, ‹ first snaps back to that ' +
-        'question, then walks upward, the way editors handle ' +
-        'go-to-previous-change.\n\n' +
-        'At the ends of the conversation the buttons disable, and the ' +
-        'counter between them always names the turn you are on — ' +
-        'whether you got there by clicking, scrolling, or sending.\n\n' +
-        'Every jump animates, even while a reply is streaming in and ' +
-        'even if you change direction mid-flight — navigation and ' +
-        'growth never fight, so there are no teleports and no sudden ' +
-        'reflows while you read.\n\n' +
-        'Try it mid-stream, too: send a message, jump back two ' +
-        'questions while the reply is still arriving, read for a ' +
-        'moment, then press › twice to come back and watch the rest ' +
-        'of the answer fill in. The stream never tugs at your reading ' +
-        'position, no matter where in the conversation you are.',
+      'They move relative to the turn you are actually on — however you ' +
+        'got there, by clicking, scrolling, or sending. At the two ends ' +
+        'they disable.',
+    ),
+    mk('user', 'Makes sense. Can I try it?'),
+    mk(
+      'assistant',
+      'Go ahead — press Send to stream a reply, scroll up mid-stream to ' +
+        'take over, or use ‹ › to hop between questions.',
     ),
   ]
 }
 
 /**
  * A settled group-chat-flavored conversation for the stick-to-bottom
- * demos — long enough to overflow the pane so the follow/release
- * behavior is visible from the first interaction.
+ * demos — enough turns to overflow the pane so the follow/release
+ * behavior is visible from the first interaction, but with short
+ * replies that end on a brief, inviting line, so the demo doesn't open
+ * on the tail of a wall of text.
  */
 export function seedStickConversation(): DemoMsg[] {
   const mk = (
@@ -212,66 +285,46 @@ export function seedStickConversation(): DemoMsg[] {
     mk('user', 'What does stick-to-bottom actually do?'),
     mk(
       'assistant',
-      'It follows growth. While you sit at the bottom, every new ' +
-        'message (or stream chunk) pushes older content up and the ' +
-        'viewport stays glued to the newest line — the group-chat ' +
-        'contract.',
-      [{ title: 'Tool call · search_docs', body: TOOL_CALL_BODY }],
+      'It follows growth: while you sit at the bottom, every new message ' +
+        'pushes older ones up and the viewport stays glued to the newest ' +
+        'line — the group-chat contract.',
+      [
+        {
+          kind: 'tool',
+          title: 'search_docs',
+          args: TOOL_CALL_ARGS,
+          body: TOOL_CALL_BODY,
+        },
+      ],
     ),
     mk('user', 'And when I scroll up to read something older?'),
     mk(
       'assistant',
-      'The follow releases the moment your input arrives — wheel, ' +
-        'touch, or keyboard. It never waits to see where the scroll ' +
-        'lands, so a stream in full flight cannot win a race against ' +
-        'you and drag the viewport back down.\n\n' +
-        'Try it: send a message, then scroll up mid-stream. The text ' +
-        'keeps arriving below, but your reading position holds.',
+      'The follow releases the instant your scroll input arrives — ' +
+        'wheel, touch, or keys — so a stream in full flight can never ' +
+        'drag you back down.',
     ),
-    mk('user', 'How do I get back to following the stream?'),
+    mk('user', 'How do I get back to following?'),
     mk(
       'assistant',
-      'The ↓ button takes you back to the bottom and resumes the ' +
-        'follow, and sending a message does the same. Scrolling back ' +
-        'down by hand deliberately does not — reading the latest text ' +
-        'and following future text are different intents.',
+      'The ↓ button returns you to the bottom and re-engages the follow; ' +
+        'sending a message does too. Scrolling down by hand on purpose ' +
+        'does not — those are different intents.',
     ),
-    mk('user', 'What about expanding things after the reply finished?'),
+    mk('user', 'What about expanding a block after the reply finished?'),
     mk(
       'assistant',
-      'Once the stream ends, the viewport is yours. Scroll up and ' +
-        'open the "Tool call" or "Reasoning" blocks in the earlier ' +
-        'replies — the content grows, and your reading position holds.',
-      [{ title: 'Reasoning', body: REASONING_BODY }],
+      'Go ahead — open a Tool call or Reasoning block in an earlier ' +
+        'reply and your reading position holds. Resizing settled content ' +
+        'never yanks the viewport.',
+      [{ kind: 'reasoning', title: 'Reasoning', body: REASONING_BODY }],
     ),
-    mk('user', 'Can I jump between questions here too?'),
+    mk('user', 'Nice. Anything else to try?'),
     mk(
       'assistant',
-      'Yes — ‹ Prev / Next › below work here too. Each click scrolls ' +
-        'the adjacent question to the top of the viewport, releasing ' +
-        'the follow on the way, so you can revisit any exchange while ' +
-        'a reply is still streaming in.\n\n' +
-        'One difference from the pin-to-top demo: there is no gutter ' +
-        'here, so a question near the end of the transcript can only ' +
-        'rise as high as the real bottom allows. Right after you send, ' +
-        'the newest question cannot reach the top yet — as the reply ' +
-        'streams in, scroll room grows and it becomes a navigation ' +
-        'target like any other turn.\n\n' +
-        'The counter between the buttons names the question you are ' +
-        'reading. At the bottom you are on the latest turn by ' +
-        'definition, so it reads 5/5 and Next disables; the ↓ button ' +
-        'or another send returns you to the live stream.\n\n' +
-        '‹ also adapts to where you are: from the middle of a long ' +
-        'answer it first scrolls back to the question you are reading, ' +
-        'then walks upward one exchange per press — the convention ' +
-        'editors use for go-to-previous-change.\n\n' +
-        'Keyboard works too. Focus the transcript and ArrowUp, PageUp, ' +
-        'or Home release the follow exactly like the wheel does, while ' +
-        'the reply keeps growing below your reading position.\n\n' +
-        'That is the whole tour. Send a message to watch the follow ' +
-        'track a stream, scroll up mid-reply to take over, and use the ' +
-        'speed selector to slow the chunks down enough to see each ' +
-        'step happen.',
+      'Send a message to watch the follow track a stream, then scroll up ' +
+        'mid-reply to take over. The speed control slows the chunks down ' +
+        'so you can see each step.',
     ),
   ]
 }
