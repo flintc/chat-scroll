@@ -127,9 +127,9 @@ identity-stable). React's batching applies.
 
 ## Options
 
-`useChatScroll` calls `instance.setOptions()` whenever a primitive
-option field changes (`strategy`, `bottomThreshold`, `scrollMargin`,
-`scrollBehavior`, `scrollDurationMs`). Pass options inline:
+`useChatScroll` calls `instance.setOptions()` whenever an option
+field changes (`strategy`, `bottomThreshold`, `scrollMargin`,
+`bottomInset`, `scrollBehavior`, `scrollDurationMs`, `pinClamp`). Pass options inline:
 
 ```tsx
 useChatScroll({ strategy: 'pin-to-top', bottomThreshold: 80 })

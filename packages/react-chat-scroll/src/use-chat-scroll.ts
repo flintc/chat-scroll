@@ -96,6 +96,7 @@ export function useChatScroll(
       bottomInset: opts.bottomInset,
       scrollBehavior: opts.scrollBehavior,
       scrollDurationMs: opts.scrollDurationMs,
+      pinClamp: opts.pinClamp,
     })
   }, [
     instance,
@@ -105,6 +106,10 @@ export function useChatScroll(
     opts.bottomInset,
     opts.scrollBehavior,
     opts.scrollDurationMs,
+    // `pinClamp` is an object; depend on its fields so an inline literal
+    // (new identity every render) doesn't re-run this every render.
+    opts.pinClamp?.tallerThan,
+    opts.pinClamp?.visibleHeight,
   ])
 
   // Mirror reactive `streaming` input. Skipped entirely when undefined,

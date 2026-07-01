@@ -115,6 +115,31 @@ describe('useChatScroll (React)', () => {
     expect(result.current.instance.options.bottomThreshold).toBe(200)
   })
 
+  it('live-syncs pinClamp, and clears it when the prop is removed', () => {
+    let opts: Parameters<typeof useChatScroll>[0] = {
+      strategy: 'pin-to-top',
+    }
+    const { result, rerender } = renderHook(
+      (o: typeof opts) => useChatScroll(o),
+      { initialProps: opts },
+    )
+    expect(result.current.instance.options.pinClamp).toBeUndefined()
+    opts = {
+      strategy: 'pin-to-top',
+      pinClamp: { tallerThan: 160, visibleHeight: 96 },
+    }
+    rerender(opts)
+    expect(result.current.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
+    // Dropping the prop turns the clamp off (pinClamp is the one option
+    // where explicit `undefined` clears rather than being ignored).
+    opts = { strategy: 'pin-to-top' }
+    rerender(opts)
+    expect(result.current.instance.options.pinClamp).toBeUndefined()
+  })
+
   it('re-exposes pin-to-top navigation methods', () => {
     const { result } = renderHook(() => useChatScroll({ strategy: 'pin-to-top' }))
     expect(typeof result.current.pinMessage).toBe('function')

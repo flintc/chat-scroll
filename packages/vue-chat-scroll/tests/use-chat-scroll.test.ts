@@ -3,6 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 
 import { useChatScroll } from '../src/use-chat-scroll'
+import type { UseChatScrollOptions } from '../src/use-chat-scroll'
 
 beforeAll(() => {
   if (!window.matchMedia) {
@@ -98,6 +99,39 @@ describe('useChatScroll (Vue)', () => {
     optsRef.value = { bottomThreshold: 200 }
     await wrapper.vm.$nextTick()
     expect(scrollRef.instance.options.bottomThreshold).toBe(200)
+    wrapper.unmount()
+  })
+
+  it('live-syncs pinClamp through ref-based options, and clears on removal', async () => {
+    let scrollRef!: ReturnType<typeof useChatScroll>
+    let optsRef!: ReturnType<typeof ref<UseChatScrollOptions>>
+    const Comp = defineComponent({
+      setup() {
+        const opts = ref<UseChatScrollOptions>({ strategy: 'pin-to-top' })
+        optsRef = opts
+        const scroll = useChatScroll(opts)
+        scrollRef = scroll
+        return () => h('div', { ref: scroll.containerRef })
+      },
+    })
+
+    const wrapper = mount(Comp, { attachTo: document.body })
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.pinClamp).toBeUndefined()
+    optsRef.value = {
+      strategy: 'pin-to-top',
+      pinClamp: { tallerThan: 160, visibleHeight: 96 },
+    }
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
+    // Dropping the key turns the clamp off (pinClamp is the one option
+    // where explicit `undefined` clears rather than being ignored).
+    optsRef.value = { strategy: 'pin-to-top' }
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.pinClamp).toBeUndefined()
     wrapper.unmount()
   })
 

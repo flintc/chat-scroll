@@ -117,6 +117,7 @@ export function useChatScroll(
           bottomInset: next.bottomInset,
           scrollBehavior: next.scrollBehavior,
           scrollDurationMs: next.scrollDurationMs,
+          pinClamp: next.pinClamp,
         })
       },
       { deep: true },
