@@ -19,10 +19,15 @@ scroll.setStreaming(false)
 
 `setStreaming(true)` does two things:
 
-1. Sets `overflow-anchor: none` on the container. The browser stops
-   anchoring scroll to arbitrary nodes during DOM mutation, so the
-   controller's pin/lock math isn't competing with the browser for
-   `scrollTop`.
+1. Sets `overflow-anchor: none` on the container — but only while the
+   controller is actively holding a position the user asked to stay at:
+   locked to the bottom, anchored on the pin, or mid controller-owned
+   animation. That stops the browser anchoring scroll to arbitrary
+   nodes during DOM mutation, so the pin/lock math isn't competing with
+   the browser for `scrollTop`. The moment the reader scrolls away
+   mid-stream, the browser default is restored — its own anchoring is
+   then what keeps their reading position when content grows above
+   them (a late image, an expanding block).
 2. For `stick-to-bottom` specifically, **arms the auto-snap**. The
    strategy only re-pins `scrollTop` to `scrollHeight` when
    `streaming && locked` are both true. Outside a stream, expanding a

@@ -114,7 +114,9 @@ write, not an animation.
 - **Type:** `number`
 
 The absolute Y offset (in the scroll plane) of the pinned message's top
-edge, minus `scrollMargin`. `-1` when no pin is active. Refreshed on
+edge, minus `scrollMargin` (plus the over-scroll offset when
+[`pinClamp`](./options#pinclamp) is active on an over-tall message).
+`-1` when no pin is active. Refreshed on
 every content resize so it tracks the live element — if a block above
 the pin expands, `pinnedY` updates with the new layout before the
 gutter is recomputed.

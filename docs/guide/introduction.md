@@ -20,8 +20,9 @@ Every chat UI reinvents the same handful of behaviors:
   beneath the content while the response is still filling in.
 - **At-bottom detection** — to show a "scroll to bottom" affordance, fade
   unread badges, etc.
-- **Streaming-safe** — disable browser `overflow-anchor` while the assistant
-  is streaming, so layout doesn't fight the strategy.
+- **Streaming-safe** — disable browser `overflow-anchor` while the
+  strategy is holding a position mid-stream, so layout doesn't fight
+  it — and hand it back when the user scrolls away.
 
 These are mostly framework-agnostic concerns: `getBoundingClientRect`,
 `ResizeObserver`, `scrollTop`, and a handful of DOM mutations. There's no

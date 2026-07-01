@@ -112,9 +112,10 @@ export const ASSISTANT_SEGMENTS: readonly BotSegment[] = [
       '  examples/_shared/src/style.css: (none — relies on default)\n' +
       '  docs/recipes/overflow-anchor.md\n' +
       '\n' +
-      'overflow-anchor is set to "none" during streaming so the browser ' +
-      'does not anchor to an arbitrary node mid-stream, which would ' +
-      'fight the controller for scrollTop.',
+      'overflow-anchor is set to "none" only while the controller is ' +
+      'actively holding a position mid-stream (locked or pinned), so the ' +
+      'browser does not fight it for scrollTop; it is restored the moment ' +
+      'the reader scrolls away.',
   },
   { type: 'text', text: "It's tricky because " },
   { type: 'text', text: 'the user has multiple intentions ' },

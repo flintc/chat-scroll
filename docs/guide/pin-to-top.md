@@ -73,11 +73,17 @@ handler when you have one.
 
 ## Streaming
 
-Set `streaming` while the assistant is generating — it disables the
-browser's `overflow-anchor`, which otherwise fights the strategy by
-re-anchoring scroll to arbitrary nodes during DOM mutation. Passing
+Set `streaming` while the assistant is generating — while the pin is
+held it disables the browser's `overflow-anchor`, which otherwise
+fights the strategy by re-anchoring scroll to arbitrary nodes during
+DOM mutation (and restores it if the reader scrolls away). Passing
 your loading flag as the adapter's `streaming` option is all it takes.
 See [Streaming mode](./streaming).
+
+For very tall prompts — a pasted log, a long code block — the
+[`pinClamp` option](../reference/options#pinclamp) over-scrolls the
+pinned message so only a slice of it stays at the top and the response
+keeps the room.
 
 ## Multi-turn
 

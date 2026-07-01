@@ -45,6 +45,24 @@ it, and the gutter math accounts for it. Live-updatable via
 `setOptions`; the [home page demo](/) exposes it as the **Margin**
 control.
 
+## `bottomInset`
+
+- **Type:** `number` (pixels)
+- **Default:** `0`
+
+Height of an obstruction overlaying the **bottom** of the viewport —
+typically a `position: fixed`/`absolute` composer that floats over the
+messages instead of sitting in flow below them. The controller reserves
+this much space below the content in its own gutter (it does **not**
+touch your container's padding), so the last message can scroll clear of
+the obstruction and `atBottom` flips only once it has. Works under both
+strategies.
+
+Live-updatable via `setOptions`, so feed it the composer's measured
+height from a `ResizeObserver` and it tracks growth (a textarea wrapping,
+an attachment row) on the same frame. See the
+[Overlay composer recipe](../recipes/composer-overlay).
+
 ## `pinClamp`
 
 - **Type:** `{ tallerThan: number; visibleHeight: number }` (pixels)
@@ -74,29 +92,13 @@ the same JS scroll-correction as the normal pin — it holds cross-engine
 (Chromium **and** WebKit) with no drift.
 
 A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }` (≈ 10em /
-6em at a 16px base). Live-updatable via `setOptions`; the [home page
-demo](/) exposes it as the **Clamp tall** toggle (send the long first
-prompt, then flip it). Values are plain px numbers to match the rest of
-the option surface (no CSS-length parsing). Mirrors assistant-ui's
-`topAnchorMessageClamp`.
-
-## `bottomInset`
-
-- **Type:** `number` (pixels)
-- **Default:** `0`
-
-Height of an obstruction overlaying the **bottom** of the viewport —
-typically a `position: fixed`/`absolute` composer that floats over the
-messages instead of sitting in flow below them. The controller reserves
-this much space below the content in its own gutter (it does **not**
-touch your container's padding), so the last message can scroll clear of
-the obstruction and `atBottom` flips only once it has. Works under both
-strategies.
-
-Live-updatable via `setOptions`, so feed it the composer's measured
-height from a `ResizeObserver` and it tracks growth (a textarea wrapping,
-an attachment row) on the same frame. See the
-[Overlay composer recipe](../recipes/composer-overlay).
+6em at a 16px base). Live-updatable via `setOptions` — pass an explicit
+`pinClamp: undefined` to turn it off (unlike other options, whose
+`undefined` is ignored to protect their resolved defaults). The
+[home page demo](/) exposes it as the **Clamp tall** toggle, on by
+default — send the long first prompt, then flip it off to compare.
+Values are plain px numbers to match the rest of the option surface
+(no CSS-length parsing).
 
 ## `scrollBehavior`
 

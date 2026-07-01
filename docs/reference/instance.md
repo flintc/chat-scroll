@@ -195,8 +195,12 @@ lock automatically when the user scrolls up.
 
 ### `setStreaming(streaming)`
 
-Toggles `overflow-anchor: none` on the container. Call before / after
-a streaming response. See [Streaming mode](../guide/streaming).
+Marks a streaming response as in flight. While streaming **and**
+actively holding a position (locked, pinned, or animating), the
+controller sets `overflow-anchor: none` on the container so the
+browser's own anchoring doesn't fight it for `scrollTop`; the default
+is restored when the reader scrolls away. Call before / after a
+streaming response. See [Streaming mode](../guide/streaming).
 
 Turning streaming OFF keeps the follow alive for a two-frame grace
 period, so the final chunk's growth — which typically renders after
