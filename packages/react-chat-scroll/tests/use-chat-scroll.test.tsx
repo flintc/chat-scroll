@@ -133,11 +133,56 @@ describe('useChatScroll (React)', () => {
       tallerThan: 160,
       visibleHeight: 96,
     })
-    // Dropping the prop turns the clamp off (pinClamp is the one option
-    // where explicit `undefined` clears rather than being ignored).
+    // Dropping the prop turns the clamp off (pinClamp is clearable —
+    // explicit `undefined` clears rather than being ignored).
     opts = { strategy: 'pin-to-top' }
     rerender(opts)
     expect(result.current.instance.options.pinClamp).toBeUndefined()
+  })
+
+  it('clears a pinClamp passed in the initial options when the prop is dropped', () => {
+    let opts: Parameters<typeof useChatScroll>[0] = {
+      strategy: 'pin-to-top',
+      pinClamp: { tallerThan: 160, visibleHeight: 96 },
+    }
+    const { result, rerender } = renderHook(
+      (o: typeof opts) => useChatScroll(o),
+      { initialProps: opts },
+    )
+    expect(result.current.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
+    opts = { strategy: 'pin-to-top' }
+    rerender(opts)
+    expect(result.current.instance.options.pinClamp).toBeUndefined()
+  })
+
+  it('never sends pinClamp when the consumer never passed it — imperative clamps survive', () => {
+    let opts: Parameters<typeof useChatScroll>[0] = {
+      strategy: 'pin-to-top',
+      bottomThreshold: 40,
+    }
+    const { result, rerender } = renderHook(
+      (o: typeof opts) => useChatScroll(o),
+      { initialProps: opts },
+    )
+    // The composer-overlay recipe pattern: enable the clamp imperatively.
+    act(() =>
+      result.current.instance.setOptions({
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      }),
+    )
+    // An unrelated reactive option change re-runs the sync effect. The
+    // consumer never drove `pinClamp` declaratively, so the key must not
+    // be sent (an explicit `undefined` would clear the clamp).
+    opts = { strategy: 'pin-to-top', bottomThreshold: 200 }
+    rerender(opts)
+    expect(result.current.instance.options.bottomThreshold).toBe(200)
+    expect(result.current.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
   })
 
   it('re-exposes pin-to-top navigation methods', () => {

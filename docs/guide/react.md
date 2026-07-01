@@ -135,6 +135,10 @@ field changes (`strategy`, `bottomThreshold`, `scrollMargin`,
 useChatScroll({ strategy: 'pin-to-top', bottomThreshold: 80 })
 ```
 
+`pinClamp` is synced only once you actually pass it — from then on,
+removing the key clears the clamp; if you never pass it, a clamp set
+imperatively via `scroll.instance.setOptions()` is left alone.
+
 `scrollBehavior` and `scrollDurationMs` are read on every scroll call,
 so changes via `setOptions` take effect on the next scroll without
 reconstructing the instance — wire them to a UI toggle / slider if you

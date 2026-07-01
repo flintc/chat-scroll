@@ -10,8 +10,14 @@
   `visibleHeight` px stay visible at the viewport top. Re-applied on
   every content resize, and it rides the same JS scroll-correction as
   the normal pin, so it holds on WebKit too. Live-updatable via
-  `setOptions` — an explicit `pinClamp: undefined` turns it off — and
-  synced reactively by the React and Vue adapters. See
+  `setOptions` — an explicit `pinClamp: undefined` turns it off. That's
+  now the general `setOptions` rule for options whose resolved default
+  is `undefined` (`pinClamp` and `onScrollChange`): an explicit
+  `undefined` clears them, while every other option's `undefined` stays
+  ignored to protect resolved defaults. The React and Vue adapters sync
+  `pinClamp` reactively, and only send the key once you've actually
+  passed it — so a clamp set imperatively via `instance.setOptions`
+  survives unrelated reactive option changes. See
   [`pinClamp`](/reference/options#pinclamp).
 
 - **`bottomInset` option**: reserve space for an obstruction overlaying

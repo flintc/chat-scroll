@@ -127,11 +127,74 @@ describe('useChatScroll (Vue)', () => {
       tallerThan: 160,
       visibleHeight: 96,
     })
-    // Dropping the key turns the clamp off (pinClamp is the one option
-    // where explicit `undefined` clears rather than being ignored).
+    // Dropping the key turns the clamp off (pinClamp is clearable —
+    // explicit `undefined` clears rather than being ignored).
     optsRef.value = { strategy: 'pin-to-top' }
     await wrapper.vm.$nextTick()
     expect(scrollRef.instance.options.pinClamp).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('clears a pinClamp present in the initial options when the key is dropped', async () => {
+    let scrollRef!: ReturnType<typeof useChatScroll>
+    let optsRef!: ReturnType<typeof ref<UseChatScrollOptions>>
+    const Comp = defineComponent({
+      setup() {
+        const opts = ref<UseChatScrollOptions>({
+          strategy: 'pin-to-top',
+          pinClamp: { tallerThan: 160, visibleHeight: 96 },
+        })
+        optsRef = opts
+        const scroll = useChatScroll(opts)
+        scrollRef = scroll
+        return () => h('div', { ref: scroll.containerRef })
+      },
+    })
+
+    const wrapper = mount(Comp, { attachTo: document.body })
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
+    optsRef.value = { strategy: 'pin-to-top' }
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.pinClamp).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('never sends pinClamp when the consumer never passed it — imperative clamps survive', async () => {
+    let scrollRef!: ReturnType<typeof useChatScroll>
+    let optsRef!: ReturnType<typeof ref<UseChatScrollOptions>>
+    const Comp = defineComponent({
+      setup() {
+        const opts = ref<UseChatScrollOptions>({
+          strategy: 'pin-to-top',
+          bottomThreshold: 40,
+        })
+        optsRef = opts
+        const scroll = useChatScroll(opts)
+        scrollRef = scroll
+        return () => h('div', { ref: scroll.containerRef })
+      },
+    })
+
+    const wrapper = mount(Comp, { attachTo: document.body })
+    await wrapper.vm.$nextTick()
+    // The composer-overlay recipe pattern: enable the clamp imperatively.
+    scrollRef.instance.setOptions({
+      pinClamp: { tallerThan: 160, visibleHeight: 96 },
+    })
+    // An unrelated reactive option change re-fires the deep watcher. The
+    // consumer never drove `pinClamp` declaratively, so the key must not
+    // be sent (an explicit `undefined` would clear the clamp).
+    optsRef.value = { strategy: 'pin-to-top', bottomThreshold: 200 }
+    await wrapper.vm.$nextTick()
+    expect(scrollRef.instance.options.bottomThreshold).toBe(200)
+    expect(scrollRef.instance.options.pinClamp).toEqual({
+      tallerThan: 160,
+      visibleHeight: 96,
+    })
     wrapper.unmount()
   })
 
