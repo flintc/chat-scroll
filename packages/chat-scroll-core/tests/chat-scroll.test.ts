@@ -2929,6 +2929,34 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('targets the clamped anchor for a tall message (agrees with pinMessage)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 500, // tall — past the clamp threshold
+        y: 500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      // scrollToMessage must land where pinMessage would: the CLAMPED
+      // anchor (500 - 12 + 404 = 892), not the raw top (488) — the two
+      // "Y where this message anchors" definitions must agree.
+      s.scrollToMessage(m2)
+      expect(container.scrollTop).toBe(892)
+      s.destroy()
+    })
+
     it('the in-flight target is the reference for relativeMessage', () => {
       // Smooth mode: the animation is in flight, scrollTop is still at
       // the start — a second "prev" must walk from the TARGET, not from
@@ -3079,6 +3107,54 @@ describe('createChatScroll', () => {
       expect(ref.el).toBe(m2)
       expect(ref.index).toBe(1)
       expect(ref.past).toBe(false)
+      s.destroy()
+    })
+
+    it('at a clamped pin: past=false and Prev walks to the previous turn', () => {
+      // The geometric reference must use the same anchor math as
+      // pinMessage — WITH the pinClamp offset. A reader at a clamped tall
+      // pin who nudges the wheel (clearing pinAnchored without moving)
+      // sits exactly at the clamped anchor; against the un-clamped top
+      // they'd read as `past` and Prev would re-pin the same message.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 500, // tall — clamps
+        y: 500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(m2)
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(892) // clamped: 500 - 12 + 404
+      // Wheel nudge: clears pinAnchored (input-driven release) without
+      // moving the fake DOM's scrollTop — still AT the clamped anchor,
+      // just no longer anchored, so resolution falls to geometry.
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      expect(s.state.pinAnchored).toBe(false)
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(m2)
+      expect(ref.past).toBe(false) // at the anchor, not scrolled past it
+      // Prev walks UP to m1 instead of re-targeting m2.
+      expect(s.relativeMessage('[data-role="user"]', -1)).toBe(m1)
       s.destroy()
     })
   })

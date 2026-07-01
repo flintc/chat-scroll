@@ -91,6 +91,18 @@ resize, so it persists while content above the pin shifts, and it rides
 the same JS scroll-correction as the normal pin — it holds cross-engine
 (Chromium **and** WebKit) with no drift.
 
+The threshold latches: once the clamp engages for the current pin — at
+pin time, or later when an image decode pushes the height past
+`tallerThan` — it stays engaged even if a reflow dips the height back
+under the line, so the anchor tracks the height continuously instead of
+jumping by the full offset on every crossing. Pinning another message
+decides afresh. Navigation agrees with the clamp, too:
+[`referenceMessage`](./instance#referencemessage-selector),
+[`relativeMessage`](./instance#relativemessage-selector-direction), and
+[`scrollToMessage`](./instance#scrolltomessage-el) all treat the clamped
+anchor as the message's position, so **Prev** from a clamped pin walks to
+the previous turn instead of re-targeting the tall one.
+
 A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }` (≈ 10em /
 6em at a 16px base). Live-updatable via `setOptions` — pass an explicit
 `pinClamp: undefined` to turn it off. (That's the rule for every option

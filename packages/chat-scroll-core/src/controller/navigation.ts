@@ -1,9 +1,31 @@
-import { offsetWithin } from '../scroll-utils'
+import { computePinnedY } from '../strategies/pin-to-top'
 import type { ReferenceMessage } from '../types'
 import type { ControllerContext } from './context'
 import { pinMessage } from './pin'
 import { startAnimatedScroll } from './scroll-animation'
 import { commit } from './store'
+
+/**
+ * The anchor Y for `el` — the exact scrollTop `pinMessage` lands on.
+ * Navigation must share the pin's definition of "where this message
+ * anchors": with `pinClamp` set, a tall message's anchor includes the
+ * clamp offset, so a reader sitting at a clamped pin is AT the reference
+ * (not `past` it — otherwise Prev would re-target the same message), and
+ * `scrollToMessage` arrives where `pinMessage` would. The clamp is a
+ * pin-to-top concept, so it's ignored for other strategies (same gating
+ * as `pinRelative`). Deliberately the un-latched computation — the
+ * anchored-refresh latch in `refreshPinnedY` only exists to stabilize
+ * live resizes; navigation just needs the geometric target.
+ */
+function anchorTop(
+  cc: ControllerContext,
+  el: HTMLElement,
+  container: HTMLElement,
+): number {
+  const clamp =
+    cc.options.strategy === 'pin-to-top' ? cc.options.pinClamp : undefined
+  return computePinnedY(el, container, cc.options.scrollMargin, clamp)
+}
 
 /**
  * Shared reference resolution for pinRelative / relativeMessage /
@@ -58,7 +80,9 @@ function resolveReference(
   for (let i = 0; i < matches.length; i++) {
     const el = matches[i]
     if (!el) continue
-    const top = offsetWithin(el, container) - cc.options.scrollMargin
+    // `anchorTop` floors at 0 (scrollTop can't go negative), matching the
+    // scroll position pinMessage/scrollToMessage can actually reach.
+    const top = anchorTop(cc, el, container)
     if (top <= st + FUDGE) {
       index = i
       refTop = top
@@ -140,9 +164,9 @@ export function scrollToMessage(cc: ControllerContext, el: HTMLElement): void {
   cc.navTargetEl = el
   // Live getter: the element's offset can shift mid-animation (content above
   // it resizing, a virtualizer refining estimated row offsets); the animation
-  // re-reads and re-clamps every frame.
-  startAnimatedScroll(cc, () =>
-    Math.max(0, offsetWithin(el, container) - cc.options.scrollMargin),
-  )
+  // re-reads and re-clamps every frame. Shares `anchorTop` with
+  // resolveReference so the target agrees with `pinMessage` for a clamped
+  // tall message.
+  startAnimatedScroll(cc, () => anchorTop(cc, el, container))
   commit(cc)
 }
