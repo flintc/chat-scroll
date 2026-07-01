@@ -6,7 +6,7 @@ use it directly when consuming the core.
 ```ts
 interface ChatScrollInstance {
   readonly state: ChatScrollState
-  readonly options: Required<Omit<ChatScrollOptions, 'onScrollChange'>>
+  readonly options: ResolvedChatScrollOptions // every default resolved
 
   mount(container: HTMLElement, content: HTMLElement): void
   setOptions(opts: Partial<ChatScrollOptions>): void
@@ -48,8 +48,11 @@ different elements tears down the previous mount before re-mounting.
 
 Merge new options into the instance. Keys whose value is `undefined` are
 ignored (they keep their current value), so adapters can safely pass
-every key on every render. Switching `strategy` will reset the
-prior strategy's transient state (clearing pins / releasing locks).
+every key on every render. The exceptions are the options whose resolved
+default **is** `undefined` — `pinClamp` and `onScrollChange` — where an
+explicit `undefined` clears the option back to "off". Switching
+`strategy` will reset the prior strategy's transient state (clearing
+pins / releasing locks).
 
 ```ts
 instance.setOptions({ bottomThreshold: 80 })

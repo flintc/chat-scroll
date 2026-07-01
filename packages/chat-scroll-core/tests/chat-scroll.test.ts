@@ -358,6 +358,35 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('setOptions installs and clears onScrollChange via an explicit undefined', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const cb = vi.fn()
+      const s = createChatScroll()
+      s.mount(container, content)
+
+      s.setOptions({ onScrollChange: cb })
+      setScrollTop(900)
+      flushScroll() // reach the bottom — atBottom flips true
+      expect(cb).toHaveBeenCalled()
+      cb.mockClear()
+
+      // `onScrollChange` is clearable like `pinClamp` — `undefined` IS its
+      // resolved default, so the key being present removes the callback.
+      // Other keys passed as `undefined` are still ignored.
+      s.setOptions({ onScrollChange: undefined, bottomThreshold: undefined })
+      expect(s.options.onScrollChange).toBeUndefined()
+      expect(s.options.bottomThreshold).toBe(40)
+      setScrollTop(500)
+      flushScroll() // scroll up — atBottom flips back, state DOES change
+      expect(cb).not.toHaveBeenCalled()
+      s.destroy()
+    })
+
     it('subscribe returns unsubscribe', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
@@ -1920,10 +1949,10 @@ describe('createChatScroll', () => {
       raf.flushFrames()
       expect(s.state.pinnedY).toBe(692) // clamped
 
-      // `pinClamp` is the one option where an explicit `undefined` is
-      // meaningful (it IS the default): the key being present clears the
-      // clamp. Other undefined keys are still ignored — scrollMargin must
-      // keep its resolved value, not become NaN.
+      // `pinClamp` is clearable — an explicit `undefined` is meaningful
+      // (it IS the default): the key being present clears the clamp.
+      // Other undefined keys are still ignored — scrollMargin must keep
+      // its resolved value, not become NaN.
       s.setOptions({ pinClamp: undefined, scrollMargin: undefined })
       expect(s.options.pinClamp).toBeUndefined()
       expect(s.options.scrollMargin).toBe(12)

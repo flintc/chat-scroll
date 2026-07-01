@@ -7,6 +7,7 @@ export type {
   ChatScrollStrategy,
   PinClamp,
   ReferenceMessage,
+  ResolvedChatScrollOptions,
   ScrollPosition,
 } from './types'
 

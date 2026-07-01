@@ -1,19 +1,20 @@
 import { pinToTopStrategy } from '../strategies/pin-to-top'
 import { stickToBottomStrategy } from '../strategies/stick-to-bottom'
 import type { Strategy, StrategyContext } from '../strategies/types'
-import type { ChatScrollOptions, ChatScrollState, PinClamp } from '../types'
+import type {
+  ChatScrollOptions,
+  ChatScrollState,
+  ResolvedChatScrollOptions,
+} from '../types'
 
 /**
- * Resolved options — every option present, plus the optional callback and
- * the optional `pinClamp` (which has no default; `undefined` means "off",
- * so it can't be made `Required` without forcing a value).
+ * Resolved options — every option present, plus the optional clearable
+ * pair (`pinClamp`, `onScrollChange`), which have no default: `undefined`
+ * means "off". The definition lives in types.ts so the public
+ * `ChatScrollInstance['options']` surface and the controller share one
+ * shape.
  */
-export type ResolvedOptions = Required<
-  Omit<ChatScrollOptions, 'onScrollChange' | 'pinClamp'>
-> & {
-  pinClamp?: PinClamp
-  onScrollChange?: ChatScrollOptions['onScrollChange']
-}
+export type ResolvedOptions = ResolvedChatScrollOptions
 
 export type Listener = (state: ChatScrollState) => void
 

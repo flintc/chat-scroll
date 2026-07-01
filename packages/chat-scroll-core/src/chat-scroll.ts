@@ -1,5 +1,6 @@
 import { createGutter } from './gutter'
 import { recalcGutter } from './strategies/pin-to-top'
+import { CLEARABLE_OPTION_KEYS } from './types'
 import type { ChatScrollInstance, ChatScrollOptions } from './types'
 import { createControllerContext, STRATEGIES } from './controller/context'
 import {
@@ -115,13 +116,14 @@ export function createChatScroll(
     // passing every key on every render, with `undefined` for options the
     // consumer never set. Spreading those verbatim would clobber resolved
     // defaults (`bottomThreshold: undefined` breaks at-bottom detection;
-    // `scrollMargin: undefined` makes `pinnedY` NaN). `pinClamp` is the
-    // exception: `undefined` IS its resolved default ("off"), so an
-    // explicitly passed `pinClamp: undefined` clears it — otherwise the
-    // clamp could be enabled at runtime but never disabled.
+    // `scrollMargin: undefined` makes `pinnedY` NaN). The clearable keys
+    // (`pinClamp`, `onScrollChange`) are the exception: `undefined` IS
+    // their resolved default, so an explicitly passed `undefined` clears
+    // them — otherwise a clamp or callback enabled at runtime could never
+    // be disabled.
     const defined = Object.fromEntries(
       Object.entries(next).filter(
-        ([k, v]) => v !== undefined || k === 'pinClamp',
+        ([k, v]) => v !== undefined || CLEARABLE_OPTION_KEYS.has(k),
       ),
     ) as Partial<ChatScrollOptions>
     cc.options = {

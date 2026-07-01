@@ -93,8 +93,9 @@ the same JS scroll-correction as the normal pin — it holds cross-engine
 
 A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }` (≈ 10em /
 6em at a 16px base). Live-updatable via `setOptions` — pass an explicit
-`pinClamp: undefined` to turn it off (unlike other options, whose
-`undefined` is ignored to protect their resolved defaults). The
+`pinClamp: undefined` to turn it off. (That's the rule for every option
+whose resolved default is `undefined` — this one and `onScrollChange`;
+the rest ignore `undefined` to protect their resolved defaults.) The
 [home page demo](/) exposes it as the **Clamp tall** toggle, on by
 default — send the long first prompt, then flip it off to compare.
 Values are plain px numbers to match the rest of the option surface
@@ -146,6 +147,9 @@ Evaluated at `mount()` / `reset()` time; not live-updatable via
 
 Called whenever the state object transitions. Framework adapters use this
 internally; you generally don't pass it yourself unless you're using the
-core directly.
+core directly. Live-updatable via `setOptions`; an explicit
+`onScrollChange: undefined` removes the callback (its resolved default is
+`undefined`, so — like [`pinClamp`](#pinclamp) — an explicit `undefined`
+clears rather than being ignored).
 
 If you need multiple subscribers, use `instance.subscribe()` instead.
