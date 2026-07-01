@@ -57,12 +57,9 @@ const marginPx = ref<number>(100)
 const motion = ref<ChatScrollBehavior>('auto')
 
 // pinClamp — over-scroll an over-tall pinned question so the streaming
-// answer keeps room. The preset mirrors the docs (≈10em / 6em). "Off"
-// can't be `pinClamp: undefined` (setOptions ignores undefined keys, so
-// it never clears) — it's a clamp with a threshold no message reaches,
-// which makes clampOffset a no-op.
+// answer keeps room. The preset mirrors the docs (≈10em / 6em); an
+// explicit `pinClamp: undefined` through setOptions turns it off.
 const CLAMP_ON = { tallerThan: 160, visibleHeight: 96 }
-const CLAMP_OFF = { tallerThan: Number.MAX_SAFE_INTEGER, visibleHeight: 0 }
 // On by default in the home demo — the lead prompt is over-tall, so the
 // clamp is what makes the answer visible without a manual toggle.
 const clampTall = ref(true)
@@ -97,7 +94,7 @@ function applyClamp(on: boolean): void {
   for (const pane of panes()) {
     const sc = pane?.scroll
     if (!sc) continue
-    sc.instance.setOptions({ pinClamp: on ? CLAMP_ON : CLAMP_OFF })
+    sc.instance.setOptions({ pinClamp: on ? CLAMP_ON : undefined })
     const el = sc.getPinnedElement()
     if (el) sc.pinMessage(el)
   }

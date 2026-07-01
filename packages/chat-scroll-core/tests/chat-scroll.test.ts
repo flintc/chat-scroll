@@ -1895,6 +1895,46 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('setOptions with an explicit undefined pinClamp turns the clamp off', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(692) // clamped
+
+      // `pinClamp` is the one option where an explicit `undefined` is
+      // meaningful (it IS the default): the key being present clears the
+      // clamp. Other undefined keys are still ignored — scrollMargin must
+      // keep its resolved value, not become NaN.
+      s.setOptions({ pinClamp: undefined, scrollMargin: undefined })
+      expect(s.options.pinClamp).toBeUndefined()
+      expect(s.options.scrollMargin).toBe(12)
+      setTallMsg(msg, 300, 500, container)
+      setContentHeight(2010)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(288) // back to the un-clamped anchor
+      expect(container.scrollTop).toBe(288)
+      s.destroy()
+    })
+
     it('pinClamp resolves to undefined by default in instance.options', () => {
       const s = createChatScroll({ strategy: 'pin-to-top' })
       expect(s.options.pinClamp).toBeUndefined()

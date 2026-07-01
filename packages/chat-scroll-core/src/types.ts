@@ -101,11 +101,12 @@ export interface ChatScrollOptions {
    * Clamp an over-tall pinned message so the response keeps room. When the
    * pinned element is taller than `tallerThan` px, anchor it so only
    * `visibleHeight` px remain visible at the top (over-scrolling the rest
-   * above the viewport). Only used with `'pin-to-top'`. Omit to disable
-   * (the current behavior — the whole message pins at `scrollMargin`).
+   * above the viewport). Only used with `'pin-to-top'`. Omit to disable —
+   * the whole message then pins at `scrollMargin`. Live-updatable via
+   * `setOptions`; passing an explicit `pinClamp: undefined` turns it off.
    *
    * A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }`
-   * (≈ 10em / 6em at 16px, matching assistant-ui's `topAnchorMessageClamp`).
+   * (≈ 10em / 6em at a 16px base).
    * @default undefined
    */
   pinClamp?: PinClamp

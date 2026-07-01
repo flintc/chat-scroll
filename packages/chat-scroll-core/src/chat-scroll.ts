@@ -115,9 +115,14 @@ export function createChatScroll(
     // passing every key on every render, with `undefined` for options the
     // consumer never set. Spreading those verbatim would clobber resolved
     // defaults (`bottomThreshold: undefined` breaks at-bottom detection;
-    // `scrollMargin: undefined` makes `pinnedY` NaN).
+    // `scrollMargin: undefined` makes `pinnedY` NaN). `pinClamp` is the
+    // exception: `undefined` IS its resolved default ("off"), so an
+    // explicitly passed `pinClamp: undefined` clears it — otherwise the
+    // clamp could be enabled at runtime but never disabled.
     const defined = Object.fromEntries(
-      Object.entries(next).filter(([, v]) => v !== undefined),
+      Object.entries(next).filter(
+        ([k, v]) => v !== undefined || k === 'pinClamp',
+      ),
     ) as Partial<ChatScrollOptions>
     cc.options = {
       ...cc.options,
