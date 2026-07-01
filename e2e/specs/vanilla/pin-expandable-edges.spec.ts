@@ -96,11 +96,17 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   // iOS Safari do not, so there the pin still drifts; the no-snap-back
   // invariant above is all we can guarantee. (See `reconcileOverflowAnchor`.)
   if (browserName === 'webkit') {
+    const scrollTopDrift = after.scrollTop - before.scrollTop
     // eslint-disable-next-line no-console
     console.log(
       `[pin-edges] webkit: anchoring unavailable in nested scroller, ` +
-        `pin drift=${pinDrift.toFixed(1)}px (place-keeping is a no-op here)`,
+        `pin drift=${pinDrift.toFixed(1)}px (place-keeping is a no-op here), ` +
+        `scrollTopΔ=${scrollTopDrift.toFixed(1)}px`,
     )
+    // With no browser anchoring in play, nothing may touch scrollTop: a
+    // regression that partially re-anchors (nudging scrollTop back toward
+    // the pin) must fail here, not just log.
+    expect(Math.abs(scrollTopDrift)).toBeLessThan(60)
   } else {
     expect(Math.abs(pinDrift)).toBeLessThan(24)
   }
