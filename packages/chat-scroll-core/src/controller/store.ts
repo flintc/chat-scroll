@@ -24,10 +24,11 @@ export function statesEqual(a: ChatScrollState, b: ChatScrollState): boolean {
  * animation. The instant the user scrolls away mid-stream (none of those), we
  * restore the browser default so their reading position survives growth above.
  *
- * Driven from `commit` so every lock / pin / streaming / animation transition
- * reconciles synchronously, plus directly from `setStreaming`'s grace timer
- * (a `streamingGrace` flip is not part of `ChatScrollState`, so it doesn't go
- * through the state diff). Idempotent: only writes when the value changes.
+ * Driven from `commit` — unconditionally, ahead of its no-op early return, so
+ * mutations invisible to the state diff (`streamingGrace` is not part of
+ * `ChatScrollState`) still reconcile whenever their caller commits — plus
+ * directly from the grace timer's rAF callback, which has no commit of its
+ * own. Idempotent: only writes when the value changes.
  */
 export function reconcileOverflowAnchor(cc: ControllerContext): void {
   const container = cc.ctx.container
@@ -52,12 +53,14 @@ export function reconcileOverflowAnchor(cc: ControllerContext): void {
  * no-op commits.
  */
 export function commit(cc: ControllerContext): void {
+  // Reconcile BEFORE the no-op early return: `streamingGrace` lives outside
+  // `ChatScrollState`, so a path can change the desired anchoring while the
+  // state diff stays clean — e.g. `reset()` cancelling the post-stream grace
+  // when the strategy reset re-asserts an identical state. Idempotent, so a
+  // no-op commit costs one style comparison.
+  reconcileOverflowAnchor(cc)
   if (statesEqual(cc.snapshot, cc.internal)) return
   cc.snapshot = Object.freeze({ ...cc.internal })
-  // Any state change that flips streaming / locked / pinAnchored /
-  // scrollInFlight changes whether the controller is actively managing
-  // scrollTop — reconcile the browser's anchoring to match before notifying.
-  reconcileOverflowAnchor(cc)
   cc.options.onScrollChange?.(cc.snapshot)
   cc.listeners.forEach((l) => l(cc.snapshot))
 }

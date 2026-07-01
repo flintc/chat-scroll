@@ -2684,6 +2684,34 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('reset() during the grace restores overflow-anchor', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom(
+        { clientHeight: 100, contentHeight: 1000 },
+      )
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(900)
+      // Commit `atBottom: true` so the reset below re-asserts an IDENTICAL
+      // locked-at-bottom state — the interesting case for the commit diff.
+      flushScroll()
+      s.setStreaming(false)
+      expect(container.style.overflowAnchor).toBe('none') // still graced
+      // A thread switch inside the grace window cancels the grace rAF (and
+      // its reconcile) while producing no state diff — the trailing commit
+      // must reconcile anyway or `none` is stranded on the new thread.
+      s.reset()
+      expect(container.style.overflowAnchor).toBe('')
+      raf.flushFrames()
+      raf.flushFrames()
+      expect(container.style.overflowAnchor).toBe('')
+      s.destroy()
+    })
+
     it('a new stream during the grace keeps following seamlessly', () => {
       const { s, container, setContentHeight, ro, raf } = buildStreamEnd()
       s.setStreaming(false)
