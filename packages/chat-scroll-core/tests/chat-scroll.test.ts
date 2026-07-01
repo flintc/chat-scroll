@@ -2009,6 +2009,65 @@ describe('createChatScroll', () => {
       expect(container.scrollTop).toBe(692)
       s.destroy()
     })
+
+    it('latches: a height dip back below tallerThan cannot un-clamp the pin', () => {
+      // Hysteresis for the live height read. A message pinned below the
+      // threshold whose height then crosses it (image decode, late
+      // markdown reflow) engages the clamp — and once engaged for the
+      // current pin, a later dip just UNDER the threshold must not snap
+      // the anchored reader back by the full clamp offset. Without the
+      // latch, a height oscillating around `tallerThan` flip-flops
+      // scrollTop by ±clampOffset on every resize tick.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      // Pinned at 150px — just below the 160px threshold.
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 150,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(288) // 150 <= 160 → un-clamped
+
+      // An image decodes: 150 → 500. The clamp engages (and latches).
+      setTallMsg(msg, 300, 500, container)
+      setContentHeight(2010)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(692) // 300 - 12 + (500 - 96)
+      expect(container.scrollTop).toBe(692)
+
+      // A reflow dips the height just BELOW the threshold. Un-latched
+      // math would zero the offset (pinnedY 288 — a 404px snap for the
+      // anchored reader); the latch keeps the clamp engaged, so the
+      // offset tracks the height continuously: 155 - 96 = 59.
+      setTallMsg(msg, 300, 155, container)
+      setContentHeight(2020)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(347) // 300 - 12 + 59 — still clamped
+      expect(container.scrollTop).toBe(347)
+
+      // Back above the threshold: still continuous, no ±clampOffset jump.
+      setTallMsg(msg, 300, 165, container)
+      setContentHeight(2030)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(357) // 300 - 12 + (165 - 96)
+      expect(container.scrollTop).toBe(357)
+      s.destroy()
+    })
   })
 
   describe('stick-to-bottom strategy', () => {

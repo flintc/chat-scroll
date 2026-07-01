@@ -13,12 +13,19 @@ import type { Strategy, StrategyContext } from './types'
  * from `getBoundingClientRect().height`). The result is floored at 0 so a
  * clamp configured with `visibleHeight > tallerThan` (or larger than the
  * element) never pulls the anchor upward.
+ *
+ * `engaged` bypasses the threshold check: the caller has already decided
+ * the clamp applies (see the latch in `refreshPinnedY`), so the offset
+ * tracks the live height continuously instead of collapsing to 0 the
+ * moment the height dips back under `tallerThan`.
  */
 export function clampOffset(
   elementHeight: number,
   clamp: PinClamp | undefined,
+  engaged = false,
 ): number {
-  if (!clamp || elementHeight <= clamp.tallerThan) return 0
+  if (!clamp) return 0
+  if (!engaged && elementHeight <= clamp.tallerThan) return 0
   return Math.max(0, elementHeight - clamp.visibleHeight)
 }
 
@@ -34,17 +41,48 @@ export function clampOffset(
  * height is stable, but keeping the read here (rather than baking a
  * one-shot value at pin time) means the clamp survives every recalc and
  * tracks the element if it ever does reflow.
+ *
+ * With `engaged` left at its default this is the pure, un-latched
+ * computation (threshold decides): what `pinMessage` uses at pin time and
+ * what navigation uses to answer "where does this message anchor?".
+ * `refreshPinnedY` passes its latched `engaged` state so an anchored
+ * reader can't be flip-flopped by a height oscillating around the
+ * threshold.
  */
 export function computePinnedY(
   el: HTMLElement,
   container: HTMLElement,
   margin: number,
   clamp: PinClamp | undefined,
+  engaged = false,
 ): number {
   const offset = offsetWithin(el, container)
-  const extra = clampOffset(el.getBoundingClientRect().height, clamp)
+  const extra = clamp
+    ? clampOffset(el.getBoundingClientRect().height, clamp, engaged)
+    : 0
   return Math.max(0, offset - margin + extra)
 }
+
+/**
+ * Per-instance clamp latch: the pinned element for which the tall-message
+ * clamp has ENGAGED. Once a pin's live height has been measured above
+ * `tallerThan`, the clamp stays engaged for that pin even if the height
+ * later dips back under the threshold (image decode settling, late
+ * markdown reflow). Without the latch, a height oscillating around
+ * `tallerThan` would flip `clampOffset` between 0 and hundreds of px on
+ * every resize tick — and `recalcGutter` hard-writes `scrollTop` from
+ * `pinnedY` while the reader is anchored, so the viewport would jump
+ * ±clampOffset per tick.
+ *
+ * Keyed by the strategy context (one per ChatScroll instance) with the
+ * pinned element as the value, so pinning a DIFFERENT element naturally
+ * resets the latch and a `setOptions`-enabled clamp still engages on the
+ * next resize. The one case the latch outlives is re-pinning the SAME
+ * element consecutively: a between-pins height drop below the threshold
+ * is indistinguishable here from a mid-pin dip, and keeping the clamp is
+ * the stable choice.
+ */
+const engagedClampEl = new WeakMap<StrategyContext, HTMLElement>()
 
 /**
  * Pin-to-top strategy (AI chat).
@@ -75,6 +113,7 @@ export const pinToTopStrategy: Strategy = {
     ctx.pinnedMargin = 0
     ctx.state.pinAnchored = false
     ctx.state.pinActive = false
+    engagedClampEl.delete(ctx)
     if (ctx.gutter) setGutterHeight(ctx.gutter, 0)
   },
 }
@@ -98,16 +137,33 @@ export function refreshPinnedY(ctx: StrategyContext): number {
     ctx.pinnedEl = null
     ctx.state.pinnedY = -1
     ctx.state.pinActive = false
+    engagedClampEl.delete(ctx)
     return 0
   }
   // Re-derive through the shared helper so the tall-message clamp is
   // re-applied on every resize. Without this, a clamped tall pin would
   // un-clamp itself the first time content above it shifted.
+  //
+  // The clamp decision is latched (see `engagedClampEl`): engaged if it
+  // already engaged for this pinned element, or if the live height is
+  // above the threshold now — never dis-engaged by a height dip. A clamp
+  // removed via `setOptions` still turns it off (`clamp` undefined makes
+  // the latch irrelevant, and dropping the stale entry keeps a later
+  // re-enable honest to the threshold).
+  const el = ctx.pinnedEl
+  const clamp = ctx.options.pinClamp
+  const engaged =
+    clamp !== undefined &&
+    (engagedClampEl.get(ctx) === el ||
+      el.getBoundingClientRect().height > clamp.tallerThan)
+  if (engaged) engagedClampEl.set(ctx, el)
+  else engagedClampEl.delete(ctx)
   const live = computePinnedY(
-    ctx.pinnedEl,
+    el,
     ctx.container,
     ctx.pinnedMargin,
-    ctx.options.pinClamp,
+    clamp,
+    engaged,
   )
   const delta = live - ctx.state.pinnedY
   ctx.state.pinnedY = live
