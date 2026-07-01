@@ -14,10 +14,6 @@ export function setStreaming(cc: ControllerContext, streaming: boolean): void {
   cc.internal.streaming = streaming
   if (streaming) {
     cancelStreamingGrace(cc)
-    // `overflow-anchor` follows the controller's active-management state, not
-    // streaming alone — reconcile picks `none` here only if we're locked /
-    // pinned / animating. See `reconcileOverflowAnchor`.
-    reconcileOverflowAnchor(cc)
     commit(cc)
     return
   }
@@ -38,12 +34,10 @@ export function setStreaming(cc: ControllerContext, streaming: boolean): void {
       cc.streamingGraceFrame = requestAnimationFrame(() => {
         cc.streamingGraceFrame = null
         cc.ctx.streamingGrace = false
-        // The grace flip isn't part of ChatScrollState, so it won't reconcile
-        // through `commit` — do it directly.
+        // No commit runs in this callback, so reconcile directly.
         reconcileOverflowAnchor(cc)
       })
     })
   }
-  reconcileOverflowAnchor(cc)
   commit(cc)
 }
