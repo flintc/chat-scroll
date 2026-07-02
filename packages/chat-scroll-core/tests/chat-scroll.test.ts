@@ -188,6 +188,64 @@ describe('createChatScroll', () => {
       expect(b.container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
       s.destroy()
     })
+
+    it('destroy removes a controller-created gutter', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll()
+      s.mount(container, content)
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
+      s.destroy()
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeNull()
+    })
+
+    it('adopts a consumer-rendered gutter and leaves it in place on destroy', () => {
+      // The headless-clean form: the consumer renders
+      // `<div data-chat-scroll-gutter />` below the content in their own
+      // template. The controller must adopt it (no second node), size it,
+      // and on destroy restore its inline styles WITHOUT removing it —
+      // the framework's renderer owns that node.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const g = document.createElement('div')
+      g.setAttribute('data-chat-scroll-gutter', '')
+      container.appendChild(g)
+
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.mount(container, content)
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+      expect(g.style.flexShrink).toBe('0')
+
+      s.destroy()
+      expect(container.contains(g)).toBe(true)
+      // Inline styles restored — an empty div's natural height is 0, so
+      // no scroll slack outlives the mount.
+      expect(g.style.height).toBe('')
+      expect(g.style.flexShrink).toBe('')
+    })
+
+    it('accepts an explicit gutter element as the third mount argument', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const g = document.createElement('div')
+      container.appendChild(g)
+
+      const s = createChatScroll()
+      s.mount(container, content, g)
+      // Adopted: tagged, styled, and no second node created.
+      expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+
+      s.destroy()
+      expect(container.contains(g)).toBe(true)
+    })
   })
 
   describe('at-bottom detection', () => {

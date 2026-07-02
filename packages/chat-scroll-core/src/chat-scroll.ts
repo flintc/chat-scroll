@@ -1,4 +1,4 @@
-import { createGutter } from './gutter'
+import { resolveGutter } from './gutter'
 import { recalcGutter } from './strategies/pin-to-top'
 import { CLEARABLE_OPTION_KEYS } from './types'
 import type { ChatScrollInstance, ChatScrollOptions } from './types'
@@ -52,8 +52,18 @@ export function createChatScroll(
 ): ChatScrollInstance {
   const cc = createControllerContext(opts)
 
-  function mount(container: HTMLElement, content: HTMLElement): void {
-    if (cc.ctx.container === container && cc.ctx.content === content) return
+  function mount(
+    container: HTMLElement,
+    content: HTMLElement,
+    gutter?: HTMLElement,
+  ): void {
+    if (
+      cc.ctx.container === container &&
+      cc.ctx.content === content &&
+      (gutter === undefined || cc.ctx.gutter === gutter)
+    ) {
+      return
+    }
     if (cc.ctx.container) teardownDom(cc)
 
     cc.ctx.container = container
@@ -61,7 +71,15 @@ export function createChatScroll(
 
     applyContainerStyles(cc)
     applyContentStyles(cc)
-    cc.ctx.gutter = createGutter(container)
+    // Adopt a consumer-rendered gutter (the explicit argument, or a direct
+    // child tagged `data-chat-scroll-gutter`); create one only when the
+    // consumer didn't render one. Ownership decides teardown: created
+    // nodes are removed, adopted nodes are left in place with their
+    // inline styles restored.
+    const resolvedGutter = resolveGutter(container, gutter)
+    cc.ctx.gutter = resolvedGutter.el
+    cc.gutterOwned = resolvedGutter.owned
+    cc.savedGutterStyles = resolvedGutter.savedStyles
     // Strategies call this to request a smooth catch-up to the pin instead of
     // a synchronous `scrollTop = pinnedY` jump. Used after the
     // pointerdown-abort case where the user is far from the pin and a teleport

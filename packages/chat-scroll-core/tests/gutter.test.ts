@@ -4,6 +4,8 @@ import {
   calcGutterHeight,
   createGutter,
   destroyGutter,
+  resolveGutter,
+  restoreGutterStyles,
   setGutterHeight,
 } from '../src/gutter'
 
@@ -75,6 +77,82 @@ describe('gutter', () => {
     const g = createGutter(c)
     destroyGutter(g)
     expect(c.contains(g)).toBe(false)
+  })
+
+  describe('resolveGutter', () => {
+    it('adopts an explicitly provided element — not owned, styles applied and saved', () => {
+      const c = document.createElement('div')
+      const g = document.createElement('div')
+      g.style.height = '25px'
+      c.appendChild(g)
+      document.body.appendChild(c)
+
+      const r = resolveGutter(c, g)
+      expect(r.el).toBe(g)
+      expect(r.owned).toBe(false)
+      // Tagged so selectors and a later attribute-adoption remount find it.
+      expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
+      // Controller styles applied…
+      expect(g.style.flexShrink).toBe('0')
+      expect(g.style.pointerEvents).toBe('none')
+      expect(g.style.height).toBe('0px')
+      // …prior inline values captured for teardown.
+      expect(r.savedStyles?.height).toBe('25px')
+    })
+
+    it('adopts a tagged direct child when no element is provided', () => {
+      const c = document.createElement('div')
+      const g = document.createElement('div')
+      g.setAttribute('data-chat-scroll-gutter', '')
+      c.appendChild(g)
+      document.body.appendChild(c)
+
+      const r = resolveGutter(c)
+      expect(r.el).toBe(g)
+      expect(r.owned).toBe(false)
+      expect(r.savedStyles).not.toBeNull()
+    })
+
+    it('creates and owns the node when there is nothing to adopt', () => {
+      const c = document.createElement('div')
+      document.body.appendChild(c)
+
+      const r = resolveGutter(c)
+      expect(r.owned).toBe(true)
+      expect(r.savedStyles).toBeNull()
+      expect(r.el.parentElement).toBe(c)
+      expect(r.el.getAttribute('data-chat-scroll-gutter')).toBe('')
+    })
+
+    it("does not adopt a NESTED instance's gutter", () => {
+      const outer = document.createElement('div')
+      const message = document.createElement('div')
+      outer.appendChild(message)
+      document.body.appendChild(outer)
+      const innerGutter = createGutter(message)
+
+      const r = resolveGutter(outer)
+      expect(r.el).not.toBe(innerGutter)
+      expect(r.owned).toBe(true)
+      expect(r.el.parentElement).toBe(outer)
+    })
+
+    it('restoreGutterStyles puts the prior inline styles back', () => {
+      const c = document.createElement('div')
+      const g = document.createElement('div')
+      g.style.height = '25px'
+      g.style.margin = '4px'
+      c.appendChild(g)
+      document.body.appendChild(c)
+
+      const r = resolveGutter(c, g)
+      setGutterHeight(g, 120)
+      restoreGutterStyles(g, r.savedStyles)
+      expect(g.style.height).toBe('25px')
+      expect(g.style.margin).toBe('4px')
+      expect(g.style.flexShrink).toBe('')
+      expect(g.style.pointerEvents).toBe('')
+    })
   })
 
   describe('calcGutterHeight', () => {
