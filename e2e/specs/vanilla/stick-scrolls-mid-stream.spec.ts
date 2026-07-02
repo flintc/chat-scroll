@@ -1,4 +1,12 @@
-import { test, expect, hold, showCue, streamN, userScrollSmooth } from '../../fixtures'
+import {
+  test,
+  expect,
+  hold,
+  showCue,
+  streamN,
+  streamUntilDone,
+  userScrollSmooth,
+} from '../../fixtures'
 
 test('stick-scrolls-mid-stream', async ({ page }) => {
   await page.goto('/#/stick-to-bottom')
@@ -9,6 +17,17 @@ test('stick-scrolls-mid-stream', async ({ page }) => {
   await expect(page.locator('[data-test="status"]')).toContainText(
     'locked=✓',
   )
+
+  // Build a tall transcript first: one full turn streamed to completion, so
+  // there is real room to scroll up. The demo's transcripts are short — a
+  // single partially-streamed reply doesn't overflow far enough past the
+  // bottom-threshold for an upward scroll to read as "left the bottom", and
+  // the lock (correctly) never releases because the viewport never actually
+  // leaves the bottom.
+  await page.evaluate(() => window.__demo?.sendUserMessage())
+  await streamUntilDone(page, 40)
+  await page.evaluate(() => window.__demo?.finishStream())
+  await hold(page, 400)
 
   await showCue(page, 'user sends a question')
   await page.evaluate(() => {

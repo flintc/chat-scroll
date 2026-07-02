@@ -6,7 +6,7 @@ use it directly when consuming the core.
 ```ts
 interface ChatScrollInstance {
   readonly state: ChatScrollState
-  readonly options: Required<Omit<ChatScrollOptions, 'onScrollChange'>>
+  readonly options: ResolvedChatScrollOptions // every default resolved
 
   mount(container: HTMLElement, content: HTMLElement): void
   setOptions(opts: Partial<ChatScrollOptions>): void
@@ -48,8 +48,11 @@ different elements tears down the previous mount before re-mounting.
 
 Merge new options into the instance. Keys whose value is `undefined` are
 ignored (they keep their current value), so adapters can safely pass
-every key on every render. Switching `strategy` will reset the
-prior strategy's transient state (clearing pins / releasing locks).
+every key on every render. The exceptions are the options whose resolved
+default **is** `undefined` — `pinClamp` and `onScrollChange` — where an
+explicit `undefined` clears the option back to "off". Switching
+`strategy` will reset the prior strategy's transient state (clearing
+pins / releasing locks).
 
 ```ts
 instance.setOptions({ bottomThreshold: 80 })
@@ -195,8 +198,12 @@ lock automatically when the user scrolls up.
 
 ### `setStreaming(streaming)`
 
-Toggles `overflow-anchor: none` on the container. Call before / after
-a streaming response. See [Streaming mode](../guide/streaming).
+Marks a streaming response as in flight. While streaming **and**
+actively holding a position (locked, pinned, or animating), the
+controller sets `overflow-anchor: none` on the container so the
+browser's own anchoring doesn't fight it for `scrollTop`; the default
+is restored when the reader scrolls away. Call before / after a
+streaming response. See [Streaming mode](../guide/streaming).
 
 Turning streaming OFF keeps the follow alive for a two-frame grace
 period, so the final chunk's growth — which typically renders after

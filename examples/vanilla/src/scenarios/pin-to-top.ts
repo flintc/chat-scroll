@@ -2,6 +2,7 @@ import { createChatScroll } from '@chat-scroll/core'
 import {
   createPlaybackController,
   formatState,
+  appendTurnText,
   PRIOR_TURNS,
   setBlockOpen,
   showCue,
@@ -69,7 +70,7 @@ export function mountPinToTop(root: HTMLElement): () => void {
     const el = document.createElement('div')
     el.className = turn.role === 'user' ? 'msg msg--user' : 'msg msg--bot'
     el.dataset.test = turn.role === 'user' ? 'user-msg' : 'bot-msg'
-    el.textContent = turn.text
+    appendTurnText(el, turn.role, turn.text)
     list.appendChild(el)
   }
 
@@ -207,6 +208,9 @@ export function mountPinToTop(root: HTMLElement): () => void {
     },
     setScrollBehavior(behavior): void {
       playback.setScrollBehavior(behavior)
+    },
+    setPinClamp(clamp): void {
+      scroll.setOptions({ pinClamp: clamp })
     },
     showCue,
   }

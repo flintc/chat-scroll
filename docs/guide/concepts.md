@@ -58,7 +58,7 @@ read most of the time:
 interface ChatScrollState {
   atBottom: boolean    // user is within `bottomThreshold` of the end
   pinActive: boolean   // a pin-to-top message is currently anchored
-  streaming: boolean   // overflow-anchor is disabled
+  streaming: boolean   // a response is in flight (see Streaming mode)
   locked: boolean      // stick-to-bottom lock is engaged
   // ...three more for advanced consumers — see the State reference.
 }
@@ -87,7 +87,7 @@ firing on every tick.
 | `scrollToMessage(el)` | Animated scroll bringing `el` to the viewport top; releases the lock first. Both strategies. |
 | `scrollToBottom()`   | Smooth-scroll (or instant) to the bottom.             |
 | `lock()` / `unlock()`| Engage / release stick-to-bottom lock.                |
-| `setStreaming(bool)` | Toggle `overflow-anchor: none`; arms stick-to-bottom's auto-snap. |
+| `setStreaming(bool)` | Mark a response in flight; arms stick-to-bottom's auto-snap (and `overflow-anchor` handling — see [Streaming mode](./streaming)). |
 | `reset()`            | Clear pin, release lock, reset gutter.                |
 | `savePosition()`     | Snapshot scroll position (for tab/route changes).     |
 | `restorePosition()`  | Restore a saved position.                             |

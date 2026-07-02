@@ -1,14 +1,20 @@
 import { pinToTopStrategy } from '../strategies/pin-to-top'
 import { stickToBottomStrategy } from '../strategies/stick-to-bottom'
 import type { Strategy, StrategyContext } from '../strategies/types'
-import type { ChatScrollOptions, ChatScrollState } from '../types'
+import type {
+  ChatScrollOptions,
+  ChatScrollState,
+  ResolvedChatScrollOptions,
+} from '../types'
 
-/** Resolved options — every option present, plus the optional callback. */
-export type ResolvedOptions = Required<
-  Omit<ChatScrollOptions, 'onScrollChange'>
-> & {
-  onScrollChange?: ChatScrollOptions['onScrollChange']
-}
+/**
+ * Resolved options — every option present, plus the optional clearable
+ * pair (`pinClamp`, `onScrollChange`), which have no default: `undefined`
+ * means "off". The definition lives in types.ts so the public
+ * `ChatScrollInstance['options']` surface and the controller share one
+ * shape.
+ */
+export type ResolvedOptions = ResolvedChatScrollOptions
 
 export type Listener = (state: ChatScrollState) => void
 
@@ -150,6 +156,8 @@ export function createControllerContext(
     scrollBehavior: opts.scrollBehavior ?? DEFAULTS.scrollBehavior,
     scrollDurationMs: opts.scrollDurationMs ?? DEFAULTS.scrollDurationMs,
     initialPosition: opts.initialPosition ?? DEFAULTS.initialPosition,
+    // No default — `undefined` means the clamp is off (backward compatible).
+    pinClamp: opts.pinClamp,
     onScrollChange: opts.onScrollChange,
   }
 
@@ -174,6 +182,7 @@ export function createControllerContext(
       bottomThreshold: options.bottomThreshold,
       scrollMargin: options.scrollMargin,
       bottomInset: options.bottomInset,
+      pinClamp: options.pinClamp,
     },
     pinAnimationInterrupted: false,
     scrollDelta: 0,

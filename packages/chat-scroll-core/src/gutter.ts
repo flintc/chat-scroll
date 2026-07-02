@@ -72,7 +72,13 @@ export function createGutter(container: HTMLElement): HTMLElement {
 }
 
 export function setGutterHeight(gutter: HTMLElement, height: number): void {
-  gutter.style.height = `${Math.max(0, Math.round(height))}px`
+  // Sub-pixel precision (not rounded to whole px) on purpose: during
+  // streaming the content grows by fractional pixels while the gutter
+  // shrinks to compensate, keeping the scroll extent constant. Rounding
+  // the gutter to whole px breaks that cancellation, so `scrollHeight`
+  // alternates ±1px frame to frame and the scrollbar visibly jitters.
+  // Round to 2 decimals only to keep the inline style tidy.
+  gutter.style.height = `${Math.max(0, Math.round(height * 100) / 100)}px`
 }
 
 export function destroyGutter(gutter: HTMLElement): void {

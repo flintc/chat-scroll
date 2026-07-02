@@ -1,5 +1,6 @@
 export * from './lipsum'
 export * from './segments'
+export * from './rich-message'
 export * from './demo-api'
 export * from './cue'
 export * from './blocks'

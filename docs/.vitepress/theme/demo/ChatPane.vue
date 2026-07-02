@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef } from 'vue'
+import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useChatScroll } from '@chat-scroll/vue'
 import type { ChatScrollStrategy } from '@chat-scroll/vue'
 
-import type { DemoMsg } from './data'
+import type { DemoBlock, DemoMsg } from './data'
 
 const props = defineProps<{
   strategy: ChatScrollStrategy
@@ -38,6 +38,33 @@ const setContainer = (el: Element | ComponentPublicInstance | null): void => {
   chatEl.value = el instanceof HTMLElement ? el : null
   containerRef(el)
 }
+
+// ── Expandable blocks ─────────────────────────────────────────────
+// Default open state mirrors the example apps: reasoning is shown
+// (live thinking), a tool call stays collapsed (its args assemble in
+// the summary; the result is a click away). Crucially nothing
+// AUTO-collapses mid-stream — collapsing a block the instant it
+// finishes would shrink content below the pin, and the scroll extent
+// correctly follows that shrink, so the scrollbar would bounce on every
+// block. Keeping the open state stable while the reply streams keeps
+// content monotonic and the scroll area still. A click takes over —
+// the user's choice wins from then on (and shows the resize being
+// absorbed). Keyed per message+block so streamed turns don't inherit
+// state.
+const blockOverrides = reactive(new Map<string, boolean>())
+const isBlockOpen = (id: number, bi: number, b: DemoBlock): boolean =>
+  blockOverrides.get(`${id}:${bi}`) ??
+  (b.kind === 'reasoning' && Boolean(b.body))
+function toggleBlock(id: number, bi: number, b: DemoBlock): void {
+  blockOverrides.set(`${id}:${bi}`, !isBlockOpen(id, bi, b))
+}
+// A shrinking transcript means Reset — drop the user's toggles too.
+watch(
+  () => props.messages.length,
+  (n, o) => {
+    if (n < o) blockOverrides.clear()
+  },
+)
 
 // Re-evaluate the nav computed on raw scroll position changes — the
 // library's state only commits on semantic changes (atBottom etc.).
@@ -133,15 +160,45 @@ defineExpose({ scroll, nav, navTo, chatEl })
             :class="`ld-msg--${m.role}`"
             :data-role="m.role"
           >
-            <details
+            <div
               v-for="(b, bi) in m.blocks"
               :key="bi"
               class="ld-block"
+              :class="{
+                'ld-block--open': isBlockOpen(m.id, bi, b),
+                'ld-block--streaming': b.streaming,
+              }"
             >
-              <summary>{{ b.title }}</summary>
-              <div class="ld-block__body">{{ b.body }}</div>
-            </details>
-            <div class="ld-msg__text">{{ m.text }}</div>
+              <button
+                type="button"
+                class="ld-block__summary"
+                :aria-expanded="isBlockOpen(m.id, bi, b)"
+                @click="toggleBlock(m.id, bi, b)"
+              >
+                <span class="ld-block__icon" aria-hidden="true">
+                  {{ b.kind === 'tool' ? '🛠' : '💭' }}
+                </span>
+                <span class="ld-block__title">
+                  {{ b.title
+                  }}<span v-if="b.kind === 'tool'" class="ld-block__args">{{
+                    b.args
+                  }}</span>
+                </span>
+                <span class="ld-block__chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="ld-block__wrap">
+                <div
+                  class="ld-block__body"
+                  :class="{ 'ld-block__body--mono': b.kind === 'tool' }"
+                >
+                  {{ b.body }}
+                </div>
+              </div>
+            </div>
+            <!-- Only the answer text is bubbled; the reasoning / tool
+                 cards above sit outside it (the ChatGPT/Claude layout).
+                 No bubble while the turn is still all-blocks. -->
+            <div v-if="m.text" class="ld-msg__text">{{ m.text }}</div>
           </div>
           <slot name="bottom" />
         </div>
@@ -221,40 +278,123 @@ defineExpose({ scroll, nav, navTo, chatEl })
   flex-direction: column;
   gap: 0.625rem;
 }
+/* A turn is a transparent column: reasoning / tool cards stacked
+   above, then the answer bubble. Only the bubble is tinted — the cards
+   sit outside it (the ChatGPT/Claude layout). */
 .ld-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
   max-width: 88%;
-  border-radius: 10px;
-  padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   line-height: 1.45;
 }
-.ld-msg__text {
-  white-space: pre-wrap;
-}
 .ld-msg--user {
   align-self: flex-end;
-  background: var(--vp-c-brand-soft);
+  align-items: flex-end;
 }
 .ld-msg--assistant {
   align-self: flex-start;
+  /* A stable column width so the cards and bubble don't jitter
+     horizontally as the answer streams in and grows. */
+  width: 88%;
+}
+.ld-msg__text {
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  white-space: pre-wrap;
+}
+.ld-msg--user .ld-msg__text {
+  background: var(--vp-c-brand-soft);
+}
+.ld-msg--assistant .ld-msg__text {
   background: var(--vp-c-bg-soft);
 }
 .ld-block {
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
-  margin-bottom: 0.5rem;
   font-size: 0.75rem;
 }
-.ld-block > summary {
+.ld-block__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
   cursor: pointer;
   padding: 0.3rem 0.55rem;
+  border: 0;
+  background: transparent;
   color: var(--vp-c-text-2);
+  font-size: inherit;
   user-select: none;
 }
+.ld-block__icon {
+  flex: none;
+}
+.ld-block__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ld-block__args {
+  margin-left: 0.4rem;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.9em;
+  color: var(--vp-c-text-3);
+}
+.ld-block__chev {
+  flex: none;
+  transition: transform 180ms ease;
+}
+.ld-block--open .ld-block__chev {
+  transform: rotate(180deg);
+}
+/* While a block's content is arriving, pulse its summary — the cue
+   that the reasoning / tool call is live. */
+.ld-block--streaming .ld-block__summary {
+  animation: ld-block-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ld-block-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+/* Animated collapse (grid-template-rows 0fr → 1fr) instead of
+   <details>: the open/close transition resizes the message over many
+   frames, exactly the churn the controller must absorb. */
+.ld-block__wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+.ld-block--open .ld-block__wrap {
+  grid-template-rows: 1fr;
+}
 .ld-block__body {
-  padding: 0.3rem 0.55rem 0.55rem;
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 0.55rem;
+  border-top: 1px dashed transparent;
   color: var(--vp-c-text-2);
-  border-top: 1px dashed var(--vp-c-divider);
+  white-space: pre-wrap;
+}
+.ld-block--open .ld-block__body {
+  padding: 0.3rem 0.55rem 0.55rem;
+  border-top-color: var(--vp-c-divider);
+}
+.ld-block__body--mono {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.95em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-block__wrap,
+  .ld-block__chev {
+    transition: none;
+  }
+  .ld-block--streaming .ld-block__summary {
+    animation: none;
+  }
 }
 /* Gutter visualization — the library's gutter element carries a stable
    data attribute, so the demo can paint it without touching internals. */

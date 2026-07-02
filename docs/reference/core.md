@@ -40,6 +40,7 @@ import type {
   ChatScrollInstance,
   ChatScrollStrategy,
   ChatScrollBehavior,
+  PinClamp,
   ScrollPosition,
 } from '@chat-scroll/core'
 ```
@@ -54,7 +55,7 @@ utilities](../guide/lower-level-utilities)), the core also exports:
 | ----------------------- | ---------------------------------------------------- |
 | `createGutter`          | Append a styled gutter element to a container.       |
 | `destroyGutter`         | Remove a gutter from the DOM.                        |
-| `setGutterHeight`       | Set a gutter's height (clamped to ≥ 0, rounded).     |
+| `setGutterHeight`       | Set a gutter's height (clamped to ≥ 0; sub-pixel, to 2 decimals). |
 | `calcGutterHeight`      | Compute the gutter height that pins `scrollHeight − clientHeight` to `pinnedY`. |
 | `isAtBottom`            | Boolean: within `threshold` of the bottom, minus an optional `endSlack` (e.g. a gutter). |
 | `offsetWithin`          | Geometric offset of an element within a container.   |

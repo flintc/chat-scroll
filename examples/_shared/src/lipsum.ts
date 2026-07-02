@@ -66,10 +66,12 @@ export const ASSISTANT_CHUNKS: readonly string[] = [
  * segments emit a collapsible thinking/tool card whose body is streamed
  * incrementally by [[expandSegments]].
  *
- * The thinking block is `defaultOpen` so the viewer sees it appear
- * mid-stream (matching how chat UIs reveal live reasoning), and the
- * tool block starts collapsed (matching how chat UIs render tool
- * calls — the result is usually long and the summary is enough).
+ * The reasoning and tool-call blocks lead the turn — they stream in
+ * first, above the answer bubble, the way ChatGPT and Claude surface
+ * an assistant's thinking and tool use before the prose. The thinking
+ * block is `defaultOpen` so the viewer sees it reveal live reasoning;
+ * the tool block starts collapsed (its result is long and the summary
+ * is enough).
  */
 export type BotSegment =
   | { type: 'text'; text: string }
@@ -99,14 +101,6 @@ export const ASSISTANT_SEGMENTS: readonly BotSegment[] = [
       'with content growth). I should answer at both levels.',
     defaultOpen: true,
   },
-  { type: 'text', text: "It's tricky because " },
-  { type: 'text', text: 'the user has multiple intentions ' },
-  { type: 'text', text: "you can't always distinguish. " },
-  { type: 'text', text: 'Sometimes they want to be anchored ' },
-  { type: 'text', text: 'to the latest message — ' },
-  { type: 'text', text: "that's how group chat works, " },
-  { type: 'text', text: 'where the most recent line ' },
-  { type: 'text', text: 'is what matters most.\n\n' },
   {
     type: 'tool',
     name: 'search_codebase',
@@ -118,10 +112,19 @@ export const ASSISTANT_SEGMENTS: readonly BotSegment[] = [
       '  examples/_shared/src/style.css: (none — relies on default)\n' +
       '  docs/recipes/overflow-anchor.md\n' +
       '\n' +
-      'overflow-anchor is set to "none" during streaming so the browser ' +
-      'does not anchor to an arbitrary node mid-stream, which would ' +
-      'fight the controller for scrollTop.',
+      'overflow-anchor is set to "none" only while the controller is ' +
+      'actively holding a position mid-stream (locked or pinned), so the ' +
+      'browser does not fight it for scrollTop; it is restored the moment ' +
+      'the reader scrolls away.',
   },
+  { type: 'text', text: "It's tricky because " },
+  { type: 'text', text: 'the user has multiple intentions ' },
+  { type: 'text', text: "you can't always distinguish. " },
+  { type: 'text', text: 'Sometimes they want to be anchored ' },
+  { type: 'text', text: 'to the latest message — ' },
+  { type: 'text', text: "that's how group chat works, " },
+  { type: 'text', text: 'where the most recent line ' },
+  { type: 'text', text: 'is what matters most.\n\n' },
   { type: 'text', text: 'Other times they want a stable position ' },
   { type: 'text', text: 'while reading a long response, ' },
   { type: 'text', text: 'with new content appearing below ' },
@@ -153,13 +156,6 @@ export const ASSISTANT_SEGMENTS_TURN_2: readonly BotSegment[] = [
       'stream, then shrink the gutter as the response fills the space.',
     defaultOpen: true,
   },
-  { type: 'text', text: 'A few more thoughts: ' },
-  { type: 'text', text: 'the trick is that you almost never want ' },
-  { type: 'text', text: 'to fight the user. ' },
-  { type: 'text', text: 'If they wheel-scroll mid-stream, ' },
-  { type: 'text', text: 'cancel whatever auto-scroll is in flight. ' },
-  { type: 'text', text: 'If they expand a thinking block, ' },
-  { type: 'text', text: "their reading position shouldn't jump.\n\n" },
   {
     type: 'tool',
     name: 'inspect_dom',
@@ -172,6 +168,13 @@ export const ASSISTANT_SEGMENTS_TURN_2: readonly BotSegment[] = [
       'content. As the response streams in, scrollHeight increases and ' +
       'the gutter shrinks, keeping the pinned message exactly at the top.',
   },
+  { type: 'text', text: 'A few more thoughts: ' },
+  { type: 'text', text: 'the trick is that you almost never want ' },
+  { type: 'text', text: 'to fight the user. ' },
+  { type: 'text', text: 'If they wheel-scroll mid-stream, ' },
+  { type: 'text', text: 'cancel whatever auto-scroll is in flight. ' },
+  { type: 'text', text: 'If they expand a thinking block, ' },
+  { type: 'text', text: "their reading position shouldn't jump.\n\n" },
   { type: 'text', text: 'The gutter is the load-bearing trick. ' },
   { type: 'text', text: 'Without it, ' },
   { type: 'text', text: 'a short response leaves the pinned user message ' },

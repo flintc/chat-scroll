@@ -107,9 +107,19 @@ export function useChatScroll(
 
   // Watch reactive options if provided.
   if (isRef(opts)) {
+    // `pinClamp` needs a presence latch: the core treats an explicit
+    // `pinClamp: undefined` as "clear the clamp" (its resolved default IS
+    // `undefined`), so unconditionally sending `next.pinClamp` would let
+    // any unrelated option change wipe a clamp the consumer set
+    // imperatively via `instance.setOptions` (the composer-overlay recipe
+    // pattern). Send the key only once the consumer has driven it
+    // declaratively (including in the initial options) — from then on,
+    // dropping the key clears the clamp; never passing it never sends it.
+    let pinClampDriven = 'pinClamp' in opts.value
     watch(
       opts,
       (next) => {
+        if ('pinClamp' in next) pinClampDriven = true
         instance.setOptions({
           strategy: next.strategy,
           bottomThreshold: next.bottomThreshold,
@@ -117,6 +127,7 @@ export function useChatScroll(
           bottomInset: next.bottomInset,
           scrollBehavior: next.scrollBehavior,
           scrollDurationMs: next.scrollDurationMs,
+          ...(pinClampDriven ? { pinClamp: next.pinClamp } : {}),
         })
       },
       { deep: true },

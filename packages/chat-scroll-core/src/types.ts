@@ -9,6 +9,20 @@ export type ChatScrollStrategy = 'pin-to-top' | 'stick-to-bottom'
 
 export type ChatScrollBehavior = 'auto' | 'smooth' | 'instant'
 
+/**
+ * Clamp configuration for an over-tall pinned message (pin-to-top). When
+ * the pinned element is taller than `tallerThan` px, it is over-scrolled
+ * so only `visibleHeight` px remain visible at the viewport top — the rest
+ * of the message sits above the viewport, leaving the streaming response
+ * the rest of the room. Both values are px. See `ChatScrollOptions.pinClamp`.
+ */
+export interface PinClamp {
+  /** Height threshold (px). Messages at or below this pin normally. */
+  tallerThan: number
+  /** How many px of the message stay visible at the top once clamped. */
+  visibleHeight: number
+}
+
 export interface ChatScrollOptions {
   /**
    * Scroll strategy.
@@ -84,11 +98,54 @@ export interface ChatScrollOptions {
   initialPosition?: 'bottom' | 'none'
 
   /**
+   * Clamp an over-tall pinned message so the response keeps room. When the
+   * pinned element is taller than `tallerThan` px, anchor it so only
+   * `visibleHeight` px remain visible at the top (over-scrolling the rest
+   * above the viewport). Only used with `'pin-to-top'`. Omit to disable —
+   * the whole message then pins at `scrollMargin`. Live-updatable via
+   * `setOptions`; passing an explicit `pinClamp: undefined` turns it off.
+   *
+   * A sensible preset is `{ tallerThan: 160, visibleHeight: 96 }`
+   * (≈ 10em / 6em at a 16px base).
+   * @default undefined
+   */
+  pinClamp?: PinClamp
+
+  /**
    * Called when state changes. Framework adapters use this to publish
    * reactive state into their own systems (signals, hooks, refs).
+   * Live-updatable via `setOptions`; passing an explicit
+   * `onScrollChange: undefined` removes the callback.
+   * @default undefined
    */
   onScrollChange?: (state: ChatScrollState) => void
 }
+
+/**
+ * The options whose resolved default IS `undefined` — `pinClamp` ("clamp
+ * off") and `onScrollChange` ("no callback"). For every other option,
+ * `setOptions` ignores keys passed as `undefined` (adapters sync by
+ * passing every key on every render; spreading those verbatim would
+ * clobber resolved defaults). For these keys an explicit `undefined` is
+ * the only way to express "back to the default", so `setOptions` lets it
+ * through and clears them.
+ */
+export type ClearableOptionKey = 'pinClamp' | 'onScrollChange'
+
+export const CLEARABLE_OPTION_KEYS: ReadonlySet<string> =
+  new Set<ClearableOptionKey>(['pinClamp', 'onScrollChange'])
+
+/**
+ * Resolved options — every option present, except the clearable ones
+ * (`pinClamp`, `onScrollChange`), which have no default: `undefined`
+ * means "off", so they can't be made `Required` without forcing a value.
+ * Single definition shared by `ChatScrollInstance['options']` and the
+ * controller context.
+ */
+export type ResolvedChatScrollOptions = Required<
+  Omit<ChatScrollOptions, ClearableOptionKey>
+> &
+  Pick<ChatScrollOptions, ClearableOptionKey>
 
 export interface ChatScrollState {
   /**
@@ -198,9 +255,7 @@ export interface ChatScrollInstance {
   readonly state: ChatScrollState
 
   /** Current resolved options. */
-  readonly options: Required<Omit<ChatScrollOptions, 'onScrollChange'>> & {
-    onScrollChange?: ChatScrollOptions['onScrollChange']
-  }
+  readonly options: ResolvedChatScrollOptions
 
   /**
    * Wire up the scrollable container and content wrapper.
@@ -212,7 +267,9 @@ export interface ChatScrollInstance {
   /**
    * Update options at any time. Partial — unspecified keys retain their
    * values, and keys explicitly passed as `undefined` are ignored too
-   * (so adapters can pass every key on every render).
+   * (so adapters can pass every key on every render). The exceptions are
+   * the options whose resolved default IS `undefined` — `pinClamp` and
+   * `onScrollChange` — where an explicit `undefined` clears the option.
    */
   setOptions: (opts: Partial<ChatScrollOptions>) => void
 

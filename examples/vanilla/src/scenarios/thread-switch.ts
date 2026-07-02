@@ -3,6 +3,7 @@ import {
   ASSISTANT_SEGMENTS,
   createPlaybackController,
   formatState,
+  appendTurnText,
   PRIOR_TURNS,
   showCue,
   USER_PROMPT,
@@ -31,7 +32,7 @@ function buildThread(id: string, title: string): Thread {
   for (const turn of PRIOR_TURNS) {
     const el = document.createElement('div')
     el.className = turn.role === 'user' ? 'msg msg--user' : 'msg msg--bot'
-    el.textContent = turn.text
+    appendTurnText(el, turn.role, turn.text)
     nodes.push(el)
   }
   const u = document.createElement('div')

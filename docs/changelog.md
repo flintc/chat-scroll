@@ -4,6 +4,22 @@
 
 ### Added
 
+- **`pinClamp` option** (`pin-to-top` only): clamp an over-tall pinned
+  message so the streaming response keeps room. When the pinned element
+  is taller than `tallerThan` px, the controller over-scrolls it so only
+  `visibleHeight` px stay visible at the viewport top. Re-applied on
+  every content resize, and it rides the same JS scroll-correction as
+  the normal pin, so it holds on WebKit too. Live-updatable via
+  `setOptions` — an explicit `pinClamp: undefined` turns it off. That's
+  now the general `setOptions` rule for options whose resolved default
+  is `undefined` (`pinClamp` and `onScrollChange`): an explicit
+  `undefined` clears them, while every other option's `undefined` stays
+  ignored to protect resolved defaults. The React and Vue adapters sync
+  `pinClamp` reactively, and only send the key once you've actually
+  passed it — so a clamp set imperatively via `instance.setOptions`
+  survives unrelated reactive option changes. See
+  [`pinClamp`](/reference/options#pinclamp).
+
 - **`bottomInset` option**: reserve space for an obstruction overlaying
   the bottom of the viewport — a `position: fixed`/`absolute` composer
   floating over the messages. The controller folds it into its own
@@ -50,6 +66,19 @@
 
 ### Fixed
 
+- **Browser scroll-anchoring comes back when the reader scrolls away
+  mid-stream.** `overflow-anchor: none` used to be held for the whole
+  streaming session; once the reader scrolled off the bottom (or off the
+  pin) nothing kept their place, so content growing above the viewport —
+  a late image decode, an expanding block — shoved their reading
+  position. The controller now disables anchoring only while it is
+  actively holding a position (locked, pinned, or animating) and
+  restores the browser default the moment the reader scrolls away.
+- **The gutter keeps sub-pixel heights** (rounded to 2 decimals instead
+  of whole px). During streaming the content grows by fractional pixels
+  while the gutter shrinks to compensate; whole-px rounding broke that
+  cancellation, so `scrollHeight` alternated ±1px frame to frame and the
+  scrollbar visibly jittered mid-stream.
 - **The container's own `padding-bottom` now recalculates the gutter at
   runtime.** The controller already subtracted container padding from
   the gutter math, but only re-ran on a border-box resize — so growing

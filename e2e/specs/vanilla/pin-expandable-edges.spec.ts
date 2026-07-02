@@ -15,7 +15,10 @@ import {
  * to the pin, prior block toggles, pin stays). This file covers the
  * cases where we explicitly do NOT want the controller to re-anchor.
  */
-test('pin-expandable: scrolled-away does not snap back', async ({ page }) => {
+test('pin-expandable: scrolled-away does not snap back', async ({
+  page,
+  browserName,
+}) => {
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
@@ -44,30 +47,69 @@ test('pin-expandable: scrolled-away does not snap back', async ({ page }) => {
   await userWheelScroll(page, -350)
   await hold(page, 500)
 
-  const scrollBoxBefore = await page.locator('[data-test="scroll"]').boundingBox()
-  const scrollTopBefore = await page.evaluate(
-    () => (document.querySelector('[data-test="scroll"]') as HTMLElement).scrollTop,
-  )
+  // Record the pin's VISUAL position (its offset from the viewport top). The
+  // pin is parked in the lower half of the viewport — the reader scrolled up
+  // to read prior content but the pinned turn + its streaming answer are what
+  // they're tracking. Two invariants when the prior block grows:
+  //   (1) the pinned turn must not jump (its visual position holds), and
+  //   (2) the controller must not snap them back to the pin (pin nowhere near
+  //       the top / scrollMargin).
+  const readPin = () =>
+    page.evaluate(() => {
+      const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
+      const cr = c.getBoundingClientRect()
+      const pin = Array.from(
+        c.querySelectorAll<HTMLElement>('[data-test="user-msg"]'),
+      ).at(-1)!
+      return {
+        pinOffset: pin.getBoundingClientRect().top - cr.top,
+        scrollTop: c.scrollTop,
+      }
+    })
+  const before = await readPin()
 
-  // Now toggle a prior block. With pinAnchored cleared, the controller
-  // must NOT re-anchor to the pin (that would snap the user back away
-  // from where they intentionally scrolled).
+  // Now toggle a prior block above the pin. With pinAnchored cleared, the
+  // controller must NOT re-anchor to the pin — and because overflow-anchor is
+  // handed back to the browser the moment the reader scrolls away, the block
+  // growing above the pin must not shove the pinned turn down the viewport.
   await showCue(page, 'now expand a prior tool call')
   await page.evaluate(() => window.__demo?.expandBlock?.(1))
   await hold(page, 500)
 
-  const scrollTopAfter = await page.evaluate(
-    () => (document.querySelector('[data-test="scroll"]') as HTMLElement).scrollTop,
+  const after = await readPin()
+  const pinDrift = after.pinOffset - before.pinOffset
+  // eslint-disable-next-line no-console
+  console.log(
+    `[pin-edges] scrolled-away: pin visual drift=${pinDrift.toFixed(1)}px ` +
+      `(${before.pinOffset.toFixed(0)}→${after.pinOffset.toFixed(0)}) ` +
+      `scrollTopΔ=${after.scrollTop - before.scrollTop}px`,
   )
 
-  // Tolerance: the browser will adjust scrollTop slightly due to
-  // overflow-anchor (set to 'none' during streaming → no help) and
-  // clamping. We just want to verify the controller did NOT slam
-  // scrollTop back to ctx.pinnedY (which would be ~+350 from where
-  // the user is now).
-  const dy = scrollTopAfter - scrollTopBefore
-  console.log(`[pin-edges] scrolled-away: scrollTop delta = ${dy}px`)
-  expect(Math.abs(dy)).toBeLessThan(60)
+  // (1) The controller did NOT slam them back to the pin: it stays far below
+  // the viewport top, nowhere near scrollMargin (~12px). True on every engine.
+  expect(after.pinOffset).toBeGreaterThan(150)
+  // (2) The pinned turn stays put when the prior block grows. On baseline
+  // (overflow-anchor `none` while streaming) the growth shoved the pin DOWN by
+  // its height — the reader lost their place even though scrollTop never
+  // moved. Handing anchoring back to the browser on scroll-away holds it —
+  // but ONLY on engines that anchor inside nested scroll containers. WebKit /
+  // iOS Safari do not, so there the pin still drifts; the no-snap-back
+  // invariant above is all we can guarantee. (See `reconcileOverflowAnchor`.)
+  if (browserName === 'webkit') {
+    const scrollTopDrift = after.scrollTop - before.scrollTop
+    // eslint-disable-next-line no-console
+    console.log(
+      `[pin-edges] webkit: anchoring unavailable in nested scroller, ` +
+        `pin drift=${pinDrift.toFixed(1)}px (place-keeping is a no-op here), ` +
+        `scrollTopΔ=${scrollTopDrift.toFixed(1)}px`,
+    )
+    // With no browser anchoring in play, nothing may touch scrollTop: a
+    // regression that partially re-anchors (nudging scrollTop back toward
+    // the pin) must fail here, not just log.
+    expect(Math.abs(scrollTopDrift)).toBeLessThan(60)
+  } else {
+    expect(Math.abs(pinDrift)).toBeLessThan(24)
+  }
 
   await hold(page, 500)
 })

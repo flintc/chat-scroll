@@ -168,6 +168,10 @@ useChatScroll(opts)
 opts.value.bottomThreshold = 100
 ```
 
+`pinClamp` is synced only once you actually pass it — from then on,
+removing the key clears the clamp; if you never pass it, a clamp set
+imperatively via `scroll.instance.setOptions()` is left alone.
+
 ## Refs
 
 `containerRef` and `contentRef` are functions you bind via

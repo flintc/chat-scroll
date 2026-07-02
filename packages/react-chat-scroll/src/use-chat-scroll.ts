@@ -88,7 +88,18 @@ export function useChatScroll(
 
   // Keep options in sync. We exclude `onScrollChange` here — adapters own
   // the subscription via subscribe() below.
+  //
+  // `pinClamp` needs a presence latch: the core treats an explicit
+  // `pinClamp: undefined` as "clear the clamp" (its resolved default IS
+  // `undefined`), so unconditionally sending `opts.pinClamp` would let any
+  // unrelated option change wipe a clamp the consumer set imperatively via
+  // `instance.setOptions` (the composer-overlay recipe pattern). Send the
+  // key only once the consumer has driven it declaratively — from then on,
+  // dropping the prop clears the clamp; never passing it never sends it.
+  const hasPinClamp = 'pinClamp' in opts
+  const pinClampDriven = useRef(false)
   useEffect(() => {
+    if (hasPinClamp) pinClampDriven.current = true
     instance.setOptions({
       strategy: opts.strategy,
       bottomThreshold: opts.bottomThreshold,
@@ -96,6 +107,7 @@ export function useChatScroll(
       bottomInset: opts.bottomInset,
       scrollBehavior: opts.scrollBehavior,
       scrollDurationMs: opts.scrollDurationMs,
+      ...(pinClampDriven.current ? { pinClamp: opts.pinClamp } : {}),
     })
   }, [
     instance,
@@ -105,6 +117,12 @@ export function useChatScroll(
     opts.bottomInset,
     opts.scrollBehavior,
     opts.scrollDurationMs,
+    // `pinClamp` is an object; depend on its fields (plus key presence)
+    // so an inline literal (new identity every render) doesn't re-run
+    // this every render.
+    opts.pinClamp?.tallerThan,
+    opts.pinClamp?.visibleHeight,
+    hasPinClamp,
   ])
 
   // Mirror reactive `streaming` input. Skipped entirely when undefined,

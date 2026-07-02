@@ -58,10 +58,15 @@ describe('gutter', () => {
     expect(g.style.height).toBe('0px')
   })
 
-  it('setGutterHeight rounds fractional values', () => {
+  it('setGutterHeight keeps sub-pixel precision (to 2 decimals)', () => {
+    // Sub-pixel on purpose: rounding to whole px makes the gutter and a
+    // fractionally-growing content fail to cancel, so `scrollHeight`
+    // alternates ±1px during streaming and the scrollbar jitters.
     const g = document.createElement('div')
     setGutterHeight(g, 12.7)
-    expect(g.style.height).toBe('13px')
+    expect(g.style.height).toBe('12.7px')
+    setGutterHeight(g, 12.345)
+    expect(g.style.height).toBe('12.35px')
   })
 
   it('destroyGutter removes the element from the DOM', () => {

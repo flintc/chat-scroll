@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createChatScroll } from '../src/chat-scroll'
-import { recalcGutter } from '../src/strategies/pin-to-top'
+import { clampOffset, recalcGutter } from '../src/strategies/pin-to-top'
 import type { StrategyContext } from '../src/strategies/types'
 import type { ChatScrollState } from '../src/types'
 
@@ -358,6 +358,35 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('setOptions installs and clears onScrollChange via an explicit undefined', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
+      const cb = vi.fn()
+      const s = createChatScroll()
+      s.mount(container, content)
+
+      s.setOptions({ onScrollChange: cb })
+      setScrollTop(900)
+      flushScroll() // reach the bottom — atBottom flips true
+      expect(cb).toHaveBeenCalled()
+      cb.mockClear()
+
+      // `onScrollChange` is clearable like `pinClamp` — `undefined` IS its
+      // resolved default, so the key being present removes the callback.
+      // Other keys passed as `undefined` are still ignored.
+      s.setOptions({ onScrollChange: undefined, bottomThreshold: undefined })
+      expect(s.options.onScrollChange).toBeUndefined()
+      expect(s.options.bottomThreshold).toBe(40)
+      setScrollTop(500)
+      flushScroll() // scroll up — atBottom flips back, state DOES change
+      expect(cb).not.toHaveBeenCalled()
+      s.destroy()
+    })
+
     it('subscribe returns unsubscribe', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
@@ -422,6 +451,64 @@ describe('createChatScroll', () => {
       // the final chunk's growth is still followed, then restores.
       raf.flushFrames()
       raf.flushFrames()
+      expect(container.style.overflowAnchor).toBe('')
+      s.destroy()
+    })
+
+    it('hands overflow-anchor back when the user scrolls away mid-stream (stick)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll() // stick-to-bottom, starts locked
+      s.mount(container, content)
+      s.setStreaming(true)
+      // Locked at the bottom → the controller owns scrollTop → disable the
+      // browser's anchoring so the two don't fight.
+      expect(container.style.overflowAnchor).toBe('none')
+      // Reader scrolls away mid-stream (lock releases). The controller no
+      // longer drives scrollTop, so the browser's own anchoring must come
+      // back to keep their place when content grows above them.
+      s.unlock()
+      expect(container.style.overflowAnchor).toBe('')
+      // Re-engaging follow hands scrollTop back to the controller.
+      s.lock()
+      expect(container.style.overflowAnchor).toBe('none')
+      s.destroy()
+    })
+
+    it('hands overflow-anchor back when the user leaves the pin mid-stream (pin-to-top)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 1400,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 900,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // Anchored on the pin → the controller owns scrollTop → none.
+      expect(s.state.pinAnchored).toBe(true)
+      expect(container.style.overflowAnchor).toBe('none')
+      // Reader wheels away from the pin to read the answer — anchoring goes
+      // back to the browser so a late image above doesn't shift their place.
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      expect(s.state.pinAnchored).toBe(false)
       expect(container.style.overflowAnchor).toBe('')
       s.destroy()
     })
@@ -1593,6 +1680,396 @@ describe('createChatScroll', () => {
     })
   })
 
+  describe('clampOffset (pure)', () => {
+    it('returns 0 when no clamp is configured', () => {
+      expect(clampOffset(500, undefined)).toBe(0)
+    })
+    it('returns 0 when the element is at or below the threshold', () => {
+      expect(clampOffset(160, { tallerThan: 160, visibleHeight: 96 })).toBe(0)
+      expect(clampOffset(100, { tallerThan: 160, visibleHeight: 96 })).toBe(0)
+    })
+    it('returns height - visibleHeight for a taller element', () => {
+      expect(clampOffset(500, { tallerThan: 160, visibleHeight: 96 })).toBe(404)
+      expect(clampOffset(200, { tallerThan: 160, visibleHeight: 96 })).toBe(104)
+    })
+    it('never returns a negative offset (visibleHeight > height)', () => {
+      expect(clampOffset(180, { tallerThan: 160, visibleHeight: 300 })).toBe(0)
+    })
+  })
+
+  describe('pinClamp (tall-message clamp)', () => {
+    // Stub a message's rect so it reads as `height` px tall and sits at
+    // document Y `docY`. Mirrors `appendMessage`'s rect shape but with a
+    // configurable height (the clamp reads getBoundingClientRect().height)
+    // and lets us simulate a content-above resize by re-pointing docY.
+    function setTallMsg(
+      msg: HTMLElement,
+      docY: number,
+      height: number,
+      container: HTMLElement,
+    ): void {
+      msg.getBoundingClientRect = () => {
+        const top = docY - container.scrollTop
+        return {
+          top,
+          left: 0,
+          bottom: top + height,
+          right: 800,
+          width: 800,
+          height,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        } as DOMRect
+      }
+    }
+
+    it('off by default — a tall message pins at scrollMargin (backward compat)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      // A 500px-tall user message at docY 300 — well past any sane
+      // threshold, but no pinClamp option → unchanged behavior.
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // pinnedY = 300 - 12 = 288 (no clamp). scrollTop lands at the pin.
+      expect(s.state.pinnedY).toBe(288)
+      expect(container.scrollTop).toBe(288)
+      s.destroy()
+    })
+
+    it('clamps a tall message: pinnedY = offset - margin + (height - visibleHeight)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // height 500 > tallerThan 160 → clampOffset = 500 - 96 = 404.
+      // pinnedY = 300 - 12 + 404 = 692. The message's top (docY 300)
+      // ends up 692 - 300 = 392px ABOVE the viewport top, leaving only
+      // 96px (500 - 404) of it on screen — and the rest of the viewport
+      // for the response.
+      expect(s.state.pinnedY).toBe(692)
+      expect(container.scrollTop).toBe(692)
+      s.destroy()
+    })
+
+    it('leaves a SHORT message unaffected even when pinClamp is set', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      // 40px message, below the 160px threshold.
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      // 40 <= 160 → clampOffset 0 → pinnedY = 300 - 12 = 288.
+      expect(s.state.pinnedY).toBe(288)
+      expect(container.scrollTop).toBe(288)
+      s.destroy()
+    })
+
+    it('clamp PERSISTS across a content-above resize (does not un-clamp)', () => {
+      // The load-bearing case: refreshPinnedY runs on every resize. If
+      // the clamp only lived in pinMessage, the first resize would
+      // recompute pinnedY WITHOUT the clamp and the tall pin would snap
+      // back to scrollMargin.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(692) // clamped on the initial pin
+
+      // A block above the pin expands by 200 → the tall message's docY
+      // moves to 500. The clamp offset (404) must survive.
+      setTallMsg(msg, 500, 500, container)
+      setContentHeight(2200)
+      ro.triggerResize()
+      // pinnedY = 500 - 12 + 404 = 892 — STILL clamped, not 488.
+      expect(s.state.pinnedY).toBe(892)
+      // Streaming → controller re-anchors scrollTop to the clamped pinnedY.
+      expect(container.scrollTop).toBe(892)
+      s.destroy()
+    })
+
+    it('the gutter grows to make the clamped pinnedY reachable (no runaway)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 800,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
+      // pinnedY = 692; gutter = max(0, 692 + 600 - 800) = 492. The
+      // resulting max-scroll (scrollHeight 800 + 492 gutter - 600) = 692
+      // exactly equals pinnedY → the clamped target is reachable and no
+      // further. (Bounded by offset + height, so never runs away.)
+      expect(g.style.height).toBe('492px')
+      expect(container.scrollTop).toBe(692)
+      s.destroy()
+    })
+
+    it('setOptions can enable the clamp live, applied on the next resize', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(288) // un-clamped at first
+
+      // Enable the clamp; the next content resize re-derives pinnedY.
+      s.setOptions({ pinClamp: { tallerThan: 160, visibleHeight: 96 } })
+      expect(s.options.pinClamp).toEqual({ tallerThan: 160, visibleHeight: 96 })
+      setTallMsg(msg, 300, 500, container)
+      setContentHeight(2010)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(692)
+      expect(container.scrollTop).toBe(692)
+      s.destroy()
+    })
+
+    it('setOptions with an explicit undefined pinClamp turns the clamp off', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 500,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(692) // clamped
+
+      // `pinClamp` is clearable — an explicit `undefined` is meaningful
+      // (it IS the default): the key being present clears the clamp.
+      // Other undefined keys are still ignored — scrollMargin must keep
+      // its resolved value, not become NaN.
+      s.setOptions({ pinClamp: undefined, scrollMargin: undefined })
+      expect(s.options.pinClamp).toBeUndefined()
+      expect(s.options.scrollMargin).toBe(12)
+      setTallMsg(msg, 300, 500, container)
+      setContentHeight(2010)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(288) // back to the un-clamped anchor
+      expect(container.scrollTop).toBe(288)
+      s.destroy()
+    })
+
+    it('pinClamp resolves to undefined by default in instance.options', () => {
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      expect(s.options.pinClamp).toBeUndefined()
+    })
+
+    it('pinRelative to an earlier tall turn clamps too', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 500, // tall earlier turn
+        y: 300,
+      })
+      appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 1500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(m1)
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(692) // m1 clamped: 300 - 12 + 404
+      // Navigate down to m2 (short), then back up to the tall m1.
+      s.pinRelative('[data-role="user"]', 1)
+      raf.flushFrames()
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(1488) // m2: 1500 - 12, no clamp
+      s.pinRelative('[data-role="user"]', -1)
+      raf.flushFrames()
+      raf.flushFrames()
+      // Re-pinning the tall m1 re-applies the clamp.
+      expect(container.scrollTop).toBe(692)
+      s.destroy()
+    })
+
+    it('latches: a height dip back below tallerThan cannot un-clamp the pin', () => {
+      // Hysteresis for the live height read. A message pinned below the
+      // threshold whose height then crosses it (image decode, late
+      // markdown reflow) engages the clamp — and once engaged for the
+      // current pin, a later dip just UNDER the threshold must not snap
+      // the anchored reader back by the full clamp offset. Without the
+      // latch, a height oscillating around `tallerThan` flip-flops
+      // scrollTop by ±clampOffset on every resize tick.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setContentHeight } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      // Pinned at 150px — just below the 160px threshold.
+      const msg = appendMessage(container, content, {
+        role: 'user',
+        height: 150,
+        y: 300,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.setStreaming(true)
+      s.pinMessage(msg)
+      raf.flushFrames()
+      expect(s.state.pinnedY).toBe(288) // 150 <= 160 → un-clamped
+
+      // An image decodes: 150 → 500. The clamp engages (and latches).
+      setTallMsg(msg, 300, 500, container)
+      setContentHeight(2010)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(692) // 300 - 12 + (500 - 96)
+      expect(container.scrollTop).toBe(692)
+
+      // A reflow dips the height just BELOW the threshold. Un-latched
+      // math would zero the offset (pinnedY 288 — a 404px snap for the
+      // anchored reader); the latch keeps the clamp engaged, so the
+      // offset tracks the height continuously: 155 - 96 = 59.
+      setTallMsg(msg, 300, 155, container)
+      setContentHeight(2020)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(347) // 300 - 12 + 59 — still clamped
+      expect(container.scrollTop).toBe(347)
+
+      // Back above the threshold: still continuous, no ±clampOffset jump.
+      setTallMsg(msg, 300, 165, container)
+      setContentHeight(2030)
+      ro.triggerResize()
+      expect(s.state.pinnedY).toBe(357) // 300 - 12 + (165 - 96)
+      expect(container.scrollTop).toBe(357)
+      s.destroy()
+    })
+  })
+
   describe('stick-to-bottom strategy', () => {
     it('locked by default for stick-to-bottom', () => {
       const ro = installFakeResizeObserver()
@@ -2295,6 +2772,34 @@ describe('createChatScroll', () => {
       s.destroy()
     })
 
+    it('reset() during the grace restores overflow-anchor', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom(
+        { clientHeight: 100, contentHeight: 1000 },
+      )
+      const s = createChatScroll({ strategy: 'stick-to-bottom' })
+      s.mount(container, content)
+      s.setStreaming(true)
+      setScrollTop(900)
+      // Commit `atBottom: true` so the reset below re-asserts an IDENTICAL
+      // locked-at-bottom state — the interesting case for the commit diff.
+      flushScroll()
+      s.setStreaming(false)
+      expect(container.style.overflowAnchor).toBe('none') // still graced
+      // A thread switch inside the grace window cancels the grace rAF (and
+      // its reconcile) while producing no state diff — the trailing commit
+      // must reconcile anyway or `none` is stranded on the new thread.
+      s.reset()
+      expect(container.style.overflowAnchor).toBe('')
+      raf.flushFrames()
+      raf.flushFrames()
+      expect(container.style.overflowAnchor).toBe('')
+      s.destroy()
+    })
+
     it('a new stream during the grace keeps following seamlessly', () => {
       const { s, container, setContentHeight, ro, raf } = buildStreamEnd()
       s.setStreaming(false)
@@ -2421,6 +2926,34 @@ describe('createChatScroll', () => {
       expect(s.state.pinAnchored).toBe(false)
       expect(s.state.pinActive).toBe(true) // gutter + pinnedY untouched
       expect(s.state.pinnedY).toBe(888)
+      s.destroy()
+    })
+
+    it('targets the clamped anchor for a tall message (agrees with pinMessage)', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 500, // tall — past the clamp threshold
+        y: 500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      // scrollToMessage must land where pinMessage would: the CLAMPED
+      // anchor (500 - 12 + 404 = 892), not the raw top (488) — the two
+      // "Y where this message anchors" definitions must agree.
+      s.scrollToMessage(m2)
+      expect(container.scrollTop).toBe(892)
       s.destroy()
     })
 
@@ -2574,6 +3107,54 @@ describe('createChatScroll', () => {
       expect(ref.el).toBe(m2)
       expect(ref.index).toBe(1)
       expect(ref.past).toBe(false)
+      s.destroy()
+    })
+
+    it('at a clamped pin: past=false and Prev walks to the previous turn', () => {
+      // The geometric reference must use the same anchor math as
+      // pinMessage — WITH the pinClamp offset. A reader at a clamped tall
+      // pin who nudges the wheel (clearing pinAnchored without moving)
+      // sits exactly at the clamped anchor; against the un-clamped top
+      // they'd read as `past` and Prev would re-pin the same message.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const raf = installFakeRaf()
+      cleanup.push(raf.uninstall)
+      const { container, content } = buildScrollDom({
+        clientHeight: 600,
+        contentHeight: 2000,
+      })
+      const m1 = appendMessage(container, content, {
+        role: 'user',
+        height: 40,
+        y: 100,
+      })
+      const m2 = appendMessage(container, content, {
+        role: 'user',
+        height: 500, // tall — clamps
+        y: 500,
+      })
+      const s = createChatScroll({
+        strategy: 'pin-to-top',
+        scrollBehavior: 'instant',
+        pinClamp: { tallerThan: 160, visibleHeight: 96 },
+      })
+      s.mount(container, content)
+      s.pinMessage(m2)
+      raf.flushFrames()
+      expect(container.scrollTop).toBe(892) // clamped: 500 - 12 + 404
+      // Wheel nudge: clears pinAnchored (input-driven release) without
+      // moving the fake DOM's scrollTop — still AT the clamped anchor,
+      // just no longer anchored, so resolution falls to geometry.
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
+      expect(s.state.pinAnchored).toBe(false)
+      const ref = s.referenceMessage('[data-role="user"]')
+      expect(ref.el).toBe(m2)
+      expect(ref.past).toBe(false) // at the anchor, not scrolled past it
+      // Prev walks UP to m1 instead of re-targeting m2.
+      expect(s.relativeMessage('[data-role="user"]', -1)).toBe(m1)
       s.destroy()
     })
   })
