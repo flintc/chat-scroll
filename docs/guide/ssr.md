@@ -11,7 +11,10 @@ ref callback that fires client-side.
 - **`instance.mount(container, content)`** — wires up the scroll
   listener, the `ResizeObserver`, and the gutter element. **Client
   only.** All three adapters call it from ref callbacks, which fire
-  after hydration.
+  after hydration. Render the gutter in your template
+  (`<div data-chat-scroll-gutter />` after the content) and it is part
+  of the server markup too — `mount()` adopts it instead of appending a
+  node the server never rendered.
 - **`instance.destroy()`** — cleanup hook (`useEffect` cleanup,
   `onBeforeUnmount`, `onCleanup`). Also client only, by virtue of
   when those hooks run.

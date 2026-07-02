@@ -4,6 +4,17 @@
 
 ### Added
 
+- **Template-owned gutter**: render an empty
+  `<div data-chat-scroll-gutter />` as the last child of your container
+  and `mount()` adopts it instead of creating its own node — every
+  element is then framework-owned, and the controller only ever writes
+  the gutter's height. On `destroy()` an adopted gutter stays in place
+  with its inline styles restored; only a controller-created one is
+  removed. `mount()` also accepts the gutter element as an optional
+  third argument. Rendering it yourself keeps server and client markup
+  identical under SSR. Omitting it still works — the controller creates
+  one, as before. See [Concepts](/guide/concepts).
+
 - **`pinClamp` option** (`pin-to-top` only): clamp an over-tall pinned
   message so the streaming response keeps room. When the pinned element
   is taller than `tallerThan` px, the controller over-scrolls it so only

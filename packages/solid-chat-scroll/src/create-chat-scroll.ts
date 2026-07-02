@@ -67,7 +67,13 @@ export interface CreateChatScrollReturn {
  *       <div ref={scroll.contentRef}>
  *         <For each={messages()}>{(m) => <Bubble msg={m} />}</For>
  *       </div>
+ *       <div data-chat-scroll-gutter="" />
  *     </div>
+ *
+ * The tagged empty div is the gutter — the spacer the controller sizes
+ * below the content. Rendering it in your template keeps every node
+ * framework-owned (the controller only writes its height, and leaves it
+ * in place on unmount). Omit it and the controller creates one for you.
  *
  * Or omit `streaming` and call `scroll.setStreaming(true/false)` from your
  * own handlers when you own the request lifecycle directly.
