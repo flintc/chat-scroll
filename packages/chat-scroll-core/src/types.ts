@@ -263,20 +263,22 @@ export interface ChatScrollInstance {
    * new elements re-mounts.
    *
    * The gutter (the spacer the controller sizes below the content) is
-   * resolved in order of precedence: the `gutter` argument if given; a
-   * direct child of the container carrying `data-chat-scroll-gutter`
-   * (render an empty `<div data-chat-scroll-gutter />` after your
-   * content); otherwise the controller creates one. A consumer-rendered
-   * gutter is *adopted* — the controller only ever writes its height,
-   * and on `destroy()` restores its inline styles and leaves it in
-   * place, so framework renderers never see a node appear or disappear
-   * underneath them. It also survives SSR hydration: the div is part of
-   * the server markup.
+   * resolved in order of precedence: the `gutter` argument if given
+   * (`null` counts as omitted, so a not-yet-fired ref is safe to pass;
+   * a non-null element must be a direct child of the container —
+   * anything else throws); a direct child of the container carrying
+   * `data-chat-scroll-gutter` (render an empty
+   * `<div data-chat-scroll-gutter />` after your content); otherwise the
+   * controller creates one. A consumer-rendered gutter is *adopted* —
+   * the controller only ever writes its height, and on `destroy()`
+   * restores its inline styles and leaves it in place, so framework
+   * renderers never see a node appear or disappear underneath them. It
+   * also survives SSR hydration: the div is part of the server markup.
    */
   mount: (
     container: HTMLElement,
     content: HTMLElement,
-    gutter?: HTMLElement,
+    gutter?: HTMLElement | null,
   ) => void
 
   /**

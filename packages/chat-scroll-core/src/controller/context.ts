@@ -143,14 +143,12 @@ export interface ControllerContext {
 
   // ── Gutter ownership ──────────────────────────────────────────
   /**
-   * True when the controller created the gutter node itself (the vanilla
-   * fallback) and therefore removes it on teardown. False when it adopted
-   * a consumer-rendered node — teardown then restores
-   * `savedGutterStyles` and leaves the node in place; removing a node
+   * Prior inline state of an adopted (consumer-rendered) gutter —
+   * teardown restores it and leaves the node in place; removing a node
    * the framework's renderer created is not the controller's call.
+   * `null` means the controller owns the node and teardown removes it.
+   * The null-ness is the ownership bit; see `ResolvedGutter`.
    */
-  gutterOwned: boolean
-  /** Prior inline styles of an adopted gutter; null when owned/absent. */
   savedGutterStyles: SavedGutterStyles | null
 }
 
@@ -229,7 +227,6 @@ export function createControllerContext(
     lastSeenScrollHeight: 0,
     savedContainerStyles: null,
     savedContentStyles: null,
-    gutterOwned: false,
     savedGutterStyles: null,
   }
 }

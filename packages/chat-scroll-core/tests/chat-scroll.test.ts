@@ -245,6 +245,52 @@ describe('createChatScroll', () => {
 
       s.destroy()
       expect(container.contains(g)).toBe(true)
+      // The stamp is removed with the styles — the node is back to its
+      // pre-mount state and can't hijack a later mount's adoption.
+      expect(g.hasAttribute('data-chat-scroll-gutter')).toBe(false)
+    })
+
+    it('a null gutter argument does not defeat mount idempotency', () => {
+      // Plain-JS consumers pass `gutterRef.current`, which is null before
+      // the ref fires. That must behave like an omitted argument — not
+      // force a teardown+remount on every render.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll()
+      s.mount(container, content, null)
+      const g = container.querySelector('[data-chat-scroll-gutter]')
+      s.mount(container, content, null)
+      s.mount(container, content)
+      expect(ro.callbacks().size).toBe(1) // no re-bind happened
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBe(g)
+      s.destroy()
+    })
+
+    it("removes a dead instance's leftover gutter on the next destroy", () => {
+      // First instance never destroyed (HMR / crash): its created gutter
+      // stays behind with a streamed height. The next instance re-owns
+      // it, so ITS destroy removes the node instead of leaving phantom
+      // scroll slack behind.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const dead = createChatScroll()
+      dead.mount(container, content)
+      const leftover = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
+      leftover.style.height = '448px'
+      // dead is never destroyed — simulate the module being swapped out.
+
+      const next = createChatScroll()
+      next.mount(container, content)
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+      expect(leftover.style.height).toBe('0px')
+      next.destroy()
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeNull()
     })
   })
 

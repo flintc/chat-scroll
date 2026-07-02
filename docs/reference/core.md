@@ -53,8 +53,12 @@ utilities](../guide/lower-level-utilities)), the core also exports:
 
 | Symbol                  | Purpose                                              |
 | ----------------------- | ---------------------------------------------------- |
-| `createGutter`          | Append a styled gutter element to a container.       |
-| `destroyGutter`         | Remove a gutter from the DOM.                        |
+| `resolveGutter`         | Adopt a consumer-rendered gutter (explicit element or tagged direct child) or create one; returns the node plus the saved inline state that decides ownership. |
+| `restoreGutterStyles`   | Put an adopted gutter back to its saved pre-mount state (styles + attribute stamp). |
+| `applyGutterStyles`     | Write the inline styles the gutter math depends on, returning the prior values. |
+| `findGutterChild`       | Find a `[data-chat-scroll-gutter]` among a container's direct children. |
+| `createGutter`          | Append a styled gutter element to a container (reuses a tagged direct child as-is). |
+| `destroyGutter`         | Remove a gutter from the DOM. Only for nodes you (or `createGutter`) created — never a framework-rendered one; pair `resolveGutter` with `restoreGutterStyles` for those. |
 | `setGutterHeight`       | Set a gutter's height (clamped to ≥ 0; sub-pixel, to 2 decimals). |
 | `calcGutterHeight`      | Compute the gutter height that pins `scrollHeight − clientHeight` to `pinnedY`. |
 | `isAtBottom`            | Boolean: within `threshold` of the bottom, minus an optional `endSlack` (e.g. a gutter). |

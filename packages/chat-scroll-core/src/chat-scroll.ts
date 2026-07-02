@@ -55,12 +55,19 @@ export function createChatScroll(
   function mount(
     container: HTMLElement,
     content: HTMLElement,
-    gutter?: HTMLElement,
+    gutter?: HTMLElement | null,
   ): void {
+    // No-op only while the current gutter is still live in the container:
+    // if the framework replaced the tagged div (template HMR, unusual
+    // keying) the stale node is detached and the remount re-resolves.
+    // `gutter == null` (not `=== undefined`): plain-JS callers pass a ref
+    // that is null before it fires, and that must not defeat idempotency.
     if (
       cc.ctx.container === container &&
       cc.ctx.content === content &&
-      (gutter === undefined || cc.ctx.gutter === gutter)
+      (gutter == null || cc.ctx.gutter === gutter) &&
+      cc.ctx.gutter !== null &&
+      cc.ctx.gutter.parentElement === container
     ) {
       return
     }
@@ -73,12 +80,11 @@ export function createChatScroll(
     applyContentStyles(cc)
     // Adopt a consumer-rendered gutter (the explicit argument, or a direct
     // child tagged `data-chat-scroll-gutter`); create one only when the
-    // consumer didn't render one. Ownership decides teardown: created
-    // nodes are removed, adopted nodes are left in place with their
-    // inline styles restored.
+    // consumer didn't render one. `savedGutterStyles` decides teardown:
+    // null → controller-owned, removed; non-null → adopted, left in place
+    // with the saved inline state restored.
     const resolvedGutter = resolveGutter(container, gutter)
     cc.ctx.gutter = resolvedGutter.el
-    cc.gutterOwned = resolvedGutter.owned
     cc.savedGutterStyles = resolvedGutter.savedStyles
     // Strategies call this to request a smooth catch-up to the pin instead of
     // a synchronous `scrollTop = pinnedY` jump. Used after the

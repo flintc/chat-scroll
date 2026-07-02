@@ -24,7 +24,9 @@ describe('gutter', () => {
     expect(g.style.flexShrink).toBe('0')
     expect(g.style.pointerEvents).toBe('none')
     expect(g.style.height).toBe('0px')
-    expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
+    // Created nodes carry the owned marker so a later mount can tell a
+    // dead controller's leftover from a consumer-rendered gutter.
+    expect(g.getAttribute('data-chat-scroll-gutter')).toBe('owned')
   })
 
   it('createGutter is idempotent — reuses an existing gutter', () => {
@@ -80,7 +82,7 @@ describe('gutter', () => {
   })
 
   describe('resolveGutter', () => {
-    it('adopts an explicitly provided element — not owned, styles applied and saved', () => {
+    it('adopts an explicitly provided element — styles applied and saved', () => {
       const c = document.createElement('div')
       const g = document.createElement('div')
       g.style.height = '25px'
@@ -89,15 +91,32 @@ describe('gutter', () => {
 
       const r = resolveGutter(c, g)
       expect(r.el).toBe(g)
-      expect(r.owned).toBe(false)
+      // Adopted ⇔ savedStyles present (null would mean controller-owned).
+      expect(r.savedStyles).not.toBeNull()
       // Tagged so selectors and a later attribute-adoption remount find it.
       expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
       // Controller styles applied…
       expect(g.style.flexShrink).toBe('0')
       expect(g.style.pointerEvents).toBe('none')
       expect(g.style.height).toBe('0px')
-      // …prior inline values captured for teardown.
+      // …including the stylesheet-defeating zeroes…
+      expect(g.style.minHeight).toBe('0')
+      expect(g.style.padding).toMatch(/^0(px)?$/)
+      // …with the prior inline values captured for teardown.
       expect(r.savedStyles?.height).toBe('25px')
+      expect(r.savedStyles?.hadAttribute).toBe(false)
+    })
+
+    it('throws when the provided element is not a direct child of the container', () => {
+      const c = document.createElement('div')
+      const inner = document.createElement('div')
+      const g = document.createElement('div')
+      c.appendChild(inner)
+      inner.appendChild(g) // nested inside content, not a direct child
+      document.body.appendChild(c)
+
+      expect(() => resolveGutter(c, g)).toThrow(/direct.*child/i)
+      expect(() => resolveGutter(c, document.createElement('div'))).toThrow()
     })
 
     it('adopts a tagged direct child when no element is provided', () => {
@@ -109,8 +128,8 @@ describe('gutter', () => {
 
       const r = resolveGutter(c)
       expect(r.el).toBe(g)
-      expect(r.owned).toBe(false)
       expect(r.savedStyles).not.toBeNull()
+      expect(r.savedStyles?.hadAttribute).toBe(true)
     })
 
     it('creates and owns the node when there is nothing to adopt', () => {
@@ -118,10 +137,26 @@ describe('gutter', () => {
       document.body.appendChild(c)
 
       const r = resolveGutter(c)
-      expect(r.owned).toBe(true)
       expect(r.savedStyles).toBeNull()
       expect(r.el.parentElement).toBe(c)
-      expect(r.el.getAttribute('data-chat-scroll-gutter')).toBe('')
+      expect(r.el.getAttribute('data-chat-scroll-gutter')).toBe('owned')
+    })
+
+    it("re-owns a dead controller's leftover instead of adopting it", () => {
+      // HMR / crash-before-destroy leaves a controller-created gutter
+      // behind, possibly with a large streamed height. The next mount
+      // must NOT treat it as consumer-rendered: it re-takes ownership
+      // (savedStyles null → teardown removes it) and re-zeroes the
+      // height, so the stale slack can't be "restored" on destroy.
+      const c = document.createElement('div')
+      document.body.appendChild(c)
+      const leftover = createGutter(c)
+      setGutterHeight(leftover, 448)
+
+      const r = resolveGutter(c)
+      expect(r.el).toBe(leftover)
+      expect(r.savedStyles).toBeNull()
+      expect(leftover.style.height).toBe('0px')
     })
 
     it("does not adopt a NESTED instance's gutter", () => {
@@ -133,11 +168,11 @@ describe('gutter', () => {
 
       const r = resolveGutter(outer)
       expect(r.el).not.toBe(innerGutter)
-      expect(r.owned).toBe(true)
+      expect(r.savedStyles).toBeNull()
       expect(r.el.parentElement).toBe(outer)
     })
 
-    it('restoreGutterStyles puts the prior inline styles back', () => {
+    it('restoreGutterStyles puts the prior inline state back, including the attribute', () => {
       const c = document.createElement('div')
       const g = document.createElement('div')
       g.style.height = '25px'
@@ -147,11 +182,27 @@ describe('gutter', () => {
 
       const r = resolveGutter(c, g)
       setGutterHeight(g, 120)
-      restoreGutterStyles(g, r.savedStyles)
+      restoreGutterStyles(g, r.savedStyles!)
       expect(g.style.height).toBe('25px')
       expect(g.style.margin).toBe('4px')
       expect(g.style.flexShrink).toBe('')
       expect(g.style.pointerEvents).toBe('')
+      expect(g.style.minHeight).toBe('')
+      // The stamp resolveGutter added is removed again — the node can't
+      // be mistaken for a gutter by a later mount.
+      expect(g.hasAttribute('data-chat-scroll-gutter')).toBe(false)
+    })
+
+    it('restoreGutterStyles keeps the attribute the consumer authored', () => {
+      const c = document.createElement('div')
+      const g = document.createElement('div')
+      g.setAttribute('data-chat-scroll-gutter', '')
+      c.appendChild(g)
+      document.body.appendChild(c)
+
+      const r = resolveGutter(c)
+      restoreGutterStyles(g, r.savedStyles!)
+      expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
     })
   })
 
