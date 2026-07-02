@@ -94,6 +94,7 @@ onBeforeUnmount(() => {
           :data-test="m.role === 'user' ? 'user-msg' : 'bot-msg'"
         >{{ m.text }}</div>
       </div>
+      <div data-chat-scroll-gutter />
     </div>
     <button
       class="fab"

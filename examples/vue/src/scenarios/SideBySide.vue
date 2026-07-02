@@ -188,6 +188,7 @@ onBeforeUnmount(() => {
             </div>
           </template>
         </div>
+        <div data-chat-scroll-gutter />
       </div>
       <button
         class="fab"
@@ -214,6 +215,7 @@ onBeforeUnmount(() => {
             </div>
           </template>
         </div>
+        <div data-chat-scroll-gutter />
       </div>
       <button
         class="fab"

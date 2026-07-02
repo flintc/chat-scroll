@@ -156,6 +156,7 @@ export function ThreadSwitch() {
             )}
           </For>
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <button
         class="fab"

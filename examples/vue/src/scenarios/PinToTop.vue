@@ -159,6 +159,7 @@ function nextUser() {
           </div>
         </template>
       </div>
+      <div data-chat-scroll-gutter />
     </div>
     <button
       class="fab"
