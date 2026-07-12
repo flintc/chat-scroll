@@ -1,8 +1,4 @@
-import type {
-  Reporter,
-  TestCase,
-  TestResult,
-} from '@playwright/test/reporter'
+import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -15,11 +11,7 @@ import * as path from 'node:path'
  * "the pin-to-top video" without grepping a hash.
  */
 export default class VideoRename implements Reporter {
-  private readonly outDir = path.resolve(
-    import.meta.dirname,
-    '..',
-    'videos',
-  )
+  private readonly outDir = path.resolve(import.meta.dirname, '..', 'videos')
 
   onBegin(): void {
     fs.mkdirSync(this.outDir, { recursive: true })

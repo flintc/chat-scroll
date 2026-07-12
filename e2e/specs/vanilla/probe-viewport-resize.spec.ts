@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 
 /**
  * PROBE: viewport / container resize while a pin is active and the
@@ -77,7 +71,9 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
     return page.evaluate(() => {
       const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
       const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-      const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+      const ubAll = document.querySelectorAll<HTMLElement>(
+        '[data-test="user-msg"]',
+      )
       const ub = ubAll[ubAll.length - 1]!
       const u = ub.getBoundingClientRect()
       const s = c.getBoundingClientRect()

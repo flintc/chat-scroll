@@ -63,7 +63,9 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
   await expect(fab).toHaveClass(/fab--visible/, { timeout: 2_000 })
 
   const pinnedYNow = await page.evaluate(() => {
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
@@ -78,7 +80,10 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
 
   const afterFab = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
+    return {
+      scrollTop: c.scrollTop,
+      scrollMax: c.scrollHeight - c.clientHeight,
+    }
   })
   console.log(
     `[probe-fab-expand] after FAB click: scrollTop=${afterFab.scrollTop} ` +
@@ -96,7 +101,10 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
 
   const afterExpand = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
+    return {
+      scrollTop: c.scrollTop,
+      scrollMax: c.scrollHeight - c.clientHeight,
+    }
   })
   console.log(
     `[probe-fab-expand] after block expand: scrollTop=${afterExpand.scrollTop} ` +
@@ -106,7 +114,9 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
 
   // Where did the pinned message end up?
   const finalPinnedOffset = await page.evaluate(() => {
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()

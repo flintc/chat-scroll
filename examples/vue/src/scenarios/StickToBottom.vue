@@ -47,7 +47,8 @@ const playback = usePlayback({
   initialBehavior: 'instant',
   tick: chat.tick,
   onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+  onDurationChange: (ms) =>
+    scroll.instance.setOptions({ scrollDurationMs: ms }),
   isEnabled: () => chat.isStreaming.value,
 })
 
@@ -77,27 +78,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="chat"
-    data-scenario="stick-to-bottom"
-    style="position: relative"
-  >
-    <div
-      class="status"
-      data-test="status"
-    >
+  <div class="chat" data-scenario="stick-to-bottom" style="position: relative">
+    <div class="status" data-test="status">
       {{ formatState('stick-to-bottom', scroll.state.value) }}
     </div>
-    <div
-      :ref="captureContainer"
-      class="chat__scroll"
-      data-test="scroll"
-    >
-      <div
-        :ref="scroll.contentRef"
-        class="chat__list"
-        data-test="list"
-      >
+    <div :ref="captureContainer" class="chat__scroll" data-test="scroll">
+      <div :ref="scroll.contentRef" class="chat__list" data-test="list">
         <div
           v-for="m in chat.messages.value"
           :key="m.id"
@@ -130,10 +116,7 @@ onBeforeUnmount(() => {
       >
         Append message
       </button>
-      <button
-        data-test="scroll-up"
-        @click="api.scrollByPx?.(-300)"
-      >
+      <button data-test="scroll-up" @click="api.scrollByPx?.(-300)">
         Simulate scroll up
       </button>
       <PlaybackControls :playback="playback" />

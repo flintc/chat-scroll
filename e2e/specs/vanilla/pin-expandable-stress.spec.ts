@@ -59,10 +59,10 @@ test('pin-expandable: rapid toggle storm while streaming', async ({ page }) => {
   for (let i = 0; i < 10; i++) {
     const blockIdx = i % 2 // alternate the two turn-1 blocks
     const open = i % 4 < 2
-    await page.evaluate(
-      ({ b, o }) => window.__demo?.toggleBlock?.(b, o),
-      { b: blockIdx, o: open },
-    )
+    await page.evaluate(({ b, o }) => window.__demo?.toggleBlock?.(b, o), {
+      b: blockIdx,
+      o: open,
+    })
     await page.evaluate(() => window.__demo?.tick?.())
     // Wait the FULL transition (220ms + margin) before the next toggle
     // so the controller has settled to the new layout. Animations
@@ -79,7 +79,9 @@ test('pin-expandable: rapid toggle storm while streaming', async ({ page }) => {
   const offsets = samples.map((s) => Number(s.toFixed(1)))
   console.log(`[pin-stress] sampled offsets: ${offsets.join(', ')}`)
   const max = Math.max(...offsets.map((o) => Math.abs(o - 12)))
-  console.log(`[pin-stress] max deviation from margin (12px): ${max.toFixed(1)}px`)
+  console.log(
+    `[pin-stress] max deviation from margin (12px): ${max.toFixed(1)}px`,
+  )
   expect(max).toBeLessThan(5)
 
   // Final position should be exactly at the pin once everything settled.

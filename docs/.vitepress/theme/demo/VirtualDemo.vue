@@ -34,9 +34,7 @@ const scroll = useChatScroll({
 const { state, containerRef, contentRef, scrollToBottom } = scroll
 
 const chatEl = shallowRef<HTMLElement | null>(null)
-const setContainer = (
-  el: Element | ComponentPublicInstance | null,
-): void => {
+const setContainer = (el: Element | ComponentPublicInstance | null): void => {
   chatEl.value = el instanceof HTMLElement ? el : null
   containerRef(el)
 }
@@ -86,9 +84,7 @@ const virtualizer = useVirtualizer(
 )
 const rows = computed(() => virtualizer.value.getVirtualItems())
 const totalSize = computed(() => virtualizer.value.getTotalSize())
-const measureElement = (
-  el: Element | ComponentPublicInstance | null,
-): void => {
+const measureElement = (el: Element | ComponentPublicInstance | null): void => {
   if (el instanceof Element) virtualizer.value.measureElement(el)
 }
 
@@ -269,29 +265,16 @@ const navState = computed(() => {
         {{ chat.messages.value.length.toLocaleString() }} rows
       </span>
       <span class="virtual-demo__spacer" />
-      <label
-        v-if="isPin"
-        class="virtual-demo__toggle"
-      >
-        <input
-          v-model="showGutter"
-          type="checkbox"
-        >
+      <label v-if="isPin" class="virtual-demo__toggle">
+        <input v-model="showGutter" type="checkbox" />
         Show gutter
       </label>
-      <button
-        type="button"
-        class="virtual-demo__btn"
-        @click="reset"
-      >
+      <button type="button" class="virtual-demo__btn" @click="reset">
         Reset
       </button>
     </div>
 
-    <div
-      class="virtual-demo__surface"
-      :style="{ height: `${height}px` }"
-    >
+    <div class="virtual-demo__surface" :style="{ height: `${height}px` }">
       <!-- tabindex: keyboard-operable scroller. role="region", NOT
            "log": windowing mounts rows on scroll, and a live region
            would announce them as new messages. -->
@@ -364,10 +347,7 @@ const navState = computed(() => {
         >
           ‹ Prev
         </button>
-        <span
-          class="virtual-demo__nav-pos"
-          aria-label="Current turn"
-        >
+        <span class="virtual-demo__nav-pos" aria-label="Current turn">
           {{ navState.pos || '–' }}
         </span>
         <button
@@ -384,20 +364,13 @@ const navState = computed(() => {
           Next ›
         </button>
       </div>
-      <button
-        type="button"
-        class="virtual-demo__btn"
-        @click="jumpToTop"
-      >
+      <button type="button" class="virtual-demo__btn" @click="jumpToTop">
         Jump to #1
       </button>
     </div>
 
     <div class="virtual-demo__status">
-      <span
-        class="vd-chip"
-        :class="{ 'vd-chip--on': state.atBottom }"
-      >
+      <span class="vd-chip" :class="{ 'vd-chip--on': state.atBottom }">
         atBottom
       </span>
       <span
@@ -407,17 +380,10 @@ const navState = computed(() => {
       >
         pinAnchored
       </span>
-      <span
-        v-else
-        class="vd-chip"
-        :class="{ 'vd-chip--on': state.locked }"
-      >
+      <span v-else class="vd-chip" :class="{ 'vd-chip--on': state.locked }">
         locked
       </span>
-      <span
-        class="vd-chip"
-        :class="{ 'vd-chip--on': state.streaming }"
-      >
+      <span class="vd-chip" :class="{ 'vd-chip--on': state.streaming }">
         streaming
       </span>
     </div>

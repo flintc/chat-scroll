@@ -95,7 +95,10 @@ export function pinToTopSpec(): void {
     for (let i = 0; i < 4; i++) {
       await page.waitForTimeout(60)
       const sb = await page.locator('[data-test="scroll"]').boundingBox()
-      const ub = await page.locator('[data-test="user-msg"]').last().boundingBox()
+      const ub = await page
+        .locator('[data-test="user-msg"]')
+        .last()
+        .boundingBox()
       if (sb && ub) {
         const offset = ub.y - sb.y
         // The pin should sit within scrollMargin (~12) of the container top.
@@ -123,7 +126,8 @@ export function pinToTopSpec(): void {
       user2BoxAfterExpand
     ) {
       const dy =
-        (user2BoxAfterExpand.y - scrollBoxAfterExpand.y) -
+        user2BoxAfterExpand.y -
+        scrollBoxAfterExpand.y -
         (user2BoxBefore.y - scrollBoxBefore.y)
       console.log(
         `[pin-to-top] turn-2 user msg drift on mid-stream prior-tool expand: ${dy.toFixed(1)}px`,
@@ -138,7 +142,10 @@ export function pinToTopSpec(): void {
     for (let i = 0; i < 4; i++) {
       await page.waitForTimeout(60)
       const sb = await page.locator('[data-test="scroll"]').boundingBox()
-      const ub = await page.locator('[data-test="user-msg"]').last().boundingBox()
+      const ub = await page
+        .locator('[data-test="user-msg"]')
+        .last()
+        .boundingBox()
       if (sb && ub) {
         const offset = ub.y - sb.y
         if (Math.abs(offset - 12) > 30) {
@@ -164,7 +171,8 @@ export function pinToTopSpec(): void {
       user2BoxAfterCollapse
     ) {
       const dy =
-        (user2BoxAfterCollapse.y - scrollBoxAfterCollapse.y) -
+        user2BoxAfterCollapse.y -
+        scrollBoxAfterCollapse.y -
         (user2BoxAfterExpand.y - scrollBoxAfterExpand.y)
       console.log(
         `[pin-to-top] turn-2 user msg drift on mid-stream prior-think collapse: ${dy.toFixed(1)}px`,
@@ -205,7 +213,8 @@ export function pinToTopSpec(): void {
       user2BoxAfterInTurn
     ) {
       const dy =
-        (user2BoxAfterInTurn.y - scrollBoxAfterInTurn.y) -
+        user2BoxAfterInTurn.y -
+        scrollBoxAfterInTurn.y -
         (user2BoxBeforeInTurn.y - scrollBoxBeforeInTurn.y)
       console.log(
         `[pin-to-top] turn-2 user msg drift on in-turn block toggle: ${dy.toFixed(1)}px`,

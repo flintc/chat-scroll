@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 
 /**
  * PROBE: content ABOVE the pin grows DURING the pin's smooth-scroll
@@ -92,7 +86,9 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
   // pin's viewport offset will be > scrollMargin by ~Δ.
   const justAfterAnim = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -116,7 +112,9 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
 
   const afterTick = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -132,8 +130,7 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
   )
 
   const jumpDelta =
-    afterTick.pinOffsetFromViewportTop -
-    justAfterAnim.pinOffsetFromViewportTop
+    afterTick.pinOffsetFromViewportTop - justAfterAnim.pinOffsetFromViewportTop
   console.log(
     `[probe-grow] visible pin jump on next resize = ${jumpDelta.toFixed(1)}px`,
   )

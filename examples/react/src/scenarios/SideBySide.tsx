@@ -81,8 +81,7 @@ export function SideBySide() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => pin.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) =>
-      pin.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) => pin.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => pin.instance.state.streaming,
   })
 
@@ -131,7 +130,13 @@ export function SideBySide() {
       container?.removeEventListener('scroll', updatePinFab)
       ro?.disconnect()
     }
-  }, [pinInstance, stickInstance, refreshPlayback, stickScrollToBottom, updatePinFab])
+  }, [
+    pinInstance,
+    stickInstance,
+    refreshPlayback,
+    stickScrollToBottom,
+    updatePinFab,
+  ])
 
   const api: DemoApi = {
     tick(): boolean {
@@ -207,9 +212,7 @@ export function SideBySide() {
   return (
     <div className="chat" data-scenario="side-by-side">
       <div
-        className={
-          playback.showGutter ? 'panel chat--show-gutter' : 'panel'
-        }
+        className={playback.showGutter ? 'panel chat--show-gutter' : 'panel'}
         data-test="panel-pin"
       >
         <div className="panel__title">Pin to top</div>

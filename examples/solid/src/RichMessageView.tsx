@@ -54,9 +54,7 @@ function Block(props: {
 }) {
   // Initial value only — a Block keeps its local open state for its
   // lifetime, so this read is deliberately untracked.
-  const [open, setOpen] = createSignal(
-    untrack(() => props.part().defaultOpen),
-  )
+  const [open, setOpen] = createSignal(untrack(() => props.part().defaultOpen))
   const title = () =>
     props.kind === 'thinking'
       ? (props.part() as ThinkingPart).summary
@@ -71,7 +69,9 @@ function Block(props: {
   return (
     <div
       class={
-        props.kind === 'thinking' ? 'block block--thinking' : 'block block--tool'
+        props.kind === 'thinking'
+          ? 'block block--thinking'
+          : 'block block--tool'
       }
       data-test="expand-block"
       data-block-index={props.index}

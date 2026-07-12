@@ -55,9 +55,7 @@ function resolveReference(
 } | null {
   const container = cc.ctx.container
   if (!container) return null
-  const matches = Array.from(
-    container.querySelectorAll<HTMLElement>(selector),
-  )
+  const matches = Array.from(container.querySelectorAll<HTMLElement>(selector))
   if (matches.length === 0) return null
 
   const anchoredEl =

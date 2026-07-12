@@ -71,7 +71,8 @@ export function PinToTop() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => scroll.instance.state.streaming,
   })
 
@@ -158,9 +159,7 @@ export function PinToTop() {
 
   return (
     <div
-      className={
-        playback.showGutter ? 'chat chat--show-gutter' : 'chat'
-      }
+      className={playback.showGutter ? 'chat chat--show-gutter' : 'chat'}
       data-scenario="pin-to-top"
       style={{ position: 'relative' }}
     >
@@ -217,14 +216,18 @@ export function PinToTop() {
         <button
           data-test="prev-user"
           aria-label="Previous user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', -1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', -1)
+          }
         >
           ▲ Prev
         </button>
         <button
           data-test="next-user"
           aria-label="Next user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', 1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', 1)
+          }
         >
           ▼ Next
         </button>

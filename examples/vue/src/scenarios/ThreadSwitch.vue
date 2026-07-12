@@ -34,9 +34,24 @@ function makeThreads(): Thread[] {
     { role: 'bot', text: ASSISTANT_CHUNKS.join('') },
   ]
   return [
-    { id: 't1', title: 'About scroll', messages: canonical.slice(), saved: null },
-    { id: 't2', title: 'Same convo, retry', messages: canonical.slice(), saved: null },
-    { id: 't3', title: 'Yet another', messages: canonical.slice(), saved: null },
+    {
+      id: 't1',
+      title: 'About scroll',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't2',
+      title: 'Same convo, retry',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't3',
+      title: 'Yet another',
+      messages: canonical.slice(),
+      saved: null,
+    },
   ]
 }
 
@@ -81,7 +96,8 @@ const playback = usePlayback({
   initialBehavior: 'instant',
   tick: () => false,
   onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+  onDurationChange: (ms) =>
+    scroll.instance.setOptions({ scrollDurationMs: ms }),
   isEnabled: () => false,
 })
 
@@ -111,15 +127,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="chat"
-    data-scenario="thread-switch"
-    style="position: relative"
-  >
-    <div
-      class="threads"
-      data-test="threads"
-    >
+  <div class="chat" data-scenario="thread-switch" style="position: relative">
+    <div class="threads" data-test="threads">
       <button
         v-for="t in threads"
         :key="t.id"
@@ -130,10 +139,7 @@ onBeforeUnmount(() => {
         {{ t.title }}
       </button>
     </div>
-    <div
-      class="status"
-      data-test="status"
-    >
+    <div class="status" data-test="status">
       {{
         formatState(
           'stick-to-bottom',
@@ -142,16 +148,8 @@ onBeforeUnmount(() => {
         )
       }}
     </div>
-    <div
-      :ref="captureContainer"
-      class="chat__scroll"
-      data-test="scroll"
-    >
-      <div
-        :ref="scroll.contentRef"
-        class="chat__list"
-        data-test="list"
-      >
+    <div :ref="captureContainer" class="chat__scroll" data-test="scroll">
+      <div :ref="scroll.contentRef" class="chat__list" data-test="list">
         <div
           v-for="(m, i) in active?.messages ?? []"
           :key="i"
@@ -173,10 +171,7 @@ onBeforeUnmount(() => {
       ↓
     </button>
     <div class="controls">
-      <button
-        data-test="scroll-up"
-        @click="api.scrollByPx?.(-200)"
-      >
+      <button data-test="scroll-up" @click="api.scrollByPx?.(-200)">
         Scroll up a bit
       </button>
       <PlaybackControls :playback="playback" />

@@ -34,9 +34,24 @@ function makeThreads(): Thread[] {
     { role: 'bot' as const, text: ASSISTANT_CHUNKS.join('') },
   ].map((m, i) => ({ ...m, id: `m${i}` }))
   return [
-    { id: 't1', title: 'About scroll', messages: canonical.slice(), saved: null },
-    { id: 't2', title: 'Same convo, retry', messages: canonical.slice(), saved: null },
-    { id: 't3', title: 'Yet another', messages: canonical.slice(), saved: null },
+    {
+      id: 't1',
+      title: 'About scroll',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't2',
+      title: 'Same convo, retry',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't3',
+      title: 'Yet another',
+      messages: canonical.slice(),
+      saved: null,
+    },
   ]
 }
 
@@ -91,7 +106,8 @@ export function ThreadSwitch() {
     initialBehavior: 'instant',
     tick: () => false,
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => false,
   })
 

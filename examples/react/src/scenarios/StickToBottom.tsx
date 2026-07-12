@@ -50,7 +50,8 @@ export function StickToBottom() {
     initialBehavior: 'instant',
     tick: chat.tick,
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => chat.isStreaming,
   })
 

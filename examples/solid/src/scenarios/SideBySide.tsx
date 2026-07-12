@@ -65,8 +65,7 @@ export function SideBySide() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => pin.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) =>
-      pin.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) => pin.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => pin.state().streaming,
   })
 
@@ -128,12 +127,14 @@ export function SideBySide() {
         const pinUser = pinListEl?.querySelector<HTMLElement>(
           `[data-pin-key="${key}"] [data-test="user-msg"]`,
         )
-        pinBotEl = pinListEl?.querySelector<HTMLElement>(
-          `[data-pin-key="${key}"] [data-test="bot-msg"]`,
-        ) ?? null
-        stickBotEl = stickListEl?.querySelector<HTMLElement>(
-          `[data-stick-key="${key}"] [data-test="bot-msg"]`,
-        ) ?? null
+        pinBotEl =
+          pinListEl?.querySelector<HTMLElement>(
+            `[data-pin-key="${key}"] [data-test="bot-msg"]`,
+          ) ?? null
+        stickBotEl =
+          stickListEl?.querySelector<HTMLElement>(
+            `[data-stick-key="${key}"] [data-test="bot-msg"]`,
+          ) ?? null
         if (!pinUser || !pinBotEl || !stickBotEl) return
         pinStreamer.reset(pinBotEl, ASSISTANT_SEGMENTS)
         stickStreamer.reset(stickBotEl, ASSISTANT_SEGMENTS)
@@ -221,7 +222,11 @@ export function SideBySide() {
         <div class="status" data-test="status-stick">
           {formatState('stick-to-bottom', stick.state())}
         </div>
-        <div class="chat__scroll" data-test="scroll-stick" ref={stick.containerRef}>
+        <div
+          class="chat__scroll"
+          data-test="scroll-stick"
+          ref={stick.containerRef}
+        >
           <div class="chat__list" data-test="list-stick" ref={captureStickList}>
             <For each={priors}>
               {(t) => (

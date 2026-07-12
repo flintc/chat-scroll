@@ -32,7 +32,9 @@ export function mountStickToBottom(root: HTMLElement): () => void {
   const status = root.querySelector<HTMLElement>('[data-test="status"]')!
   const fab = root.querySelector<HTMLButtonElement>('[data-test="fab"]')!
   const sendBtn = root.querySelector<HTMLButtonElement>('[data-test="send"]')!
-  const upBtn = root.querySelector<HTMLButtonElement>('[data-test="scroll-up"]')!
+  const upBtn = root.querySelector<HTMLButtonElement>(
+    '[data-test="scroll-up"]',
+  )!
   const controls = root.querySelector<HTMLElement>('.controls')!
 
   const scroll = createChatScroll({

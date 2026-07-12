@@ -6,8 +6,7 @@
  * Single source of truth. Vanilla/Solid/Vue all import from here.
  */
 
-export const USER_PROMPT =
-  'Why is chat scroll behavior so tricky to get right?'
+export const USER_PROMPT = 'Why is chat scroll behavior so tricky to get right?'
 
 export const FOLLOWUP_PROMPT = 'Got any more thoughts on this?'
 

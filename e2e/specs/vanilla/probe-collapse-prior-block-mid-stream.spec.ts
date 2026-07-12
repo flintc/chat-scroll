@@ -79,7 +79,9 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
 
   const midStream = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -110,7 +112,9 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
 
   const afterCollapse = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()

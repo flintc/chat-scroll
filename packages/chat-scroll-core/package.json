@@ -2,7 +2,30 @@
   "name": "@chat-scroll/core",
   "version": "0.1.0",
   "description": "Headless scroll management for chat UIs — framework-agnostic core",
+  "keywords": [
+    "ai-chat",
+    "chat",
+    "headless",
+    "pin-to-top",
+    "scroll",
+    "stick-to-bottom",
+    "streaming"
+  ],
+  "homepage": "https://flintc.github.io/chat-scroll/",
+  "bugs": "https://github.com/flintc/chat-scroll/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flintc/chat-scroll.git",
+    "directory": "packages/chat-scroll-core"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,41 +37,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist",
-    "src",
-    "README.md"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
-  },
-  "keywords": [
-    "chat",
-    "scroll",
-    "headless",
-    "pin-to-top",
-    "stick-to-bottom",
-    "ai-chat",
-    "streaming"
-  ],
-  "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/flintc/chat-scroll.git",
-    "directory": "packages/chat-scroll-core"
-  },
-  "homepage": "https://flintc.github.io/chat-scroll/",
-  "bugs": "https://github.com/flintc/chat-scroll/issues",
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.6.0",
-    "typescript-eslint": "^8.62.1"
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
   }
 }

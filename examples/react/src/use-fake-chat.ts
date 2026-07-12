@@ -89,9 +89,7 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
     opts.applyChunk ??
     (defaultApplyChunk as unknown as (m: TMessage, c: TChunk) => TMessage)
 
-  const [messages, setMessages] = useState<TMessage[]>(
-    () => opts.initial ?? [],
-  )
+  const [messages, setMessages] = useState<TMessage[]>(() => opts.initial ?? [])
   const [status, setStatus] = useState<ChatStatus>('idle')
   const [lastUser, setLastUser] = useState<TMessage | null>(null)
 

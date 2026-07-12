@@ -55,7 +55,8 @@ const playback = usePlayback({
   supportsGutter: true,
   tick: () => api.tick(),
   onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-  onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+  onDurationChange: (ms) =>
+    scroll.instance.setOptions({ scrollDurationMs: ms }),
   isEnabled: () => scroll.state.value.streaming,
 })
 
@@ -141,26 +142,12 @@ function nextUser() {
     data-scenario="pin-to-top"
     style="position: relative"
   >
-    <div
-      class="status"
-      data-test="status"
-    >
+    <div class="status" data-test="status">
       {{ formatState('pin-to-top', scroll.state.value) }}
     </div>
-    <div
-      :ref="captureContainer"
-      class="chat__scroll"
-      data-test="scroll"
-    >
-      <div
-        :ref="captureList"
-        class="chat__list"
-        data-test="list"
-      >
-        <template
-          v-for="(t, i) in priors"
-          :key="`p${i}`"
-        >
+    <div :ref="captureContainer" class="chat__scroll" data-test="scroll">
+      <div :ref="captureList" class="chat__list" data-test="list">
+        <template v-for="(t, i) in priors" :key="`p${i}`">
           <div
             :class="t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'"
             :data-test="t.role === 'user' ? 'user-msg' : 'bot-msg'"
@@ -168,24 +155,12 @@ function nextUser() {
             {{ t.text }}
           </div>
         </template>
-        <template
-          v-for="turn in turns"
-          :key="turn.key"
-        >
-          <div
-            :data-turn-key="turn.key"
-            style="display: contents"
-          >
-            <div
-              class="msg msg--user"
-              data-test="user-msg"
-            >
+        <template v-for="turn in turns" :key="turn.key">
+          <div :data-turn-key="turn.key" style="display: contents">
+            <div class="msg msg--user" data-test="user-msg">
               {{ turn.prompt }}
             </div>
-            <div
-              class="msg msg--bot"
-              data-test="bot-msg"
-            />
+            <div class="msg msg--bot" data-test="bot-msg" />
           </div>
         </template>
       </div>
@@ -212,10 +187,7 @@ function nextUser() {
       >
         Send next prompt
       </button>
-      <button
-        data-test="finish"
-        @click="api.finishStream()"
-      >
+      <button data-test="finish" @click="api.finishStream()">
         Finish stream
       </button>
       <button

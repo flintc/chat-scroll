@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 
 /**
  * PROBE: the pinned element gets `display: none` (e.g. consumer applies
@@ -59,7 +53,9 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
   const before = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -69,7 +65,8 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
       clientHeight: c.clientHeight,
       gutterPx: parseFloat(g.style.height || '0'),
       pinnedYReal: u.top - s.top + c.scrollTop,
-      contractDelta: c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
+      contractDelta:
+        c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
     }
   })
   console.log(
@@ -120,7 +117,9 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
   const afterShow = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()

@@ -155,15 +155,15 @@ export function initialPlaybackState(
   >,
 ): PlaybackState {
   const storageKey =
-    opts.storageKey === null ? null : opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY
+    opts.storageKey === null
+      ? null
+      : (opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY)
   const stored = readPrefs(storageKey)
   return {
     running: false,
     intervalMs: stored.intervalMs ?? opts.initialIntervalMs ?? 140,
-    scrollBehavior:
-      stored.scrollBehavior ?? opts.initialBehavior ?? 'smooth',
-    scrollDurationMs:
-      stored.scrollDurationMs ?? opts.initialDurationMs ?? 320,
+    scrollBehavior: stored.scrollBehavior ?? opts.initialBehavior ?? 'smooth',
+    scrollDurationMs: stored.scrollDurationMs ?? opts.initialDurationMs ?? 320,
     showGutter: stored.showGutter ?? opts.initialShowGutter ?? false,
   }
 }
@@ -175,7 +175,9 @@ export function createPlaybackController(
   let timer: ReturnType<typeof setInterval> | null = null
 
   const storageKey =
-    opts.storageKey === null ? null : opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY
+    opts.storageKey === null
+      ? null
+      : (opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY)
   const stored = readPrefs(storageKey)
 
   const state: PlaybackState = initialPlaybackState(opts)

@@ -50,13 +50,9 @@ export function mountSideBySide(root: HTMLElement): () => void {
   const containerStick = root.querySelector<HTMLElement>(
     '[data-test="scroll-stick"]',
   )!
-  const listStick = root.querySelector<HTMLElement>(
-    '[data-test="list-stick"]',
-  )!
+  const listStick = root.querySelector<HTMLElement>('[data-test="list-stick"]')!
   const fab = root.querySelector<HTMLButtonElement>('[data-test="fab"]')!
-  const fabPin = root.querySelector<HTMLButtonElement>(
-    '[data-test="fab-pin"]',
-  )!
+  const fabPin = root.querySelector<HTMLButtonElement>('[data-test="fab-pin"]')!
   const sendBtn = root.querySelector<HTMLButtonElement>('[data-test="send"]')!
   const finishBtn = root.querySelector<HTMLButtonElement>(
     '[data-test="finish"]',

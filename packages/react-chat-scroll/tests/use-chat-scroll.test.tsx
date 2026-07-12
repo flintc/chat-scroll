@@ -14,7 +14,9 @@ afterEach(() => {
 
 describe('useChatScroll (React)', () => {
   it('returns a stable instance and reactive state', () => {
-    const { result } = renderHook(() => useChatScroll({ strategy: 'pin-to-top' }))
+    const { result } = renderHook(() =>
+      useChatScroll({ strategy: 'pin-to-top' }),
+    )
     expect(result.current.instance).toBeDefined()
     expect(result.current.state.atBottom).toBe(true)
     expect(result.current.state.streaming).toBe(false)
@@ -186,7 +188,9 @@ describe('useChatScroll (React)', () => {
   })
 
   it('re-exposes pin-to-top navigation methods', () => {
-    const { result } = renderHook(() => useChatScroll({ strategy: 'pin-to-top' }))
+    const { result } = renderHook(() =>
+      useChatScroll({ strategy: 'pin-to-top' }),
+    )
     expect(typeof result.current.pinMessage).toBe('function')
     expect(typeof result.current.pinLatest).toBe('function')
     expect(typeof result.current.pinRelative).toBe('function')
@@ -275,7 +279,8 @@ function beforeEachInstallResizeObserver(): void {
       unobserve(): void {}
       disconnect(): void {}
     }
-    ;(window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-      FakeRO as unknown as typeof ResizeObserver
+    ;(
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = FakeRO as unknown as typeof ResizeObserver
   }
 }

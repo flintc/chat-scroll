@@ -66,7 +66,9 @@ onMounted(() => {
   if (!composerEl.value) return
   ro = new ResizeObserver(([entry]) => {
     composerH.value =
-      entry?.borderBoxSize?.[0]?.blockSize ?? composerEl.value?.offsetHeight ?? 0
+      entry?.borderBoxSize?.[0]?.blockSize ??
+      composerEl.value?.offsetHeight ??
+      0
   })
   ro.observe(composerEl.value)
 })
@@ -175,10 +177,7 @@ onBeforeUnmount(clearTimer)
 <template>
   <figure class="composer-demo">
     <div class="composer-demo__settings">
-      <label
-        class="composer-demo__toggle"
-        title="Scroll strategy"
-      >
+      <label class="composer-demo__toggle" title="Scroll strategy">
         Strategy
         <select
           v-model="strategy"
@@ -194,10 +193,7 @@ onBeforeUnmount(clearTimer)
         class="composer-demo__toggle"
         title="Reserve the band the composer overlays (bottomInset)"
       >
-        <input
-          v-model="reserve"
-          type="checkbox"
-        >
+        <input v-model="reserve" type="checkbox" />
         Reserve space
       </label>
       <label
@@ -215,11 +211,7 @@ onBeforeUnmount(clearTimer)
           <option :value="3">3 lines</option>
         </select>
       </label>
-      <button
-        type="button"
-        class="composer-demo__btn"
-        @click="reset"
-      >
+      <button type="button" class="composer-demo__btn" @click="reset">
         Reset
       </button>
     </div>
@@ -227,10 +219,7 @@ onBeforeUnmount(clearTimer)
     <!-- The surface is the composer's containing block; the scroller
          fills it and the composer overlays the bottom. No container
          padding — `bottomInset` reserves the space in the gutter. -->
-    <div
-      class="composer-demo__surface"
-      :style="{ height: `${height}px` }"
-    >
+    <div class="composer-demo__surface" :style="{ height: `${height}px` }">
       <div
         :ref="containerRef"
         class="composer-demo__chat"
@@ -238,10 +227,7 @@ onBeforeUnmount(clearTimer)
         role="log"
         aria-label="Conversation"
       >
-        <div
-          :ref="contentRef"
-          class="composer-demo__messages"
-        >
+        <div :ref="contentRef" class="composer-demo__messages">
           <div
             v-for="m in messages"
             :key="m.id"

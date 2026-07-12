@@ -2,24 +2,19 @@
   "name": "@chat-scroll/example-shared",
   "version": "0.0.0",
   "private": true,
+  "files": [
+    "src"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./style.css": "./src/style.css"
   },
-  "files": [
-    "src"
-  ],
+  "scripts": {},
   "dependencies": {
     "@chat-scroll/core": "workspace:*"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.6.0",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.62.1"
-  },
-  "scripts": {
-    "lint": "eslint ."
+    "typescript": "^5.7.3"
   }
 }

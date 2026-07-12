@@ -55,7 +55,8 @@ export function PinToTop() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => scroll.state().streaming,
   })
 
@@ -76,7 +77,8 @@ export function PinToTop() {
     sendUserMessage(text?: string): void {
       const prompt = text ?? nextPrompt()
       const segments =
-        TURN_SEGMENTS[(promptIdx - 1) % TURN_SEGMENTS.length] ?? TURN_SEGMENTS[0]!
+        TURN_SEGMENTS[(promptIdx - 1) % TURN_SEGMENTS.length] ??
+        TURN_SEGMENTS[0]!
       const key = ++turnKey
       setTurns((cur) => [...cur, { key, prompt }])
       // Wait one frame so the new turn is in the DOM, then pin the user
@@ -198,14 +200,18 @@ export function PinToTop() {
         <button
           data-test="prev-user"
           aria-label="Previous user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', -1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', -1)
+          }
         >
           ▲ Prev
         </button>
         <button
           data-test="next-user"
           aria-label="Next user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', 1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', 1)
+          }
         >
           ▼ Next
         </button>

@@ -1,7 +1,4 @@
-import {
-  createBlock,
-  type CreatedBlock,
-} from './blocks'
+import { createBlock, type CreatedBlock } from './blocks'
 import type { BotSegment } from './lipsum'
 import { expandSegments, type MicroChunk } from './segments'
 
@@ -28,9 +25,7 @@ export interface BotStreamerOptions {
   bodyChunkChars?: number
 }
 
-export function createBotStreamer(
-  opts: BotStreamerOptions = {},
-): BotStreamer {
+export function createBotStreamer(opts: BotStreamerOptions = {}): BotStreamer {
   let bot: HTMLElement | null = null
   let chunks: MicroChunk[] = []
   let idx = 0

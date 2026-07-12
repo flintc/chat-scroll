@@ -76,7 +76,10 @@ async function markReference(page: import('@playwright/test').Page) {
     // sits BELOW the image being grown, so its drift measures lost place.
     const visible = (m: HTMLElement): number => {
       const r = m.getBoundingClientRect()
-      return Math.max(0, Math.min(r.bottom, cr.bottom) - Math.max(r.top, cr.top))
+      return Math.max(
+        0,
+        Math.min(r.bottom, cr.bottom) - Math.max(r.top, cr.top),
+      )
     }
     const ref =
       msgs.find((m) => {

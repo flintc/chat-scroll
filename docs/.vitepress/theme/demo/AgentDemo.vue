@@ -117,25 +117,15 @@ async function reset(): Promise<void> {
       </span>
       <span class="agent-demo__spacer" />
       <label class="agent-demo__toggle">
-        <input
-          v-model="variable"
-          type="checkbox"
-        >
+        <input v-model="variable" type="checkbox" />
         Variable-height statuses
       </label>
-      <button
-        type="button"
-        class="agent-demo__btn"
-        @click="reset"
-      >
+      <button type="button" class="agent-demo__btn" @click="reset">
         Reset
       </button>
     </div>
 
-    <div
-      class="agent-demo__surface"
-      :style="{ height: `${height}px` }"
-    >
+    <div class="agent-demo__surface" :style="{ height: `${height}px` }">
       <ChatPane
         ref="pane"
         :strategy="strategy"
@@ -158,10 +148,7 @@ async function reset(): Promise<void> {
             aria-live="polite"
           >
             <Transition name="agent-status">
-              <span
-                :key="statusIdx"
-                class="agent-demo__line"
-              >
+              <span :key="statusIdx" class="agent-demo__line">
                 <span class="agent-demo__line-text">
                   {{ lines[statusIdx] }}
                 </span>
@@ -178,10 +165,7 @@ async function reset(): Promise<void> {
             :class="{ 'agent-demo__slot--capped': !isPin }"
             aria-live="polite"
           >
-            <span
-              :key="statusIdx"
-              class="agent-demo__line-auto"
-            >
+            <span :key="statusIdx" class="agent-demo__line-auto">
               {{ lines[statusIdx] }}
             </span>
           </div>

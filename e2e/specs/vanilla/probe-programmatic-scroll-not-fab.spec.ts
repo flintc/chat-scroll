@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 
 /**
  * PROBE: a consumer's OWN programmatic scroll (not the controller's
@@ -73,7 +67,9 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
   await hold(page, 600)
 
   const pinnedYNow = await page.evaluate(() => {
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
@@ -86,7 +82,10 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
   // (which calls scrollBy, which fires a scroll event but no wheel/touch).
   // Use `container.scrollTo` directly to jump to top, simulating a
   // "scroll to top" deep-link / hotkey / sidebar navigation.
-  await showCue(page, 'consumer code: container.scrollTo(0) — NOT FAB, NOT wheel')
+  await showCue(
+    page,
+    'consumer code: container.scrollTo(0) — NOT FAB, NOT wheel',
+  )
   await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     c.scrollTo({ top: 0, behavior: 'smooth' })
@@ -95,7 +94,10 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
 
   const afterJump = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
+    return {
+      scrollTop: c.scrollTop,
+      scrollMax: c.scrollHeight - c.clientHeight,
+    }
   })
   console.log(
     `[probe-prog] after programmatic scrollTo(0): ` +
@@ -115,7 +117,10 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
 
   const afterExpand = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
+    return {
+      scrollTop: c.scrollTop,
+      scrollMax: c.scrollHeight - c.clientHeight,
+    }
   })
   console.log(
     `[probe-prog] after block expand: ` +

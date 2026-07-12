@@ -57,7 +57,11 @@ describe('animateScrollTo', () => {
     })
   }
 
-  type ScrollEl = { scrollTop: number; scrollHeight: number; clientHeight: number }
+  type ScrollEl = {
+    scrollTop: number
+    scrollHeight: number
+    clientHeight: number
+  }
   const makeEl = (opts: Partial<ScrollEl> = {}): ScrollEl => ({
     scrollTop: opts.scrollTop ?? 0,
     scrollHeight: opts.scrollHeight ?? 1000,
@@ -66,20 +70,35 @@ describe('animateScrollTo', () => {
 
   test('reduced motion sets scrollTop instantly without scheduling a frame', async () => {
     const el = makeEl({ scrollHeight: 1000, clientHeight: 400 })
-    await animateScrollTo(el, 250, { reducedMotion: true, raf, caf, now: () => nowMs })
+    await animateScrollTo(el, 250, {
+      reducedMotion: true,
+      raf,
+      caf,
+      now: () => nowMs,
+    })
     expect(el.scrollTop).toBe(250)
     expect(frames.length).toBe(0)
   })
 
   test('clamps instant target to (scrollHeight - clientHeight)', async () => {
     const el = makeEl({ scrollHeight: 500, clientHeight: 400 })
-    await animateScrollTo(el, 9999, { reducedMotion: true, raf, caf, now: () => nowMs })
+    await animateScrollTo(el, 9999, {
+      reducedMotion: true,
+      raf,
+      caf,
+      now: () => nowMs,
+    })
     expect(el.scrollTop).toBe(100)
   })
 
   test('animates monotonically from start to target across duration', async () => {
     const el = makeEl({ scrollHeight: 1000, clientHeight: 400 })
-    const promise = animateScrollTo(el, 200, { duration: 100, now: () => nowMs, raf, caf })
+    const promise = animateScrollTo(el, 200, {
+      duration: 100,
+      now: () => nowMs,
+      raf,
+      caf,
+    })
 
     tick(0)
     expect(el.scrollTop).toBe(0)
@@ -104,7 +123,12 @@ describe('animateScrollTo', () => {
   // re-clamp every frame against live scrollHeight.
   test('re-clamps to live scrollHeight each frame (Safari gutter race)', async () => {
     const el = makeEl({ scrollHeight: 500, clientHeight: 400 })
-    const promise = animateScrollTo(el, 300, { duration: 100, now: () => nowMs, raf, caf })
+    const promise = animateScrollTo(el, 300, {
+      duration: 100,
+      now: () => nowMs,
+      raf,
+      caf,
+    })
 
     tick(0)
     tick(50)
@@ -155,7 +179,12 @@ describe('animateScrollTo', () => {
 
   test('zero distance: resolves immediately, no frames scheduled', async () => {
     const el = makeEl({ scrollTop: 100 })
-    await animateScrollTo(el, 100, { duration: 100, now: () => nowMs, raf, caf })
+    await animateScrollTo(el, 100, {
+      duration: 100,
+      now: () => nowMs,
+      raf,
+      caf,
+    })
     expect(el.scrollTop).toBe(100)
     expect(frames.length).toBe(0)
   })
@@ -228,12 +257,19 @@ describe('animateScrollTo', () => {
   test('getter target: respects reduced-motion path (one-shot, evaluated once)', async () => {
     const el = makeEl({ scrollHeight: 1000, clientHeight: 400 })
     let calls = 0
-    await animateScrollTo(el, () => { calls += 1; return 250 }, {
-      reducedMotion: true,
-      raf,
-      caf,
-      now: () => nowMs,
-    })
+    await animateScrollTo(
+      el,
+      () => {
+        calls += 1
+        return 250
+      },
+      {
+        reducedMotion: true,
+        raf,
+        caf,
+        now: () => nowMs,
+      },
+    )
     expect(el.scrollTop).toBe(250)
     expect(calls).toBe(1)
   })

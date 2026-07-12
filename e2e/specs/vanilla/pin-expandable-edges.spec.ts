@@ -111,7 +111,9 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   await hold(page, 500)
 })
 
-test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }) => {
+test('pin-expandable: stream-ended toggle leaves layout stable', async ({
+  page,
+}) => {
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
@@ -142,7 +144,9 @@ test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }
     .locator('[data-test="user-msg"]')
     .last()
     .boundingBox()
-  const scrollBoxBefore = await page.locator('[data-test="scroll"]').boundingBox()
+  const scrollBoxBefore = await page
+    .locator('[data-test="scroll"]')
+    .boundingBox()
 
   // Toggle a prior block AFTER stream has ended. With `streaming: false`,
   // `overflow-anchor` is back to 'auto' so the browser auto-anchors;
@@ -157,13 +161,18 @@ test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }
     .locator('[data-test="user-msg"]')
     .last()
     .boundingBox()
-  const scrollBoxAfter = await page.locator('[data-test="scroll"]').boundingBox()
+  const scrollBoxAfter = await page
+    .locator('[data-test="scroll"]')
+    .boundingBox()
 
   if (scrollBoxBefore && user2BoxBefore && scrollBoxAfter && user2BoxAfter) {
     const dy =
-      (user2BoxAfter.y - scrollBoxAfter.y) -
+      user2BoxAfter.y -
+      scrollBoxAfter.y -
       (user2BoxBefore.y - scrollBoxBefore.y)
-    console.log(`[pin-edges] stream-ended toggle: pin drift = ${dy.toFixed(1)}px`)
+    console.log(
+      `[pin-edges] stream-ended toggle: pin drift = ${dy.toFixed(1)}px`,
+    )
     expect(Math.abs(dy)).toBeLessThan(10)
   }
 })

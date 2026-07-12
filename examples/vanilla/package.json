@@ -6,18 +6,14 @@
   "scripts": {
     "dev": "vite --port 3110 --host 0.0.0.0 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 3110 --host 0.0.0.0 --strictPort",
-    "lint": "eslint ."
+    "preview": "vite preview --port 3110 --host 0.0.0.0 --strictPort"
   },
   "dependencies": {
     "@chat-scroll/core": "workspace:*",
     "@chat-scroll/example-shared": "workspace:*"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.6.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.62.1",
     "vite": "^5.4.11"
   }
 }

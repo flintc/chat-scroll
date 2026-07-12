@@ -112,7 +112,10 @@ export function useChatScroll(
   const pinClamp = useMemo<PinClamp | undefined>(
     () =>
       pinClampTallerThan !== undefined && pinClampVisibleHeight !== undefined
-        ? { tallerThan: pinClampTallerThan, visibleHeight: pinClampVisibleHeight }
+        ? {
+            tallerThan: pinClampTallerThan,
+            visibleHeight: pinClampVisibleHeight,
+          }
         : undefined,
     [pinClampTallerThan, pinClampVisibleHeight],
   )

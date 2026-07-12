@@ -70,8 +70,7 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
     padBot.style.cssText =
       'flex: 0 0 400px; padding: 16px; background: ' +
       'linear-gradient(180deg,#0c0c0c,#1d1d1d); color: #888;'
-    padBot.textContent =
-      'OUTER SCROLL: more page content below the chat. ↑'
+    padBot.textContent = 'OUTER SCROLL: more page content below the chat. ↑'
 
     // Give the chat a definite height inside the outer flex column.
     chat.style.flex = '0 0 460px'
@@ -115,7 +114,9 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const beforeOuterScroll = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -146,7 +147,9 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const afterOuterScroll = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -170,7 +173,9 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const afterResize = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -192,7 +197,9 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
   // - The pin's offset within the chat should stay at ~scrollMargin (12px).
   // - After a resize inside the outer-scrolled state, the pin should
   //   still be at ~scrollMargin.
-  expect(Math.abs(afterOuterScroll.chatScrollTop - beforeOuterScroll.chatScrollTop)).toBeLessThan(2)
+  expect(
+    Math.abs(afterOuterScroll.chatScrollTop - beforeOuterScroll.chatScrollTop),
+  ).toBeLessThan(2)
   expect(Math.abs(afterOuterScroll.pinOffsetFromChatTop - 12)).toBeLessThan(20)
   expect(Math.abs(afterResize.pinOffsetFromChatTop - 12)).toBeLessThan(20)
 })

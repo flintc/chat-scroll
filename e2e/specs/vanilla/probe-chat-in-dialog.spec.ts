@@ -77,7 +77,9 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const inDialogPin = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -89,7 +91,8 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
       pinOffsetFromTop: u.top - s.top,
       pinnedYReal: u.top - s.top + c.scrollTop,
       gutterPx: parseFloat(g.style.height || '0'),
-      contractDelta: c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
+      contractDelta:
+        c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
     }
   })
   console.log(
@@ -117,7 +120,9 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const afterReopen = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
@@ -139,7 +144,9 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const afterResize = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()

@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 
 /**
  * PROBE: a user pointerdown on something inside the chat container WHILE
@@ -140,14 +134,15 @@ test('probe: pointerdown mid-pin-animation teleports on next resize', async ({
 
   // Where is the pinned message now (relative to viewport top)?
   const pinFinal = await page.evaluate(() => {
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
     const s = sb.getBoundingClientRect()
     return { offsetFromViewportTop: u.top - s.top, scrollTop: sb.scrollTop }
   })
-
 
   console.log(
     `[probe-pd] early scrollTop≈${sampleEarly.scrollTop.toFixed(1)} ` +
@@ -173,7 +168,9 @@ test('probe: pointerdown mid-pin-animation teleports on next resize', async ({
   // frame samples differ by an animation step. Tolerate up to 2px
   // sub-pixel rounding for "same" detection.
   const frameDelta = Math.abs(between2.scrollTop - between1.scrollTop)
-  const totalChange = Math.abs(afterExpand.scrollTop - afterPointerdown.scrollTop)
+  const totalChange = Math.abs(
+    afterExpand.scrollTop - afterPointerdown.scrollTop,
+  )
   console.log(
     `[probe-pd] frame-to-frame delta within animation=${frameDelta.toFixed(1)}px ` +
       `total change=${totalChange.toFixed(1)}px`,
@@ -185,7 +182,9 @@ test('probe: pointerdown mid-pin-animation teleports on next resize', async ({
   // afterExpand, and frameDelta is ~0 while both samples are already
   // at the final value.
   if (totalChange > 40) {
-    const between1Progress = Math.abs(between1.scrollTop - afterPointerdown.scrollTop)
+    const between1Progress = Math.abs(
+      between1.scrollTop - afterPointerdown.scrollTop,
+    )
     expect(between1Progress).toBeLessThan(totalChange - 5)
   }
 })

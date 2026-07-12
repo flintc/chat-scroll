@@ -137,10 +137,7 @@ defineExpose({ scroll, nav, navTo, chatEl })
 
 <template>
   <div class="ld-pane">
-    <div
-      v-if="label"
-      class="ld-pane__label"
-    >
+    <div v-if="label" class="ld-pane__label">
       {{ label }}
     </div>
     <div class="ld-pane__surface">
@@ -156,10 +153,7 @@ defineExpose({ scroll, nav, navTo, chatEl })
         :aria-label="label ? `Conversation — ${label}` : 'Conversation'"
         @scroll.passive="onPaneScroll"
       >
-        <div
-          :ref="contentRef"
-          class="ld-messages"
-        >
+        <div :ref="contentRef" class="ld-messages">
           <slot name="top" />
           <div
             v-for="m in messages"
@@ -183,25 +177,16 @@ defineExpose({ scroll, nav, navTo, chatEl })
                 :aria-expanded="isBlockOpen(m.id, bi, b)"
                 @click="toggleBlock(m.id, bi, b)"
               >
-                <span
-                  class="ld-block__icon"
-                  aria-hidden="true"
-                >
+                <span class="ld-block__icon" aria-hidden="true">
                   {{ b.kind === 'tool' ? '🛠' : '💭' }}
                 </span>
                 <span class="ld-block__title">
                   {{ b.title
-                  }}<span
-                    v-if="b.kind === 'tool'"
-                    class="ld-block__args"
-                  >{{
+                  }}<span v-if="b.kind === 'tool'" class="ld-block__args">{{
                     b.args
                   }}</span>
                 </span>
-                <span
-                  class="ld-block__chev"
-                  aria-hidden="true"
-                >▾</span>
+                <span class="ld-block__chev" aria-hidden="true">▾</span>
               </button>
               <div class="ld-block__wrap">
                 <div
@@ -215,10 +200,7 @@ defineExpose({ scroll, nav, navTo, chatEl })
             <!-- Only the answer text is bubbled; the reasoning / tool
                  cards above sit outside it (the ChatGPT/Claude layout).
                  No bubble while the turn is still all-blocks. -->
-            <div
-              v-if="m.text"
-              class="ld-msg__text"
-            >
+            <div v-if="m.text" class="ld-msg__text">
               {{ m.text }}
             </div>
           </div>
@@ -235,10 +217,7 @@ defineExpose({ scroll, nav, navTo, chatEl })
       </button>
     </div>
     <div class="ld-status">
-      <span
-        class="ld-chip"
-        :class="{ 'ld-chip--on': state.atBottom }"
-      >
+      <span class="ld-chip" :class="{ 'ld-chip--on': state.atBottom }">
         atBottom
       </span>
       <span
@@ -255,16 +234,10 @@ defineExpose({ scroll, nav, navTo, chatEl })
       >
         pinAnchored
       </span>
-      <span
-        class="ld-chip"
-        :class="{ 'ld-chip--on': state.streaming }"
-      >
+      <span class="ld-chip" :class="{ 'ld-chip--on': state.streaming }">
         streaming
       </span>
-      <span
-        v-if="showGutter"
-        class="ld-chip ld-chip--gutter-key"
-      >gutter</span>
+      <span v-if="showGutter" class="ld-chip ld-chip--gutter-key">gutter</span>
     </div>
   </div>
 </template>

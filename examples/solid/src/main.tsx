@@ -31,10 +31,7 @@ function App() {
       <header class="demo-bar">
         <For each={SCENARIOS}>
           {(s) => (
-            <a
-              href={`#/${s.slug}`}
-              classList={{ active: slug() === s.slug }}
-            >
+            <a href={`#/${s.slug}`} classList={{ active: slug() === s.slug }}>
               {s.title}
             </a>
           )}

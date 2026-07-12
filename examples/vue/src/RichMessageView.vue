@@ -23,21 +23,11 @@ const isBlock = (p: Part): p is ThinkingPart | ToolPart =>
       update), but the DOM node and the child component instance — and
       its local `open` ref — survive.
     -->
-    <template
-      v-for="(part, i) in msg.parts"
-      :key="i"
-    >
-      <div
-        v-if="isText(part)"
-        class="msg__text"
-      >
+    <template v-for="(part, i) in msg.parts" :key="i">
+      <div v-if="isText(part)" class="msg__text">
         {{ part.text }}
       </div>
-      <RichBlock
-        v-else-if="isBlock(part)"
-        :part="part"
-        :index="i"
-      />
+      <RichBlock v-else-if="isBlock(part)" :part="part" :index="i" />
     </template>
   </div>
 </template>

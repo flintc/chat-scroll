@@ -44,10 +44,7 @@ export function isAtBottom(
  * the equivalent `scrollTop` value — what you'd assign to make `el` the
  * topmost visible element.
  */
-export function offsetWithin(
-  el: HTMLElement,
-  container: HTMLElement,
-): number {
+export function offsetWithin(el: HTMLElement, container: HTMLElement): number {
   const elRect = el.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
   return elRect.top - containerRect.top + container.scrollTop

@@ -72,9 +72,7 @@ test('probe: horizontal wheel on inner scrollable inside a message clears pinAnc
   // isolate the nested-scrollable case we need the wide-code visible while `pinAnchored`
   // remains true; below-the-pin placement satisfies that.)
   await page.evaluate(() => {
-    const bots = document.querySelectorAll<HTMLElement>(
-      '[data-test="bot-msg"]',
-    )
+    const bots = document.querySelectorAll<HTMLElement>('[data-test="bot-msg"]')
     const lastBot = bots[bots.length - 1]!
     const wide = document.createElement('pre')
     wide.dataset.test = 'wide-code'
@@ -93,9 +91,7 @@ test('probe: horizontal wheel on inner scrollable inside a message clears pinAnc
   // Capture chat scrollTop BEFORE the horizontal wheel.
   const beforeWheel = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const wide = document.querySelector<HTMLElement>(
-      '[data-test="wide-code"]',
-    )!
+    const wide = document.querySelector<HTMLElement>('[data-test="wide-code"]')!
     return {
       chatScrollTop: c.scrollTop,
       innerScrollLeft: wide.scrollLeft,
@@ -124,9 +120,7 @@ test('probe: horizontal wheel on inner scrollable inside a message clears pinAnc
   // block's scrollLeft SHOULD have moved.
   const afterWheel = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const wide = document.querySelector<HTMLElement>(
-      '[data-test="wide-code"]',
-    )!
+    const wide = document.querySelector<HTMLElement>('[data-test="wide-code"]')!
     return {
       chatScrollTop: c.scrollTop,
       innerScrollLeft: wide.scrollLeft,
@@ -152,7 +146,9 @@ test('probe: horizontal wheel on inner scrollable inside a message clears pinAnc
 
   const afterResize = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
     const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()

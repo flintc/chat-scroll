@@ -22,8 +22,9 @@ beforeAll(() => {
       unobserve(): void {}
       disconnect(): void {}
     }
-    ;(window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-      FakeRO as unknown as typeof ResizeObserver
+    ;(
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = FakeRO as unknown as typeof ResizeObserver
   }
 })
 

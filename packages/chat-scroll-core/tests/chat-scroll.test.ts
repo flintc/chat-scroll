@@ -171,7 +171,9 @@ describe('createChatScroll', () => {
       s.mount(container, content)
       s.mount(container, content) // should not double-bind
       expect(ro.callbacks().size).toBe(1)
-      expect(container.querySelectorAll('[data-chat-scroll-gutter]').length).toBe(1)
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
       s.destroy()
     })
 
@@ -185,7 +187,9 @@ describe('createChatScroll', () => {
       s.mount(b.container, b.content)
       // a's gutter removed, b has one
       expect(a.container.querySelector('[data-chat-scroll-gutter]')).toBeNull()
-      expect(b.container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
+      expect(
+        b.container.querySelector('[data-chat-scroll-gutter]'),
+      ).toBeTruthy()
       s.destroy()
     })
 
@@ -515,15 +519,11 @@ describe('createChatScroll', () => {
     it('snapshot identity changes only when state changes', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
-      const {
-        container,
-        content,
-        setContentHeight,
-        flushScroll,
-      } = buildScrollDom({
-        clientHeight: 600,
-        contentHeight: 400, // content fits → atBottom=true at mount
-      })
+      const { container, content, setContentHeight, flushScroll } =
+        buildScrollDom({
+          clientHeight: 600,
+          contentHeight: 400, // content fits → atBottom=true at mount
+        })
       const s = createChatScroll({ strategy: 'pin-to-top' })
       s.mount(container, content)
       const snap1 = s.state
@@ -1405,8 +1405,13 @@ describe('createChatScroll', () => {
       cleanup.push(ro.uninstall)
       const raf = installFakeRaf()
       cleanup.push(raf.uninstall)
-      const { container, content, setScrollTop, flushScroll, setContentHeight } =
-        buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
+      const {
+        container,
+        content,
+        setScrollTop,
+        flushScroll,
+        setContentHeight,
+      } = buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
       const msg = appendMessage(container, content, {
         role: 'user',
         height: 40,
@@ -1448,8 +1453,13 @@ describe('createChatScroll', () => {
       cleanup.push(ro.uninstall)
       const raf = installFakeRaf()
       cleanup.push(raf.uninstall)
-      const { container, content, setScrollTop, flushScroll, setContentHeight } =
-        buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
+      const {
+        container,
+        content,
+        setScrollTop,
+        flushScroll,
+        setContentHeight,
+      } = buildScrollDom({ clientHeight: 600, contentHeight: 1500 })
       const msg = appendMessage(container, content, {
         role: 'user',
         height: 40,
@@ -1543,8 +1553,14 @@ describe('createChatScroll', () => {
       // A horizontally-scrollable inner element.
       const wide = document.createElement('pre')
       wide.style.overflowX = 'auto'
-      Object.defineProperty(wide, 'scrollWidth', { configurable: true, value: 2000 })
-      Object.defineProperty(wide, 'clientWidth', { configurable: true, value: 400 })
+      Object.defineProperty(wide, 'scrollWidth', {
+        configurable: true,
+        value: 2000,
+      })
+      Object.defineProperty(wide, 'clientWidth', {
+        configurable: true,
+        value: 400,
+      })
       content.appendChild(wide)
 
       const s = createChatScroll({
@@ -1558,7 +1574,11 @@ describe('createChatScroll', () => {
       expect(container.scrollTop).toBe(788)
 
       // Horizontal wheel ON the inner pre (event.target = wide).
-      const ev = new WheelEvent('wheel', { deltaY: 0, deltaX: 80, bubbles: true })
+      const ev = new WheelEvent('wheel', {
+        deltaY: 0,
+        deltaX: 80,
+        bubbles: true,
+      })
       wide.dispatchEvent(ev)
       expect(s.state.pinAnchored).toBe(true)
 
@@ -1680,8 +1700,14 @@ describe('createChatScroll', () => {
       })
       const wide = document.createElement('pre')
       wide.style.overflowX = 'auto'
-      Object.defineProperty(wide, 'scrollWidth', { configurable: true, value: 2000 })
-      Object.defineProperty(wide, 'clientWidth', { configurable: true, value: 400 })
+      Object.defineProperty(wide, 'scrollWidth', {
+        configurable: true,
+        value: 2000,
+      })
+      Object.defineProperty(wide, 'clientWidth', {
+        configurable: true,
+        value: 400,
+      })
       content.appendChild(wide)
 
       const s = createChatScroll({
@@ -2236,8 +2262,13 @@ describe('createChatScroll', () => {
     it('does NOT auto-scroll on content growth when streaming but not locked', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
-      const { container, content, setContentHeight, setScrollTop, flushScroll } =
-        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const {
+        container,
+        content,
+        setContentHeight,
+        setScrollTop,
+        flushScroll,
+      } = buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
       const s = createChatScroll({ strategy: 'stick-to-bottom' })
       s.mount(container, content)
       s.setStreaming(true)
@@ -2260,11 +2291,16 @@ describe('createChatScroll', () => {
       // upward movement (negative scrollTop delta) is a user leaving.
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
-      const { container, content, setScrollTop, setContentHeight, flushScroll } =
-        buildScrollDom({
-          clientHeight: 100,
-          contentHeight: 1000,
-        })
+      const {
+        container,
+        content,
+        setScrollTop,
+        setContentHeight,
+        flushScroll,
+      } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
       const s = createChatScroll({ strategy: 'stick-to-bottom' })
       s.mount(container, content)
       setScrollTop(900)
@@ -2544,8 +2580,13 @@ describe('createChatScroll', () => {
       // away and the FAB reappears.
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
-      const { container, content, setScrollTop, flushScroll, setContentHeight } =
-        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const {
+        container,
+        content,
+        setScrollTop,
+        flushScroll,
+        setContentHeight,
+      } = buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
       const s = createChatScroll({ scrollBehavior: 'instant' })
       s.mount(container, content)
       s.setStreaming(true)
@@ -2590,7 +2631,9 @@ describe('createChatScroll', () => {
       s.scrollToBottom() // rAF animation in flight
       expect(s.state.scrollInFlight).toBe(true)
       // User wheels mid-animation — their intent wins, no re-lock.
-      container.dispatchEvent(new WheelEvent('wheel', { deltaY: -50, bubbles: true }))
+      container.dispatchEvent(
+        new WheelEvent('wheel', { deltaY: -50, bubbles: true }),
+      )
       await new Promise((r) => setTimeout(r, 0))
       expect(s.state.locked).toBe(false)
       s.destroy()
@@ -2881,9 +2924,10 @@ describe('createChatScroll', () => {
       cleanup.push(ro.uninstall)
       const raf = installFakeRaf()
       cleanup.push(raf.uninstall)
-      const { container, content, setScrollTop, flushScroll } = buildScrollDom(
-        { clientHeight: 100, contentHeight: 1000 },
-      )
+      const { container, content, setScrollTop, flushScroll } = buildScrollDom({
+        clientHeight: 100,
+        contentHeight: 1000,
+      })
       const s = createChatScroll({ strategy: 'stick-to-bottom' })
       s.mount(container, content)
       s.setStreaming(true)
@@ -3318,8 +3362,13 @@ describe('createChatScroll', () => {
     it('stops after an upward scroll with no input events (scrollbar drag)', () => {
       const ro = installFakeResizeObserver()
       cleanup.push(ro.uninstall)
-      const { container, content, setContentHeight, setScrollTop, flushScroll } =
-        buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
+      const {
+        container,
+        content,
+        setContentHeight,
+        setScrollTop,
+        flushScroll,
+      } = buildScrollDom({ clientHeight: 100, contentHeight: 1000 })
       const s = createChatScroll({
         strategy: 'pin-to-top',
         initialPosition: 'bottom',
@@ -3598,7 +3647,9 @@ describe('createChatScroll', () => {
 
   describe('bottomInset (overlay-composer reservation)', () => {
     it('defaults to 0 and is exposed on resolved options', () => {
-      expect(createChatScroll({ strategy: 'pin-to-top' }).options.bottomInset).toBe(0)
+      expect(
+        createChatScroll({ strategy: 'pin-to-top' }).options.bottomInset,
+      ).toBe(0)
       expect(
         createChatScroll({ strategy: 'pin-to-top', bottomInset: 96 }).options
           .bottomInset,
@@ -3614,7 +3665,9 @@ describe('createChatScroll', () => {
       })
       const s = createChatScroll({ strategy: 'pin-to-top', bottomInset: 80 })
       s.mount(container, content)
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('80px')
       // 80px of extra scroll room below the content so the last message
       // can clear the composer (1000 + 80 - 600).
@@ -3646,7 +3699,9 @@ describe('createChatScroll', () => {
       raf.flushFrames()
       // pinnedY = 300 - 12 = 288. tight = 288 + 600 - 700 = 188 (> inset),
       // so the gutter is the tight value and maxScroll === pinnedY exactly.
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('188px')
       expect(maxScroll()).toBe(288)
       s.destroy()
@@ -3675,7 +3730,9 @@ describe('createChatScroll', () => {
       s.pinMessage(msg)
       raf.flushFrames()
       // pinnedY = 88. tight = max(0, 88 + 600 - 1400) = 0 → floored to 80.
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('80px')
       expect(maxScroll()).toBe(880) // 1400 + 80 - 600
       s.destroy()
@@ -3688,9 +3745,14 @@ describe('createChatScroll', () => {
         clientHeight: 600,
         contentHeight: 1000,
       })
-      const s = createChatScroll({ strategy: 'stick-to-bottom', bottomInset: 80 })
+      const s = createChatScroll({
+        strategy: 'stick-to-bottom',
+        bottomInset: 80,
+      })
       s.mount(container, content)
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('80px')
       s.lock() // snap to the bottom
       // maxScroll = 1000 + 80 - 600 = 480; the content end (1000) then sits
@@ -3714,7 +3776,9 @@ describe('createChatScroll', () => {
       // The composer grew — bump the inset. The gutter grows and the
       // locked viewport re-snaps to the new bottom.
       s.setOptions({ bottomInset: 80 })
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('80px')
       expect(container.scrollTop).toBe(480)
       expect(s.state.atBottom).toBe(true)
@@ -3730,7 +3794,9 @@ describe('createChatScroll', () => {
       })
       const s = createChatScroll({ strategy: 'pin-to-top' })
       s.mount(container, content)
-      const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
+      const g = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
       expect(g.style.height).toBe('0px')
       s.setOptions({ bottomInset: 64 })
       expect(g.style.height).toBe('64px')

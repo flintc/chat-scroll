@@ -94,9 +94,7 @@ export function mountPinToTop(root: HTMLElement): () => void {
   // `.chat--show-gutter [data-chat-scroll-gutter]` to overlay the
   // gutter element so viewers can watch it shrink.
   function gutterHeight(): number {
-    const g = container.querySelector<HTMLElement>(
-      '[data-chat-scroll-gutter]',
-    )
+    const g = container.querySelector<HTMLElement>('[data-chat-scroll-gutter]')
     if (!g) return 0
     return parseInt(g.style.height || '0', 10)
   }
@@ -105,9 +103,7 @@ export function mountPinToTop(root: HTMLElement): () => void {
   })
 
   function hasContentBelow(): boolean {
-    return (
-      list.scrollHeight > container.scrollTop + container.clientHeight + 40
-    )
+    return list.scrollHeight > container.scrollTop + container.clientHeight + 40
   }
   function render(): void {
     const extra = playback.state.showGutter

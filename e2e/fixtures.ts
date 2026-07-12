@@ -30,10 +30,9 @@ export async function sendUserMessage(
   page: Page,
   text?: string,
 ): Promise<void> {
-  await page.evaluate(
-    ({ text }) => window.__demo?.sendUserMessage(text),
-    { text },
-  )
+  await page.evaluate(({ text }) => window.__demo?.sendUserMessage(text), {
+    text,
+  })
 }
 
 /**
