@@ -1,5 +1,5 @@
 import { render } from 'solid-js/web'
-import { createSignal, onMount, Show } from 'solid-js'
+import { createSignal, For, onMount, Show } from 'solid-js'
 import { PinToTop } from './scenarios/PinToTop'
 import { PinToTopSimple } from './scenarios/PinToTopSimple'
 import { StickToBottom } from './scenarios/StickToBottom'
@@ -29,14 +29,16 @@ function App() {
   return (
     <>
       <header class="demo-bar">
-        {SCENARIOS.map((s) => (
-          <a
-            href={`#/${s.slug}`}
-            classList={{ active: slug() === s.slug }}
-          >
-            {s.title}
-          </a>
-        ))}
+        <For each={SCENARIOS}>
+          {(s) => (
+            <a
+              href={`#/${s.slug}`}
+              classList={{ active: slug() === s.slug }}
+            >
+              {s.title}
+            </a>
+          )}
+        </For>
       </header>
       <section
         style={{

@@ -16,7 +16,7 @@ const props = withDefaults(
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { strategy: 'stick-to-bottom', count: 5000, height: 480 },
+  { caption: '', strategy: 'stick-to-bottom', count: 5000, height: 480 },
 )
 const isPin = props.strategy === 'pin-to-top'
 
@@ -269,38 +269,51 @@ const navState = computed(() => {
         {{ chat.messages.value.length.toLocaleString() }} rows
       </span>
       <span class="virtual-demo__spacer" />
-      <label v-if="isPin" class="virtual-demo__toggle">
-        <input v-model="showGutter" type="checkbox" />
+      <label
+        v-if="isPin"
+        class="virtual-demo__toggle"
+      >
+        <input
+          v-model="showGutter"
+          type="checkbox"
+        >
         Show gutter
       </label>
-      <button type="button" class="virtual-demo__btn" @click="reset">
+      <button
+        type="button"
+        class="virtual-demo__btn"
+        @click="reset"
+      >
         Reset
       </button>
     </div>
 
-    <div class="virtual-demo__surface" :style="{ height: `${height}px` }">
+    <div
+      class="virtual-demo__surface"
+      :style="{ height: `${height}px` }"
+    >
       <!-- tabindex: keyboard-operable scroller. role="region", NOT
            "log": windowing mounts rows on scroll, and a live region
            would announce them as new messages. -->
       <div
+        :ref="setContainer"
         class="vd-chat"
         :class="{ 'vd-chat--show-gutter': showGutter }"
-        :ref="setContainer"
         tabindex="0"
         role="region"
         aria-label="Conversation (virtualized)"
         @scroll.passive="onPaneScroll"
       >
         <div
-          class="vd-total"
           :ref="contentRef"
+          class="vd-total"
           :style="{ height: `${totalSize}px` }"
         >
           <div
             v-for="row in rows"
             :key="row.key as number"
-            :data-index="row.index"
             :ref="measureElement"
+            :data-index="row.index"
             class="vd-row"
             :style="{ transform: `translateY(${row.start}px)` }"
           >
@@ -351,7 +364,10 @@ const navState = computed(() => {
         >
           ‹ Prev
         </button>
-        <span class="virtual-demo__nav-pos" aria-label="Current turn">
+        <span
+          class="virtual-demo__nav-pos"
+          aria-label="Current turn"
+        >
           {{ navState.pos || '–' }}
         </span>
         <button
@@ -368,13 +384,20 @@ const navState = computed(() => {
           Next ›
         </button>
       </div>
-      <button type="button" class="virtual-demo__btn" @click="jumpToTop">
+      <button
+        type="button"
+        class="virtual-demo__btn"
+        @click="jumpToTop"
+      >
         Jump to #1
       </button>
     </div>
 
     <div class="virtual-demo__status">
-      <span class="vd-chip" :class="{ 'vd-chip--on': state.atBottom }">
+      <span
+        class="vd-chip"
+        :class="{ 'vd-chip--on': state.atBottom }"
+      >
         atBottom
       </span>
       <span
@@ -391,12 +414,17 @@ const navState = computed(() => {
       >
         locked
       </span>
-      <span class="vd-chip" :class="{ 'vd-chip--on': state.streaming }">
+      <span
+        class="vd-chip"
+        :class="{ 'vd-chip--on': state.streaming }"
+      >
         streaming
       </span>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

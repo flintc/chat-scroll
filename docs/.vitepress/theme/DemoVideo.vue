@@ -26,7 +26,9 @@ defineProps<{
       playsinline
       preload="metadata"
     />
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

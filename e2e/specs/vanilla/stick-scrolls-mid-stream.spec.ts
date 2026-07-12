@@ -62,7 +62,7 @@ test('stick-scrolls-mid-stream', async ({ page }) => {
   expect(Math.abs(afterTop - beforeTop)).toBeLessThan(50)
 
   await showCue(page, 'user clicks ↓ — snaps to bottom')
-  await page.click('[data-test="fab"]')
+  await page.locator('[data-test="fab"]').click()
   await hold(page, 1500)
 
   await expect(page.locator('[data-test="status"]')).toContainText(

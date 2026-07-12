@@ -3349,7 +3349,9 @@ describe('createChatScroll', () => {
       // delta — but scrollHeight changed in the same frame, so this is
       // layout, not the user.
       setContentHeight(800)
-      container.scrollTop = container.scrollTop // clamp to new max (700)
+      // The mock setter clamps on assignment; write the old value back
+      // through it to land on the new max (700), like the browser does.
+      container.scrollTop = 900
       flushScroll()
       setContentHeight(1200)
       ro.triggerResize()

@@ -44,7 +44,6 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-prog]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -74,15 +73,13 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
   await hold(page, 600)
 
   const pinnedYNow = await page.evaluate(() => {
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
     const s = sb.getBoundingClientRect()
     return u.top - s.top + sb.scrollTop
   })
-  // eslint-disable-next-line no-console
   console.log(`[probe-prog] pinnedY ≈ ${pinnedYNow.toFixed(1)}`)
 
   // Consumer-driven programmatic scroll — NOT via `__demo.scrollByPx`
@@ -100,7 +97,6 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-prog] after programmatic scrollTo(0): ` +
       `scrollTop=${afterJump.scrollTop.toFixed(1)} ` +
@@ -121,7 +117,6 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-prog] after block expand: ` +
       `scrollTop=${afterExpand.scrollTop.toFixed(1)} ` +
@@ -137,7 +132,6 @@ test('probe: programmatic scrollTo leaves pinAnchored stale, snaps back on resiz
   // With the bug, the resize callback writes `scrollTop = pinnedY`,
   // snapping the user back HUNDREDS of pixels to the pin.
   const snapBackDelta = afterExpand.scrollTop - afterJump.scrollTop
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-prog] snap-back delta after resize = ${snapBackDelta.toFixed(1)}px ` +
       `(expected ≈ 0 if pinAnchored had been cleared by the scrollTo)`,

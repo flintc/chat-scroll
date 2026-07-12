@@ -9,9 +9,9 @@ export function threadSwitchSpec(): void {
 
     // ─── Mid-thread on t1 ──────────────────────────────────
     await showCue(page, 'user scrolls up in thread 1')
-    await page.click('[data-test="scroll-up"]')
+    await page.locator('[data-test="scroll-up"]').click()
     await hold(page, 600)
-    await page.click('[data-test="scroll-up"]')
+    await page.locator('[data-test="scroll-up"]').click()
     await hold(page, 1000)
 
     const t1Top = await page.evaluate(
@@ -23,7 +23,7 @@ export function threadSwitchSpec(): void {
 
     // ─── Switch to t2 ──────────────────────────────────────
     await showCue(page, 'user switches to thread 2')
-    await page.click('[data-test="thread-t2"]')
+    await page.locator('[data-test="thread-t2"]').click()
     await hold(page, 1500)
 
     const t2AtBottom = await page.evaluate(() => {
@@ -35,12 +35,12 @@ export function threadSwitchSpec(): void {
 
     // ─── Switch to t3 ──────────────────────────────────────
     await showCue(page, 'user switches to thread 3')
-    await page.click('[data-test="thread-t3"]')
+    await page.locator('[data-test="thread-t3"]').click()
     await hold(page, 1200)
 
     // ─── Switch back to t1 — restore mid-thread position ──
     await showCue(page, 'back to thread 1 — position restored')
-    await page.click('[data-test="thread-t1"]')
+    await page.locator('[data-test="thread-t1"]').click()
     await hold(page, 1500)
 
     const t1Restored = await page.evaluate(

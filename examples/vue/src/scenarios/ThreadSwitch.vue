@@ -111,8 +111,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat" data-scenario="thread-switch" style="position: relative">
-    <div class="threads" data-test="threads">
+  <div
+    class="chat"
+    data-scenario="thread-switch"
+    style="position: relative"
+  >
+    <div
+      class="threads"
+      data-test="threads"
+    >
       <button
         v-for="t in threads"
         :key="t.id"
@@ -123,7 +130,10 @@ onBeforeUnmount(() => {
         {{ t.title }}
       </button>
     </div>
-    <div class="status" data-test="status">
+    <div
+      class="status"
+      data-test="status"
+    >
       {{
         formatState(
           'stick-to-bottom',
@@ -132,14 +142,24 @@ onBeforeUnmount(() => {
         )
       }}
     </div>
-    <div class="chat__scroll" data-test="scroll" :ref="captureContainer">
-      <div class="chat__list" data-test="list" :ref="scroll.contentRef">
+    <div
+      :ref="captureContainer"
+      class="chat__scroll"
+      data-test="scroll"
+    >
+      <div
+        :ref="scroll.contentRef"
+        class="chat__list"
+        data-test="list"
+      >
         <div
           v-for="(m, i) in active?.messages ?? []"
           :key="i"
           :class="m.role === 'user' ? 'msg msg--user' : 'msg msg--bot'"
           :data-test="m.role === 'user' ? 'user-msg' : 'bot-msg'"
-        >{{ m.text }}</div>
+        >
+          {{ m.text }}
+        </div>
       </div>
       <div data-chat-scroll-gutter />
     </div>
@@ -149,9 +169,14 @@ onBeforeUnmount(() => {
       data-test="fab"
       aria-label="Scroll to bottom"
       @click="scroll.scrollToBottom()"
-    >↓</button>
+    >
+      ↓
+    </button>
     <div class="controls">
-      <button data-test="scroll-up" @click="api.scrollByPx?.(-200)">
+      <button
+        data-test="scroll-up"
+        @click="api.scrollByPx?.(-200)"
+      >
         Scroll up a bit
       </button>
       <PlaybackControls :playback="playback" />

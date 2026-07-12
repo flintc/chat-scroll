@@ -131,7 +131,6 @@ function assertHeldOrWebkitNoop(
   label: string,
 ): void {
   if (browserName === 'webkit') {
-    // eslint-disable-next-line no-console
     console.log(
       `[${label}] webkit: overflow-anchor not honored in nested scroller, ` +
         `drift=${drift.toFixed(1)}px (fix is a no-op here)`,
@@ -176,7 +175,6 @@ test('stick-to-bottom: late image above viewport keeps the reader’s place mid-
 
   const drift = after.refTopInViewport - before.refTopInViewport
   const scrolled = after.scrollTop - before.scrollTop
-  // eslint-disable-next-line no-console
   console.log(
     `[late-img/stick] reference drift=${drift.toFixed(1)}px ` +
       `(before=${before.refTopInViewport.toFixed(1)} after=${after.refTopInViewport.toFixed(1)}) ` +
@@ -225,7 +223,6 @@ test('pin-to-top: late image above the pin keeps the reader’s place when scrol
 
   const drift = after.refTopInViewport - before.refTopInViewport
   const scrolled = after.scrollTop - before.scrollTop
-  // eslint-disable-next-line no-console
   console.log(
     `[late-img/pin] reference drift=${drift.toFixed(1)}px ` +
       `(before=${before.refTopInViewport.toFixed(1)} after=${after.refTopInViewport.toFixed(1)}) ` +

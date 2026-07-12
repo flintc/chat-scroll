@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "keywords": [
     "chat",
@@ -44,5 +45,10 @@
     "directory": "packages/chat-scroll-core"
   },
   "homepage": "https://flintc.github.io/chat-scroll/",
-  "bugs": "https://github.com/flintc/chat-scroll/issues"
+  "bugs": "https://github.com/flintc/chat-scroll/issues",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "typescript-eslint": "^8.62.1"
+  }
 }

@@ -27,7 +27,6 @@ export function pinToTopSpec(): void {
     page.on('console', (msg) => {
       const txt = msg.text()
       if (txt.startsWith('[pin-to-top]')) {
-        // eslint-disable-next-line no-console
         console.log(txt)
       }
     })
@@ -102,7 +101,6 @@ export function pinToTopSpec(): void {
         // The pin should sit within scrollMargin (~12) of the container top.
         // Allow generous tolerance because the cue toast may overlap.
         if (Math.abs(offset - 12) > 30) {
-          // eslint-disable-next-line no-console
           console.log(
             `[pin-to-top] WARNING: drift during expand frame ${i}: offset=${offset.toFixed(1)}px`,
           )
@@ -144,7 +142,6 @@ export function pinToTopSpec(): void {
       if (sb && ub) {
         const offset = ub.y - sb.y
         if (Math.abs(offset - 12) > 30) {
-          // eslint-disable-next-line no-console
           console.log(
             `[pin-to-top] WARNING: drift during collapse frame ${i}: offset=${offset.toFixed(1)}px`,
           )

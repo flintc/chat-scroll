@@ -22,7 +22,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
-      // eslint-disable-next-line no-console
       console.log(txt)
     }
   })
@@ -78,7 +77,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
 
   const after = await readPin()
   const pinDrift = after.pinOffset - before.pinOffset
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-edges] scrolled-away: pin visual drift=${pinDrift.toFixed(1)}px ` +
       `(${before.pinOffset.toFixed(0)}→${after.pinOffset.toFixed(0)}) ` +
@@ -97,7 +95,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   // invariant above is all we can guarantee. (See `reconcileOverflowAnchor`.)
   if (browserName === 'webkit') {
     const scrollTopDrift = after.scrollTop - before.scrollTop
-    // eslint-disable-next-line no-console
     console.log(
       `[pin-edges] webkit: anchoring unavailable in nested scroller, ` +
         `pin drift=${pinDrift.toFixed(1)}px (place-keeping is a no-op here), ` +
@@ -118,7 +115,6 @@ test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
-      // eslint-disable-next-line no-console
       console.log(txt)
     }
   })

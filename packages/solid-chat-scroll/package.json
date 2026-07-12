@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "solid-js": "^1.8.0"
@@ -32,8 +33,12 @@
     "@chat-scroll/core": "workspace:*"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@solidjs/testing-library": "^0.8.10",
-    "solid-js": "^1.9.4"
+    "eslint": "^10.6.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "solid-js": "^1.9.4",
+    "typescript-eslint": "^8.62.1"
   },
   "license": "MIT",
   "publishConfig": {

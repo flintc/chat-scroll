@@ -34,19 +34,33 @@ const body = computed(() =>
       :aria-expanded="open"
       @click="open = !open"
     >
-      <span class="block__icon" aria-hidden="true">
+      <span
+        class="block__icon"
+        aria-hidden="true"
+      >
         {{ part.type === 'thinking' ? '💭' : '🛠' }}
       </span>
       <span class="block__title">
         {{ title }}
-        <span v-if="part.type === 'tool'" class="block__args">{{ args }}</span>
+        <span
+          v-if="part.type === 'tool'"
+          class="block__args"
+        >{{ args }}</span>
       </span>
-      <span class="block__chev" aria-hidden="true">▾</span>
+      <span
+        class="block__chev"
+        aria-hidden="true"
+      >▾</span>
     </button>
     <div class="block__wrap">
       <div class="block__body">
-        <pre v-if="part.type === 'tool'" class="block__pre">{{ body }}</pre>
-        <template v-else>{{ body }}</template>
+        <pre
+          v-if="part.type === 'tool'"
+          class="block__pre"
+        >{{ body }}</pre>
+        <template v-else>
+          {{ body }}
+        </template>
       </div>
     </div>
   </div>

@@ -8,18 +8,19 @@ export function MessageView({ msg }: { msg: RichMessage }) {
       data-test={msg.role === 'user' ? 'user-msg' : 'bot-msg'}
     >
       {/*
-        Index keys keep each slot stable across streaming updates. The
-        part object at index N is replaced on every chunk (immutable
-        update), but the DOM node and the child component instance — and
-        its local `open` state — survive.
+        `part.id` is assigned once at creation and never shifts, so each
+        slot stays stable across streaming updates. The part object is
+        replaced on every chunk (immutable update), but the DOM node and
+        the child component instance — and its local `open` state —
+        survive.
       */}
       {msg.parts.map((part, i) =>
         part.type === 'text' ? (
-          <div key={i} className="msg__text">
+          <div key={part.id} className="msg__text">
             {part.text}
           </div>
         ) : (
-          <Block key={i} part={part} index={i} />
+          <Block key={part.id} part={part} index={i} />
         ),
       )}
     </div>

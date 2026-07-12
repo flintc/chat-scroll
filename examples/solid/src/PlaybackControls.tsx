@@ -1,3 +1,4 @@
+import { For } from 'solid-js'
 import { BEHAVIOR_OPTIONS } from '@chat-scroll/example-shared'
 import type { ChatScrollBehavior } from '@chat-scroll/core'
 import type { UsePlaybackReturn } from './use-playback'
@@ -37,9 +38,9 @@ export function PlaybackControls(props: { playback: UsePlaybackReturn }) {
             )
           }
         >
-          {BEHAVIOR_OPTIONS.map((b) => (
-            <option value={b}>{b}</option>
-          ))}
+          <For each={BEHAVIOR_OPTIONS}>
+            {(b) => <option value={b}>{b}</option>}
+          </For>
         </select>
       </label>
       <label class="duration">

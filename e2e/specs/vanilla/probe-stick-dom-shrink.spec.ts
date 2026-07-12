@@ -51,7 +51,6 @@ test('probe: stick-to-bottom mid-stream DOM shrink silently unlocks', async ({
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-shrink]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -73,7 +72,6 @@ test('probe: stick-to-bottom mid-stream DOM shrink silently unlocks', async ({
       msgCount: c.querySelectorAll('.msg').length,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-shrink] mid-stream: scrollTop=${midStream.scrollTop.toFixed(1)} ` +
       `scrollMax=${midStream.scrollMax.toFixed(1)} ` +
@@ -105,7 +103,6 @@ test('probe: stick-to-bottom mid-stream DOM shrink silently unlocks', async ({
       msgCount: c.querySelectorAll('.msg').length,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-shrink] after shrink + more stream: ` +
       `scrollTop=${afterShrink.scrollTop.toFixed(1)} ` +
@@ -131,7 +128,6 @@ test('probe: stick-to-bottom mid-stream DOM shrink silently unlocks', async ({
       msgCount: c.querySelectorAll('.msg').length,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-shrink] FINAL: ` +
       `scrollTop=${final.scrollTop.toFixed(1)} ` +

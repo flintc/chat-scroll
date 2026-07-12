@@ -59,7 +59,7 @@ export function stickToBottomSpec(): void {
 
     // ─── Click the FAB — snap back to bottom ────────────────
     await showCue(page, 'user clicks ↓ to re-lock')
-    await page.click('[data-test="fab"]')
+    await page.locator('[data-test="fab"]').click()
     await hold(page, 600)
     await expect(page.locator('[data-test="status"]')).toContainText(
       'locked=✓',

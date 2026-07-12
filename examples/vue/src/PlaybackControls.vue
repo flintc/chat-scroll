@@ -32,7 +32,7 @@ function onDurationInput(e: Event) {
       data-test="interval"
       :value="props.playback.intervalMs.value"
       @input="onIntervalInput"
-    />
+    >
     ms
   </label>
   <label class="behavior">
@@ -42,7 +42,11 @@ function onDurationInput(e: Event) {
       :value="props.playback.scrollBehavior.value"
       @change="onBehaviorChange"
     >
-      <option v-for="b in BEHAVIOR_OPTIONS" :key="b" :value="b">{{ b }}</option>
+      <option
+        v-for="b in BEHAVIOR_OPTIONS"
+        :key="b"
+        :value="b"
+      >{{ b }}</option>
     </select>
   </label>
   <label class="duration">
@@ -55,10 +59,13 @@ function onDurationInput(e: Event) {
       data-test="duration"
       :value="props.playback.scrollDurationMs.value"
       @input="onDurationInput"
-    />
+    >
     ms
   </label>
-  <label v-if="props.playback.supportsGutter" class="gutter-toggle">
+  <label
+    v-if="props.playback.supportsGutter"
+    class="gutter-toggle"
+  >
     <input
       type="checkbox"
       data-test="show-gutter"
@@ -69,7 +76,7 @@ function onDurationInput(e: Event) {
             (e.target as HTMLInputElement).checked,
           )
       "
-    />
+    >
     show gutter
   </label>
   <button

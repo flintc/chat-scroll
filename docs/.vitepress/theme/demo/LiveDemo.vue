@@ -24,7 +24,7 @@ const props = withDefaults(
     /** Start with the gutter visualization on (pin scenarios). */
     gutter?: boolean
   }>(),
-  { height: 480, gutter: true },
+  { caption: '', height: 480, gutter: true },
 )
 
 type PaneHandle = InstanceType<typeof ChatPane> | null
@@ -243,7 +243,11 @@ async function reset(): Promise<void> {
   >
     <div class="live-demo__settings">
       <template v-if="scenario === 'thread-switch'">
-        <div class="live-demo__tabs" role="tablist" aria-label="Threads">
+        <div
+          class="live-demo__tabs"
+          role="tablist"
+          aria-label="Threads"
+        >
           <button
             type="button"
             role="tab"
@@ -265,14 +269,21 @@ async function reset(): Promise<void> {
         </div>
       </template>
       <span class="live-demo__spacer" />
-      <label class="live-demo__toggle" title="Chunk cadence of the fake stream">
+      <label
+        class="live-demo__toggle"
+        title="Chunk cadence of the fake stream"
+      >
         Speed
         <select
           v-model.number="speedMs"
           class="live-demo__select"
           aria-label="Stream speed"
         >
-          <option v-for="sp in SPEEDS" :key="sp.ms" :value="sp.ms">
+          <option
+            v-for="sp in SPEEDS"
+            :key="sp.ms"
+            :value="sp.ms"
+          >
             {{ sp.label }}
           </option>
         </select>
@@ -288,7 +299,11 @@ async function reset(): Promise<void> {
             class="live-demo__select"
             aria-label="Pin margin in pixels"
           >
-            <option v-for="m in MARGINS" :key="m" :value="m">{{ m }}px</option>
+            <option
+              v-for="m in MARGINS"
+              :key="m"
+              :value="m"
+            >{{ m }}px</option>
           </select>
         </label>
         <label
@@ -310,12 +325,21 @@ async function reset(): Promise<void> {
           class="live-demo__toggle"
           title="pinClamp — over-scroll an over-tall pinned question so the reply keeps room"
         >
-          <input v-model="clampTall" type="checkbox" />
+          <input
+            v-model="clampTall"
+            type="checkbox"
+          >
           Clamp tall
         </label>
       </template>
-      <label v-if="isPin" class="live-demo__toggle">
-        <input v-model="showGutter" type="checkbox" />
+      <label
+        v-if="isPin"
+        class="live-demo__toggle"
+      >
+        <input
+          v-model="showGutter"
+          type="checkbox"
+        >
         Show gutter
       </label>
       <!-- The home (side-by-side) demo keeps Reset down with the action
@@ -330,7 +354,10 @@ async function reset(): Promise<void> {
       </button>
     </div>
 
-    <div class="live-demo__panes" :style="{ height: `${height}px` }">
+    <div
+      class="live-demo__panes"
+      :style="{ height: `${height}px` }"
+    >
       <template v-if="scenario === 'side-by-side'">
         <ChatPane
           ref="paneA"
@@ -384,7 +411,10 @@ async function reset(): Promise<void> {
         >
           ‹ Prev
         </button>
-        <span class="live-demo__nav-pos" aria-label="Current turn">
+        <span
+          class="live-demo__nav-pos"
+          aria-label="Current turn"
+        >
           {{ navState.pos || '–' }}
         </span>
         <button
@@ -411,7 +441,9 @@ async function reset(): Promise<void> {
       </button>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

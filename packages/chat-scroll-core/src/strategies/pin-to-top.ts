@@ -262,7 +262,7 @@ export function recalcGutter(ctx: StrategyContext): void {
     // is consumed here so subsequent resizes use the fast sync path.
     if (ctx.pinAnimationInterrupted && ctx.reAnchorPin) {
       ctx.pinAnimationInterrupted = false
-      ctx.reAnchorPin(ctx.state.pinnedY)
+      ctx.reAnchorPin()
     } else {
       ctx.container.scrollTop = ctx.state.pinnedY
     }

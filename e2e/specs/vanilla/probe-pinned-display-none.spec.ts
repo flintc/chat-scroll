@@ -38,7 +38,6 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-dn]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -60,9 +59,8 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
   const before = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -74,7 +72,6 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
       contractDelta: c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dn] BEFORE: scrollTop=${before.scrollTop.toFixed(1)} ` +
       `scrollMax=${(before.scrollHeight - before.clientHeight).toFixed(1)} ` +
@@ -104,7 +101,6 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
       contractDelta: c.scrollHeight - c.clientHeight,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dn] AFTER HIDE: scrollTop=${afterHide.scrollTop.toFixed(1)} ` +
       `scrollMax=${(afterHide.scrollHeight - afterHide.clientHeight).toFixed(1)} ` +
@@ -124,9 +120,8 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
   const afterShow = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -138,7 +133,6 @@ test('probe: hiding the pinned element with display:none corrupts gutter math', 
       offsetFromViewportTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dn] AFTER SHOW: scrollTop=${afterShow.scrollTop.toFixed(1)} ` +
       `pinnedY(real)=${afterShow.pinnedYReal.toFixed(1)} ` +

@@ -1,4 +1,4 @@
-import { createSignal, Index, Match, Switch } from 'solid-js'
+import { createSignal, Index, Match, Switch, untrack } from 'solid-js'
 import type {
   Part,
   RichMessage,
@@ -52,7 +52,11 @@ function Block(props: {
   part: () => ThinkingPart | ToolPart
   index: number
 }) {
-  const [open, setOpen] = createSignal(props.part().defaultOpen)
+  // Initial value only — a Block keeps its local open state for its
+  // lifetime, so this read is deliberately untracked.
+  const [open, setOpen] = createSignal(
+    untrack(() => props.part().defaultOpen),
+  )
   const title = () =>
     props.kind === 'thinking'
       ? (props.part() as ThinkingPart).summary

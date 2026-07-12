@@ -94,7 +94,7 @@ export function createChatScroll(
     // expand animation, the block keeps growing through the catch-up window
     // and `pinnedY` shifts each ResizeObserver tick. Without the getter the
     // catch-up lands at the initial value and the pin ends up visibly low.
-    cc.ctx.reAnchorPin = (_target: number): void => {
+    cc.ctx.reAnchorPin = (): void => {
       // Same completion recalc as pinMessage: the gutter is floored while the
       // catch-up runs; tighten on arrival.
       startAnimatedScroll(

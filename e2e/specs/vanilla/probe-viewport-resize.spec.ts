@@ -4,7 +4,6 @@ import {
   hold,
   sendUserMessage,
   showCue,
-  streamN,
 } from '../../fixtures'
 
 /**
@@ -48,7 +47,6 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-resize]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -79,9 +77,8 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
     return page.evaluate(() => {
       const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
       const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
-      const ub = document
-        .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-        [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+      const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+      const ub = ubAll[ubAll.length - 1]!
       const u = ub.getBoundingClientRect()
       const s = c.getBoundingClientRect()
       const pinnedY = u.top - s.top + c.scrollTop
@@ -99,7 +96,6 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
 
   await showCue(page, 'short response — gutter should be non-zero now')
   const before = await measure()
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-resize] BEFORE: clientH=${before.clientHeight} ` +
       `scrollH=${before.scrollHeight} scrollMax=${before.scrollMax} ` +
@@ -122,7 +118,6 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
   await hold(page, 600)
 
   const afterShrink = await measure()
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-resize] SHRINK: clientH=${afterShrink.clientHeight} ` +
       `scrollH=${afterShrink.scrollHeight} scrollMax=${afterShrink.scrollMax} ` +
@@ -136,7 +131,6 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
   await hold(page, 600)
 
   const afterGrow = await measure()
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-resize] GROW:   clientH=${afterGrow.clientHeight} ` +
       `scrollH=${afterGrow.scrollHeight} scrollMax=${afterGrow.scrollMax} ` +
@@ -158,12 +152,10 @@ test('probe: viewport resize with short pinned response breaks tight-pin contrac
   // that nudges measurements without recalcGutter being involved.
   const shrinkShift = afterShrink.contractDelta - before.contractDelta
   const growShift = afterGrow.contractDelta - afterShrink.contractDelta
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-resize] delta-shift on shrink: ${shrinkShift.toFixed(1)}px ` +
       `(expected ≈ 0 if recalcGutter ran on resize)`,
   )
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-resize] delta-shift on grow: ${growShift.toFixed(1)}px ` +
       `(expected ≈ 0 if recalcGutter ran on resize)`,

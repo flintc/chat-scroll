@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --port 3111 --host 0.0.0.0 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 3111 --host 0.0.0.0 --strictPort"
+    "preview": "vite preview --port 3111 --host 0.0.0.0 --strictPort",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@chat-scroll/core": "workspace:*",
@@ -15,7 +16,11 @@
     "solid-js": "^1.9.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "eslint-plugin-solid": "^0.14.5",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.62.1",
     "vite": "^5.4.11",
     "vite-plugin-solid": "^2.11.0"
   }

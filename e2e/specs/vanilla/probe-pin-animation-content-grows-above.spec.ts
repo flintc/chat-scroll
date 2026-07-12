@@ -41,7 +41,6 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-grow]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -93,9 +92,8 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
   // pin's viewport offset will be > scrollMargin by ~Δ.
   const justAfterAnim = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -104,7 +102,6 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
       pinnedYReal: u.top - s.top + c.scrollTop,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-grow] just after animation: scrollTop=${justAfterAnim.scrollTop.toFixed(1)} ` +
       `pin offset from viewport top=${justAfterAnim.pinOffsetFromViewportTop.toFixed(1)} ` +
@@ -119,9 +116,8 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
 
   const afterTick = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -129,7 +125,6 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
       pinOffsetFromViewportTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-grow] after extra tick (resize fires recalcGutter): ` +
       `scrollTop=${afterTick.scrollTop.toFixed(1)} ` +
@@ -139,7 +134,6 @@ test('probe: content grows above pin during pin animation, pin lands wrong', asy
   const jumpDelta =
     afterTick.pinOffsetFromViewportTop -
     justAfterAnim.pinOffsetFromViewportTop
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-grow] visible pin jump on next resize = ${jumpDelta.toFixed(1)}px`,
   )

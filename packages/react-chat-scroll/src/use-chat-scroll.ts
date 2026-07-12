@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from 'react'
 
@@ -11,6 +12,7 @@ import {
   type ChatScrollInstance,
   type ChatScrollOptions,
   type ChatScrollState,
+  type PinClamp,
 } from '@chat-scroll/core'
 
 export interface UseChatScrollOptions extends ChatScrollOptions {
@@ -85,12 +87,10 @@ export interface UseChatScrollReturn {
 export function useChatScroll(
   opts: UseChatScrollOptions = {},
 ): UseChatScrollReturn {
-  // Single instance for the lifetime of the component.
-  const instanceRef = useRef<ChatScrollInstance | null>(null)
-  if (instanceRef.current === null) {
-    instanceRef.current = createChatScroll(opts)
-  }
-  const instance = instanceRef.current
+  // Single instance for the lifetime of the component. Construction is
+  // inert (no DOM access or listeners until mount), so a StrictMode
+  // double-invoked initializer just discards an unused object.
+  const [instance] = useState(() => createChatScroll(opts))
 
   // Keep options in sync. We exclude `onScrollChange` here — adapters own
   // the subscription via subscribe() below.
@@ -103,9 +103,22 @@ export function useChatScroll(
   // key only once the consumer has driven it declaratively — from then on,
   // dropping the prop clears the clamp; never passing it never sends it.
   const hasPinClamp = 'pinClamp' in opts
-  const pinClampDriven = useRef(false)
+  const pinClampDrivenRef = useRef(false)
+
+  // `pinClamp` is an object; re-key it on its fields so an inline literal
+  // (new identity every render) doesn't re-run the sync effect every render.
+  const pinClampTallerThan = opts.pinClamp?.tallerThan
+  const pinClampVisibleHeight = opts.pinClamp?.visibleHeight
+  const pinClamp = useMemo<PinClamp | undefined>(
+    () =>
+      pinClampTallerThan !== undefined && pinClampVisibleHeight !== undefined
+        ? { tallerThan: pinClampTallerThan, visibleHeight: pinClampVisibleHeight }
+        : undefined,
+    [pinClampTallerThan, pinClampVisibleHeight],
+  )
+
   useEffect(() => {
-    if (hasPinClamp) pinClampDriven.current = true
+    if (hasPinClamp) pinClampDrivenRef.current = true
     instance.setOptions({
       strategy: opts.strategy,
       bottomThreshold: opts.bottomThreshold,
@@ -113,7 +126,7 @@ export function useChatScroll(
       bottomInset: opts.bottomInset,
       scrollBehavior: opts.scrollBehavior,
       scrollDurationMs: opts.scrollDurationMs,
-      ...(pinClampDriven.current ? { pinClamp: opts.pinClamp } : {}),
+      ...(pinClampDrivenRef.current ? { pinClamp } : {}),
     })
   }, [
     instance,
@@ -123,11 +136,7 @@ export function useChatScroll(
     opts.bottomInset,
     opts.scrollBehavior,
     opts.scrollDurationMs,
-    // `pinClamp` is an object; depend on its fields (plus key presence)
-    // so an inline literal (new identity every render) doesn't re-run
-    // this every render.
-    opts.pinClamp?.tallerThan,
-    opts.pinClamp?.visibleHeight,
+    pinClamp,
     hasPinClamp,
   ])
 

@@ -4,7 +4,6 @@ import {
   hold,
   sendUserMessage,
   showCue,
-  streamN,
   streamUntilDone,
 } from '../../fixtures'
 
@@ -39,7 +38,6 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-fab-expand]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -65,15 +63,13 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
   await expect(fab).toHaveClass(/fab--visible/, { timeout: 2_000 })
 
   const pinnedYNow = await page.evaluate(() => {
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
     const s = sb.getBoundingClientRect()
     return u.top - s.top + sb.scrollTop
   })
-  // eslint-disable-next-line no-console
   console.log(`[probe-fab-expand] pinnedY ≈ ${pinnedYNow.toFixed(1)}`)
 
   await showCue(page, 'user clicks ↓ to read the bottom of the response')
@@ -84,7 +80,6 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-fab-expand] after FAB click: scrollTop=${afterFab.scrollTop} ` +
       `scrollMax=${afterFab.scrollMax} ` +
@@ -103,7 +98,6 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     return { scrollTop: c.scrollTop, scrollMax: c.scrollHeight - c.clientHeight }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-fab-expand] after block expand: scrollTop=${afterExpand.scrollTop} ` +
       `scrollMax=${afterExpand.scrollMax} ` +
@@ -112,15 +106,13 @@ test('probe: FAB-down then expand-prior-block snaps back to pin', async ({
 
   // Where did the pinned message end up?
   const finalPinnedOffset = await page.evaluate(() => {
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const sb = document.querySelector<HTMLElement>('[data-test="scroll"]')!
     const u = ub.getBoundingClientRect()
     const s = sb.getBoundingClientRect()
     return u.top - s.top
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-fab-expand] final pinned msg offset from scroll top: ` +
       `${finalPinnedOffset.toFixed(1)}`,

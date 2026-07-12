@@ -6,12 +6,19 @@
   "scripts": {
     "dev": "vitepress dev --port 3100 --host 0.0.0.0",
     "build": "vitepress build",
-    "preview": "vitepress preview --port 3102 --host 0.0.0.0"
+    "preview": "vitepress preview --port 3102 --host 0.0.0.0",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@chat-scroll/vue": "workspace:*",
+    "@eslint/js": "^10.0.1",
     "@tanstack/vue-virtual": "^3.13.28",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "typescript-eslint": "^8.62.1",
     "vitepress": "^1.5.0",
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "vue-eslint-parser": "^10.4.1"
   }
 }

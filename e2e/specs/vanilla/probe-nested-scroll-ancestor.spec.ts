@@ -29,7 +29,6 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-anc]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -116,9 +115,8 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const beforeOuterScroll = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
@@ -129,7 +127,6 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
       gutterPx: parseFloat(g.style.height || '0'),
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-anc] BEFORE outer scroll: chatScrollTop=${beforeOuterScroll.chatScrollTop.toFixed(1)} ` +
       `pin offset within chat=${beforeOuterScroll.pinOffsetFromChatTop.toFixed(1)} ` +
@@ -149,9 +146,8 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const afterOuterScroll = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -159,7 +155,6 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
       pinOffsetFromChatTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-anc] AFTER outer scroll: chatScrollTop=${afterOuterScroll.chatScrollTop.toFixed(1)} ` +
       `pin offset within chat=${afterOuterScroll.pinOffsetFromChatTop.toFixed(1)}`,
@@ -175,9 +170,8 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
 
   const afterResize = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -185,7 +179,6 @@ test('probe: chat inside a scrollable ancestor — pin math is invariant under o
       pinOffsetFromChatTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-anc] AFTER block toggle with outer scrolled: ` +
       `chatScrollTop=${afterResize.chatScrollTop.toFixed(1)} ` +

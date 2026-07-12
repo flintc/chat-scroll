@@ -22,7 +22,6 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-dialog]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -78,9 +77,8 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const inDialogPin = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
@@ -94,7 +92,6 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
       contractDelta: c.scrollHeight - c.clientHeight - (u.top - s.top + c.scrollTop),
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dialog] AFTER pin in modal: ` +
       `pin offset from viewport top=${inDialogPin.pinOffsetFromTop.toFixed(1)} ` +
@@ -120,9 +117,8 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const afterReopen = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -130,7 +126,6 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
       pinOffsetFromTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dialog] AFTER close + reopen: ` +
       `scrollTop=${afterReopen.scrollTop.toFixed(1)} ` +
@@ -144,9 +139,8 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
 
   const afterResize = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>('[data-test="user-msg"]')
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     return {
@@ -154,7 +148,6 @@ test('probe: pin-to-top inside <dialog> (modal) — full flow + close/reopen', a
       pinOffsetFromTop: u.top - s.top,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-dialog] AFTER resize in reopened dialog: ` +
       `scrollTop=${afterResize.scrollTop.toFixed(1)} ` +

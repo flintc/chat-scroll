@@ -49,8 +49,16 @@ function nextUser() {
     data-scenario="pin-to-top-simple"
     style="position: relative"
   >
-    <div class="chat__scroll" data-test="scroll" :ref="scroll.containerRef">
-      <div class="chat__list" data-test="list" :ref="scroll.contentRef">
+    <div
+      :ref="scroll.containerRef"
+      class="chat__scroll"
+      data-test="scroll"
+    >
+      <div
+        :ref="scroll.contentRef"
+        class="chat__list"
+        data-test="list"
+      >
         <RichMessageView
           v-for="m in chat.messages.value"
           :key="m.id"
@@ -60,8 +68,18 @@ function nextUser() {
       <div data-chat-scroll-gutter />
     </div>
     <div class="controls">
-      <button data-test="send" @click="send">Send</button>
-      <button data-test="finish" @click="chat.stop()">Finish stream</button>
+      <button
+        data-test="send"
+        @click="send"
+      >
+        Send
+      </button>
+      <button
+        data-test="finish"
+        @click="chat.stop()"
+      >
+        Finish stream
+      </button>
       <button
         data-test="prev-user"
         aria-label="Previous user message"

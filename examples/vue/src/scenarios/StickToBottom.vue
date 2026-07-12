@@ -82,17 +82,30 @@ onBeforeUnmount(() => {
     data-scenario="stick-to-bottom"
     style="position: relative"
   >
-    <div class="status" data-test="status">
+    <div
+      class="status"
+      data-test="status"
+    >
       {{ formatState('stick-to-bottom', scroll.state.value) }}
     </div>
-    <div class="chat__scroll" data-test="scroll" :ref="captureContainer">
-      <div class="chat__list" data-test="list" :ref="scroll.contentRef">
+    <div
+      :ref="captureContainer"
+      class="chat__scroll"
+      data-test="scroll"
+    >
+      <div
+        :ref="scroll.contentRef"
+        class="chat__list"
+        data-test="list"
+      >
         <div
           v-for="m in chat.messages.value"
           :key="m.id"
           :class="m.role === 'user' ? 'msg msg--user' : 'msg msg--bot'"
           :data-test="m.role === 'user' ? 'user-msg' : 'bot-msg'"
-        >{{ m.text }}</div>
+        >
+          {{ m.text }}
+        </div>
       </div>
       <div data-chat-scroll-gutter />
     </div>
@@ -102,7 +115,9 @@ onBeforeUnmount(() => {
       data-test="fab"
       aria-label="Scroll to bottom"
       @click="follow.resume()"
-    >↓</button>
+    >
+      ↓
+    </button>
     <div class="controls">
       <button
         data-test="send"
@@ -112,8 +127,13 @@ onBeforeUnmount(() => {
             playback.start()
           }
         "
-      >Append message</button>
-      <button data-test="scroll-up" @click="api.scrollByPx?.(-300)">
+      >
+        Append message
+      </button>
+      <button
+        data-test="scroll-up"
+        @click="api.scrollByPx?.(-300)"
+      >
         Simulate scroll up
       </button>
       <PlaybackControls :playback="playback" />

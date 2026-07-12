@@ -75,7 +75,6 @@ test('pin-expandable: tapping a block does not drift the pin', async ({
   if (!ub2 || !sb2) throw new Error('missing boxes')
   const offsetAfter = ub2.y - sb2.y
   const drift = offsetAfter - offsetBefore
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-tap] pin drift after tap-expand: ${drift.toFixed(1)}px ` +
       `(before=${offsetBefore.toFixed(1)}, after=${offsetAfter.toFixed(1)})`,

@@ -10,11 +10,12 @@ import {
   showCue,
   type DemoApi,
 } from '@chat-scroll/example-shared'
-import { scrollToBottomOnMount } from '../scroll-helpers'
+import { useScrollToBottomOnMount } from '../scroll-helpers'
 import { PlaybackControls } from '../PlaybackControls'
 import { usePlayback } from '../use-playback'
 
 interface Msg {
+  id: string
   role: 'user' | 'bot'
   text: string
 }
@@ -29,9 +30,9 @@ interface Thread {
 function makeThreads(): Thread[] {
   const canonical: Msg[] = [
     ...PRIOR_TURNS,
-    { role: 'user', text: USER_PROMPT },
-    { role: 'bot', text: ASSISTANT_CHUNKS.join('') },
-  ]
+    { role: 'user' as const, text: USER_PROMPT },
+    { role: 'bot' as const, text: ASSISTANT_CHUNKS.join('') },
+  ].map((m, i) => ({ ...m, id: `m${i}` }))
   return [
     { id: 't1', title: 'About scroll', messages: canonical.slice(), saved: null },
     { id: 't2', title: 'Same convo, retry', messages: canonical.slice(), saved: null },
@@ -46,18 +47,17 @@ export function ThreadSwitch() {
   })
   // Threads live for the component's lifetime — `saved` positions are
   // mutated in place on every switch.
-  const threadsRef = useRef<Thread[] | null>(null)
-  if (threadsRef.current === null) threadsRef.current = makeThreads()
-  const threads = threadsRef.current
+  const [threads] = useState(makeThreads)
   const [activeId, setActiveId] = useState(threads[0]?.id ?? 't1')
   const containerElRef = useRef<HTMLElement | null>(null)
 
+  const { containerRef, contentRef } = scroll
   const captureContainer = useCallback(
     (el: HTMLElement | null) => {
       containerElRef.current = el
-      scroll.containerRef(el)
+      containerRef(el)
     },
-    [scroll.containerRef],
+    [containerRef],
   )
 
   const active = threads.find((t) => t.id === activeId)
@@ -82,7 +82,7 @@ export function ThreadSwitch() {
     }
   }
 
-  scrollToBottomOnMount(scroll)
+  useScrollToBottomOnMount(scroll)
 
   // No streaming — playback bar is rendered (so every scenario has the
   // same controls) but tick is a no-op.
@@ -95,9 +95,11 @@ export function ThreadSwitch() {
     isEnabled: () => false,
   })
 
+  const { instance, state } = scroll
+  const { refresh: refreshPlayback } = playback
   useEffect(
-    () => scroll.instance.subscribe(() => playback.refresh()),
-    [scroll.instance, playback.refresh],
+    () => instance.subscribe(() => refreshPlayback()),
+    [instance, refreshPlayback],
   )
 
   const api: DemoApi = {
@@ -148,15 +150,15 @@ export function ThreadSwitch() {
       <div className="status" data-test="status">
         {formatState(
           'stick-to-bottom',
-          scroll.state,
+          state,
           `thread: ${active?.title ?? '?'}`,
         )}
       </div>
       <div className="chat__scroll" data-test="scroll" ref={captureContainer}>
-        <div className="chat__list" data-test="list" ref={scroll.contentRef}>
-          {(active?.messages ?? []).map((m, i) => (
+        <div className="chat__list" data-test="list" ref={contentRef}>
+          {(active?.messages ?? []).map((m) => (
             <div
-              key={i}
+              key={m.id}
               className={m.role === 'user' ? 'msg msg--user' : 'msg msg--bot'}
               data-test={m.role === 'user' ? 'user-msg' : 'bot-msg'}
             >
@@ -167,7 +169,7 @@ export function ThreadSwitch() {
         <div data-chat-scroll-gutter="" />
       </div>
       <button
-        className={scroll.state.atBottom ? 'fab' : 'fab fab--visible'}
+        className={state.atBottom ? 'fab' : 'fab fab--visible'}
         data-test="fab"
         aria-label="Scroll to bottom"
         onClick={() => scroll.scrollToBottom()}

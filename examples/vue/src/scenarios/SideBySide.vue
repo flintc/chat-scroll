@@ -166,25 +166,60 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat" data-scenario="side-by-side">
+  <div
+    class="chat"
+    data-scenario="side-by-side"
+  >
     <div
       class="panel"
       :class="{ 'chat--show-gutter': playback.showGutter.value }"
       data-test="panel-pin"
     >
-      <div class="panel__title">Pin to top</div>
-      <div class="status" data-test="status-pin">
+      <div class="panel__title">
+        Pin to top
+      </div>
+      <div
+        class="status"
+        data-test="status-pin"
+      >
         {{ formatState('pin-to-top', pin.state.value) }}
       </div>
-      <div class="chat__scroll" data-test="scroll-pin" :ref="capturePinContainer">
-        <div class="chat__list" data-test="list-pin" :ref="capturePinList">
-          <template v-for="(t, i) in priors" :key="`p${i}`">
-            <div :class="t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'">{{ t.text }}</div>
+      <div
+        :ref="capturePinContainer"
+        class="chat__scroll"
+        data-test="scroll-pin"
+      >
+        <div
+          :ref="capturePinList"
+          class="chat__list"
+          data-test="list-pin"
+        >
+          <template
+            v-for="(t, i) in priors"
+            :key="`p${i}`"
+          >
+            <div :class="t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'">
+              {{ t.text }}
+            </div>
           </template>
-          <template v-for="turn in turns" :key="turn.key">
-            <div :data-pin-key="turn.key" style="display: contents">
-              <div class="msg msg--user" data-test="user-msg">{{ turn.prompt }}</div>
-              <div class="msg msg--bot" data-test="bot-msg"></div>
+          <template
+            v-for="turn in turns"
+            :key="turn.key"
+          >
+            <div
+              :data-pin-key="turn.key"
+              style="display: contents"
+            >
+              <div
+                class="msg msg--user"
+                data-test="user-msg"
+              >
+                {{ turn.prompt }}
+              </div>
+              <div
+                class="msg msg--bot"
+                data-test="bot-msg"
+              />
             </div>
           </template>
         </div>
@@ -196,22 +231,59 @@ onBeforeUnmount(() => {
         data-test="fab-pin"
         aria-label="Scroll to latest"
         @click="pin.scrollToBottom()"
-      >↓</button>
+      >
+        ↓
+      </button>
     </div>
-    <div class="panel" data-test="panel-stick">
-      <div class="panel__title">Stick to bottom</div>
-      <div class="status" data-test="status-stick">
+    <div
+      class="panel"
+      data-test="panel-stick"
+    >
+      <div class="panel__title">
+        Stick to bottom
+      </div>
+      <div
+        class="status"
+        data-test="status-stick"
+      >
         {{ formatState('stick-to-bottom', stick.state.value) }}
       </div>
-      <div class="chat__scroll" data-test="scroll-stick" :ref="stick.containerRef">
-        <div class="chat__list" data-test="list-stick" :ref="captureStickList">
-          <template v-for="(t, i) in priors" :key="`p${i}`">
-            <div :class="t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'">{{ t.text }}</div>
+      <div
+        :ref="stick.containerRef"
+        class="chat__scroll"
+        data-test="scroll-stick"
+      >
+        <div
+          :ref="captureStickList"
+          class="chat__list"
+          data-test="list-stick"
+        >
+          <template
+            v-for="(t, i) in priors"
+            :key="`p${i}`"
+          >
+            <div :class="t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'">
+              {{ t.text }}
+            </div>
           </template>
-          <template v-for="turn in turns" :key="turn.key">
-            <div :data-stick-key="turn.key" style="display: contents">
-              <div class="msg msg--user" data-test="user-msg">{{ turn.prompt }}</div>
-              <div class="msg msg--bot" data-test="bot-msg"></div>
+          <template
+            v-for="turn in turns"
+            :key="turn.key"
+          >
+            <div
+              :data-stick-key="turn.key"
+              style="display: contents"
+            >
+              <div
+                class="msg msg--user"
+                data-test="user-msg"
+              >
+                {{ turn.prompt }}
+              </div>
+              <div
+                class="msg msg--bot"
+                data-test="bot-msg"
+              />
             </div>
           </template>
         </div>
@@ -228,7 +300,9 @@ onBeforeUnmount(() => {
             stick.lock()
           }
         "
-      >↓</button>
+      >
+        ↓
+      </button>
     </div>
     <div class="controls">
       <button
@@ -239,8 +313,15 @@ onBeforeUnmount(() => {
             playback.start()
           }
         "
-      >Send next prompt</button>
-      <button data-test="finish" @click="api.finishStream()">Finish stream</button>
+      >
+        Send next prompt
+      </button>
+      <button
+        data-test="finish"
+        @click="api.finishStream()"
+      >
+        Finish stream
+      </button>
       <PlaybackControls :playback="playback" />
     </div>
   </div>

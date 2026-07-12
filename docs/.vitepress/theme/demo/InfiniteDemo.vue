@@ -10,13 +10,13 @@ import {
 } from './data'
 import { useDemoChat } from './useDemoChat'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     caption?: string
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { height: 420 },
+  { caption: '', height: 420 },
 )
 
 // Open with the two newest pages loaded (enough to overflow the pane),
@@ -102,12 +102,19 @@ async function reset(): Promise<void> {
         messages loaded
       </span>
       <span class="infinite-demo__spacer" />
-      <button type="button" class="infinite-demo__btn" @click="reset">
+      <button
+        type="button"
+        class="infinite-demo__btn"
+        @click="reset"
+      >
         Reset
       </button>
     </div>
 
-    <div class="infinite-demo__surface" :style="{ height: `${height}px` }">
+    <div
+      class="infinite-demo__surface"
+      :style="{ height: `${height}px` }"
+    >
       <ChatPane
         ref="pane"
         strategy="stick-to-bottom"
@@ -119,8 +126,14 @@ async function reset(): Promise<void> {
           <!-- Constant-height header: swapping its text never shifts
                the transcript, so only the page prepend needs scroll
                compensation. -->
-          <div class="infinite-demo__head" aria-live="polite">
-            <span v-if="fetching" class="infinite-demo__head-loading">
+          <div
+            class="infinite-demo__head"
+            aria-live="polite"
+          >
+            <span
+              v-if="fetching"
+              class="infinite-demo__head-loading"
+            >
               Loading earlier messages…
             </span>
             <span v-else-if="hasOlder">
@@ -154,7 +167,10 @@ async function reset(): Promise<void> {
         >
           ‹ Prev
         </button>
-        <span class="infinite-demo__nav-pos" aria-label="Current turn">
+        <span
+          class="infinite-demo__nav-pos"
+          aria-label="Current turn"
+        >
           {{ navState.pos || '–' }}
         </span>
         <button
@@ -169,7 +185,9 @@ async function reset(): Promise<void> {
       </div>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

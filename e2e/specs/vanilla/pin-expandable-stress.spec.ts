@@ -23,7 +23,6 @@ test('pin-expandable: rapid toggle storm while streaming', async ({ page }) => {
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-stress]')) {
-      // eslint-disable-next-line no-console
       console.log(txt)
     }
   })

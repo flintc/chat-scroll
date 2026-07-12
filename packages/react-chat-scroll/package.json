@@ -23,6 +23,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -32,11 +33,16 @@
     "@chat-scroll/core": "workspace:*"
   },
   "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.10.4",
+    "@eslint/js": "^10.0.1",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@types/react-dom": "^19.0.2"
+    "typescript-eslint": "^8.62.1"
   },
   "license": "MIT",
   "publishConfig": {
