@@ -1,4 +1,4 @@
-import { createGutter } from './gutter'
+import { resolveGutter } from './gutter'
 import { recalcGutter } from './strategies/pin-to-top'
 import { CLEARABLE_OPTION_KEYS } from './types'
 import type { ChatScrollInstance, ChatScrollOptions } from './types'
@@ -52,8 +52,25 @@ export function createChatScroll(
 ): ChatScrollInstance {
   const cc = createControllerContext(opts)
 
-  function mount(container: HTMLElement, content: HTMLElement): void {
-    if (cc.ctx.container === container && cc.ctx.content === content) return
+  function mount(
+    container: HTMLElement,
+    content: HTMLElement,
+    gutter?: HTMLElement | null,
+  ): void {
+    // No-op only while the current gutter is still live in the container:
+    // if the framework replaced the tagged div (template HMR, unusual
+    // keying) the stale node is detached and the remount re-resolves.
+    // `gutter == null` (not `=== undefined`): plain-JS callers pass a ref
+    // that is null before it fires, and that must not defeat idempotency.
+    if (
+      cc.ctx.container === container &&
+      cc.ctx.content === content &&
+      (gutter == null || cc.ctx.gutter === gutter) &&
+      cc.ctx.gutter !== null &&
+      cc.ctx.gutter.parentElement === container
+    ) {
+      return
+    }
     if (cc.ctx.container) teardownDom(cc)
 
     cc.ctx.container = container
@@ -61,7 +78,14 @@ export function createChatScroll(
 
     applyContainerStyles(cc)
     applyContentStyles(cc)
-    cc.ctx.gutter = createGutter(container)
+    // Adopt a consumer-rendered gutter (the explicit argument, or a direct
+    // child tagged `data-chat-scroll-gutter`); create one only when the
+    // consumer didn't render one. `savedGutterStyles` decides teardown:
+    // null → controller-owned, removed; non-null → adopted, left in place
+    // with the saved inline state restored.
+    const resolvedGutter = resolveGutter(container, gutter)
+    cc.ctx.gutter = resolvedGutter.el
+    cc.savedGutterStyles = resolvedGutter.savedStyles
     // Strategies call this to request a smooth catch-up to the pin instead of
     // a synchronous `scrollTop = pinnedY` jump. Used after the
     // pointerdown-abort case where the user is far from the pin and a teleport

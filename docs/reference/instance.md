@@ -36,10 +36,22 @@ interface ChatScrollInstance {
 
 ## Methods
 
-### `mount(container, content)`
+### `mount(container, content, gutter?)`
 
 Wires up listeners, the ResizeObserver, and the gutter element. Required
 before any other DOM-touching method does anything useful.
+
+The gutter is resolved in order of precedence: the `gutter` argument if
+given (`null` counts as omitted; a non-null element must be a direct
+child of the container — anything else throws); a direct child of the
+container carrying `data-chat-scroll-gutter` (render an empty
+`<div data-chat-scroll-gutter />` after your content); otherwise
+`mount()` creates and appends one. An adopted gutter is never removed —
+`destroy()` restores its inline styles (and removes the attribute stamp
+if `mount()` added it) and leaves the node in place; a created one is
+removed. Keep the div unstyled: `mount()` zeroes `min-height`, `padding`
+and `border` inline because stylesheet values there would silently
+diverge from the height the controller writes.
 
 Idempotent — calling with the same elements is a no-op. Calling with
 different elements tears down the previous mount before re-mounting.

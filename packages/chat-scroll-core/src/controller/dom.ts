@@ -1,4 +1,4 @@
-import { destroyGutter } from '../gutter'
+import { destroyGutter, restoreGutterStyles } from '../gutter'
 import type { ControllerContext } from './context'
 import { restoreContainerStyles, restoreContentStyles } from './dom-styles'
 import { measureAtBottom } from './reservation'
@@ -140,8 +140,10 @@ export function attachResizeObservers(cc: ControllerContext): void {
 
 /**
  * Tear down every DOM binding, observer, timer and rAF handle, restoring the
- * consumer's saved styles and removing the gutter. Operates on the currently
- * bound elements — `mount()` calls this before re-binding, `destroy()` after.
+ * consumer's saved styles. The gutter is removed only when the controller
+ * created it; an adopted (consumer-rendered) gutter stays in the DOM with
+ * its inline styles restored. Operates on the currently bound elements —
+ * `mount()` calls this before re-binding, `destroy()` after.
  */
 export function teardownDom(cc: ControllerContext): void {
   if (cc.activeScrollAbort) {
@@ -179,9 +181,19 @@ export function teardownDom(cc: ControllerContext): void {
   }
   cc.userInputListeners = []
   if (cc.ctx.gutter) {
-    destroyGutter(cc.ctx.gutter)
+    if (cc.savedGutterStyles) {
+      // Adopted node — the framework's renderer created it and may hold
+      // references to it; removing it is not the controller's call.
+      // Restore the saved inline state instead: in the canonical case (an
+      // empty template div) the prior height is '', so the node collapses
+      // back to zero.
+      restoreGutterStyles(cc.ctx.gutter, cc.savedGutterStyles)
+    } else {
+      destroyGutter(cc.ctx.gutter)
+    }
     cc.ctx.gutter = null
   }
+  cc.savedGutterStyles = null
   restoreContainerStyles(cc)
   restoreContentStyles(cc)
   cancelStreamingGrace(cc)

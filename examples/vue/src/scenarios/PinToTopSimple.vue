@@ -57,6 +57,7 @@ function nextUser() {
           :msg="m"
         />
       </div>
+      <div data-chat-scroll-gutter />
     </div>
     <div class="controls">
       <button data-test="send" @click="send">Send</button>

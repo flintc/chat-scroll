@@ -236,6 +236,7 @@ export function SideBySide() {
               </div>
             ))}
           </div>
+          <div data-chat-scroll-gutter="" />
         </div>
         <button
           className={pinFabVisible ? 'fab fab--visible' : 'fab'}
@@ -282,6 +283,7 @@ export function SideBySide() {
               </div>
             ))}
           </div>
+          <div data-chat-scroll-gutter="" />
         </div>
         <button
           className={stick.state.atBottom ? 'fab' : 'fab fab--visible'}

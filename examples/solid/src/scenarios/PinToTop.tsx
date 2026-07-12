@@ -171,6 +171,7 @@ export function PinToTop() {
             )}
           </For>
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <button
         class="fab"

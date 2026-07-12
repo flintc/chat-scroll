@@ -1,3 +1,4 @@
+import type { SavedGutterStyles } from '../gutter'
 import { pinToTopStrategy } from '../strategies/pin-to-top'
 import { stickToBottomStrategy } from '../strategies/stick-to-bottom'
 import type { Strategy, StrategyContext } from '../strategies/types'
@@ -139,6 +140,16 @@ export interface ControllerContext {
   // ── Saved consumer styles (restored on teardown) ──────────────
   savedContainerStyles: SavedContainerStyles | null
   savedContentStyles: SavedContentStyles | null
+
+  // ── Gutter ownership ──────────────────────────────────────────
+  /**
+   * Prior inline state of an adopted (consumer-rendered) gutter —
+   * teardown restores it and leaves the node in place; removing a node
+   * the framework's renderer created is not the controller's call.
+   * `null` means the controller owns the node and teardown removes it.
+   * The null-ness is the ownership bit; see `ResolvedGutter`.
+   */
+  savedGutterStyles: SavedGutterStyles | null
 }
 
 /**
@@ -216,5 +227,6 @@ export function createControllerContext(
     lastSeenScrollHeight: 0,
     savedContainerStyles: null,
     savedContentStyles: null,
+    savedGutterStyles: null,
   }
 }

@@ -204,6 +204,7 @@ export function SideBySide() {
               )}
             </For>
           </div>
+          <div data-chat-scroll-gutter="" />
         </div>
         <button
           class="fab"
@@ -242,6 +243,7 @@ export function SideBySide() {
               )}
             </For>
           </div>
+          <div data-chat-scroll-gutter="" />
         </div>
         <button
           class="fab"

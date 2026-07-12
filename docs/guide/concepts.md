@@ -14,8 +14,8 @@ component: the **container**, the **content**, and the **gutter**.
 │  │  Your messages render here.              │ │
 │  │                                          │ │
 │  └──────────────────────────────────────────┘ │
-│  ┌─ gutter (chat-scroll appends) ──────────┐  │ ← height computed
-│  │                                          │ │   automatically
+│  ┌─ gutter (you provide, or chat-scroll ───┐  │ ← height computed
+│  │   appends one)                           │ │   automatically
 │  └──────────────────────────────────────────┘ │
 └──────────────────────────────────────────────┘
 ```
@@ -24,11 +24,28 @@ component: the **container**, the **content**, and the **gutter**.
 | ------------- | --------------- | ---------------------------------------- |
 | **container** | You             | The scrollable element. Owns overflow.   |
 | **content**   | You             | Wraps your messages. The thing that gets observed for resize. |
-| **gutter**    | `chat-scroll`   | Inserted as the last child of container. |
+| **gutter**    | You (or `chat-scroll`) | Empty spacer, last child of container. `chat-scroll` sizes it. |
 
-You wire both elements via refs / ref callbacks. `chat-scroll` applies the
+You wire the elements via refs / ref callbacks. `chat-scroll` applies the
 required styles to the container (`overflow-y: auto`, `display: flex`,
-`flex-direction: column`) and inserts the gutter on `mount()`.
+`flex-direction: column`) on `mount()`.
+
+The gutter is best rendered in your own template — an empty div carrying
+the `data-chat-scroll-gutter` attribute, right after the content:
+
+```html
+<div ref="container">
+  <div ref="content">…messages…</div>
+  <div data-chat-scroll-gutter></div>
+</div>
+```
+
+`mount()` finds it by the attribute and adopts it: every node stays
+framework-owned, `chat-scroll` only ever writes the gutter's height, and
+on `destroy()` the div stays where your template put it. This also keeps
+server and client markup identical under SSR. If you don't render one,
+`mount()` creates and appends it for you — and removes it again on
+`destroy()`.
 
 ## Strategies
 

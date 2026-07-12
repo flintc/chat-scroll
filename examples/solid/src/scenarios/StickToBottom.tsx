@@ -96,6 +96,7 @@ export function StickToBottom() {
             )}
           </For>
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <button
         class="fab"

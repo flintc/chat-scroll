@@ -164,6 +164,7 @@ export function ThreadSwitch() {
             </div>
           ))}
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <button
         className={scroll.state.atBottom ? 'fab' : 'fab fab--visible'}

@@ -41,6 +41,7 @@ export function PinToTopSimple() {
             <MessageView key={m.id} msg={m} />
           ))}
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <div className="controls">
         <button

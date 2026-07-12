@@ -40,6 +40,7 @@ export function PinToTopSimple() {
         <div class="chat__list" data-test="list" ref={scroll.contentRef}>
           <For each={chat.messages()}>{(msg) => <MessageView msg={msg} />}</For>
         </div>
+        <div data-chat-scroll-gutter="" />
       </div>
       <div class="controls">
         <button

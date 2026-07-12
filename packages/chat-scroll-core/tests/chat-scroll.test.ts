@@ -188,6 +188,110 @@ describe('createChatScroll', () => {
       expect(b.container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
       s.destroy()
     })
+
+    it('destroy removes a controller-created gutter', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll()
+      s.mount(container, content)
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
+      s.destroy()
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeNull()
+    })
+
+    it('adopts a consumer-rendered gutter and leaves it in place on destroy', () => {
+      // The headless-clean form: the consumer renders
+      // `<div data-chat-scroll-gutter />` below the content in their own
+      // template. The controller must adopt it (no second node), size it,
+      // and on destroy restore its inline styles WITHOUT removing it —
+      // the framework's renderer owns that node.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const g = document.createElement('div')
+      g.setAttribute('data-chat-scroll-gutter', '')
+      container.appendChild(g)
+
+      const s = createChatScroll({ strategy: 'pin-to-top' })
+      s.mount(container, content)
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+      expect(g.style.flexShrink).toBe('0')
+
+      s.destroy()
+      expect(container.contains(g)).toBe(true)
+      // Inline styles restored — an empty div's natural height is 0, so
+      // no scroll slack outlives the mount.
+      expect(g.style.height).toBe('')
+      expect(g.style.flexShrink).toBe('')
+    })
+
+    it('accepts an explicit gutter element as the third mount argument', () => {
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const g = document.createElement('div')
+      container.appendChild(g)
+
+      const s = createChatScroll()
+      s.mount(container, content, g)
+      // Adopted: tagged, styled, and no second node created.
+      expect(g.getAttribute('data-chat-scroll-gutter')).toBe('')
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+
+      s.destroy()
+      expect(container.contains(g)).toBe(true)
+      // The stamp is removed with the styles — the node is back to its
+      // pre-mount state and can't hijack a later mount's adoption.
+      expect(g.hasAttribute('data-chat-scroll-gutter')).toBe(false)
+    })
+
+    it('a null gutter argument does not defeat mount idempotency', () => {
+      // Plain-JS consumers pass `gutterRef.current`, which is null before
+      // the ref fires. That must behave like an omitted argument — not
+      // force a teardown+remount on every render.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const s = createChatScroll()
+      s.mount(container, content, null)
+      const g = container.querySelector('[data-chat-scroll-gutter]')
+      s.mount(container, content, null)
+      s.mount(container, content)
+      expect(ro.callbacks().size).toBe(1) // no re-bind happened
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBe(g)
+      s.destroy()
+    })
+
+    it("removes a dead instance's leftover gutter on the next destroy", () => {
+      // First instance never destroyed (HMR / crash): its created gutter
+      // stays behind with a streamed height. The next instance re-owns
+      // it, so ITS destroy removes the node instead of leaving phantom
+      // scroll slack behind.
+      const ro = installFakeResizeObserver()
+      cleanup.push(ro.uninstall)
+      const { container, content } = buildScrollDom()
+      const dead = createChatScroll()
+      dead.mount(container, content)
+      const leftover = container.querySelector<HTMLElement>(
+        '[data-chat-scroll-gutter]',
+      )!
+      leftover.style.height = '448px'
+      // dead is never destroyed — simulate the module being swapped out.
+
+      const next = createChatScroll()
+      next.mount(container, content)
+      expect(
+        container.querySelectorAll('[data-chat-scroll-gutter]').length,
+      ).toBe(1)
+      expect(leftover.style.height).toBe('0px')
+      next.destroy()
+      expect(container.querySelector('[data-chat-scroll-gutter]')).toBeNull()
+    })
   })
 
   describe('at-bottom detection', () => {
