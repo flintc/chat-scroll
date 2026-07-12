@@ -34,9 +34,24 @@ function makeThreads(): Thread[] {
     { role: 'bot', text: ASSISTANT_CHUNKS.join('') },
   ]
   return [
-    { id: 't1', title: 'About scroll', messages: canonical.slice(), saved: null },
-    { id: 't2', title: 'Same convo, retry', messages: canonical.slice(), saved: null },
-    { id: 't3', title: 'Yet another', messages: canonical.slice(), saved: null },
+    {
+      id: 't1',
+      title: 'About scroll',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't2',
+      title: 'Same convo, retry',
+      messages: canonical.slice(),
+      saved: null,
+    },
+    {
+      id: 't3',
+      title: 'Yet another',
+      messages: canonical.slice(),
+      saved: null,
+    },
   ]
 }
 
@@ -81,7 +96,8 @@ const playback = usePlayback({
   initialBehavior: 'instant',
   tick: () => false,
   onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+  onDurationChange: (ms) =>
+    scroll.instance.setOptions({ scrollDurationMs: ms }),
   isEnabled: () => false,
 })
 
@@ -132,14 +148,16 @@ onBeforeUnmount(() => {
         )
       }}
     </div>
-    <div class="chat__scroll" data-test="scroll" :ref="captureContainer">
-      <div class="chat__list" data-test="list" :ref="scroll.contentRef">
+    <div :ref="captureContainer" class="chat__scroll" data-test="scroll">
+      <div :ref="scroll.contentRef" class="chat__list" data-test="list">
         <div
           v-for="(m, i) in active?.messages ?? []"
           :key="i"
           :class="m.role === 'user' ? 'msg msg--user' : 'msg msg--bot'"
           :data-test="m.role === 'user' ? 'user-msg' : 'bot-msg'"
-        >{{ m.text }}</div>
+        >
+          {{ m.text }}
+        </div>
       </div>
       <div data-chat-scroll-gutter />
     </div>
@@ -149,7 +167,9 @@ onBeforeUnmount(() => {
       data-test="fab"
       aria-label="Scroll to bottom"
       @click="scroll.scrollToBottom()"
-    >↓</button>
+    >
+      ↓
+    </button>
     <div class="controls">
       <button data-test="scroll-up" @click="api.scrollByPx?.(-200)">
         Scroll up a bit

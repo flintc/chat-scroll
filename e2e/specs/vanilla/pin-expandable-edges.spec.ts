@@ -22,7 +22,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
-      // eslint-disable-next-line no-console
       console.log(txt)
     }
   })
@@ -78,7 +77,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
 
   const after = await readPin()
   const pinDrift = after.pinOffset - before.pinOffset
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-edges] scrolled-away: pin visual drift=${pinDrift.toFixed(1)}px ` +
       `(${before.pinOffset.toFixed(0)}→${after.pinOffset.toFixed(0)}) ` +
@@ -97,7 +95,6 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   // invariant above is all we can guarantee. (See `reconcileOverflowAnchor`.)
   if (browserName === 'webkit') {
     const scrollTopDrift = after.scrollTop - before.scrollTop
-    // eslint-disable-next-line no-console
     console.log(
       `[pin-edges] webkit: anchoring unavailable in nested scroller, ` +
         `pin drift=${pinDrift.toFixed(1)}px (place-keeping is a no-op here), ` +
@@ -114,11 +111,12 @@ test('pin-expandable: scrolled-away does not snap back', async ({
   await hold(page, 500)
 })
 
-test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }) => {
+test('pin-expandable: stream-ended toggle leaves layout stable', async ({
+  page,
+}) => {
   page.on('console', (msg) => {
     const txt = msg.text()
     if (txt.startsWith('[pin-edges]')) {
-      // eslint-disable-next-line no-console
       console.log(txt)
     }
   })
@@ -146,7 +144,9 @@ test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }
     .locator('[data-test="user-msg"]')
     .last()
     .boundingBox()
-  const scrollBoxBefore = await page.locator('[data-test="scroll"]').boundingBox()
+  const scrollBoxBefore = await page
+    .locator('[data-test="scroll"]')
+    .boundingBox()
 
   // Toggle a prior block AFTER stream has ended. With `streaming: false`,
   // `overflow-anchor` is back to 'auto' so the browser auto-anchors;
@@ -161,13 +161,18 @@ test('pin-expandable: stream-ended toggle leaves layout stable', async ({ page }
     .locator('[data-test="user-msg"]')
     .last()
     .boundingBox()
-  const scrollBoxAfter = await page.locator('[data-test="scroll"]').boundingBox()
+  const scrollBoxAfter = await page
+    .locator('[data-test="scroll"]')
+    .boundingBox()
 
   if (scrollBoxBefore && user2BoxBefore && scrollBoxAfter && user2BoxAfter) {
     const dy =
-      (user2BoxAfter.y - scrollBoxAfter.y) -
+      user2BoxAfter.y -
+      scrollBoxAfter.y -
       (user2BoxBefore.y - scrollBoxBefore.y)
-    console.log(`[pin-edges] stream-ended toggle: pin drift = ${dy.toFixed(1)}px`)
+    console.log(
+      `[pin-edges] stream-ended toggle: pin drift = ${dy.toFixed(1)}px`,
+    )
     expect(Math.abs(dy)).toBeLessThan(10)
   }
 })

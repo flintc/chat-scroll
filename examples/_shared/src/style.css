@@ -10,12 +10,25 @@
   --bot: #ffffff;
   --bot-fg: #0f172a;
   --border: #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-* { box-sizing: border-box; }
-html, body, #app { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+}
 
-#app { display: flex; flex-direction: column; }
+#app {
+  display: flex;
+  flex-direction: column;
+}
 
 header.demo-bar {
   flex: 0 0 auto;
@@ -32,7 +45,10 @@ header.demo-bar a {
   padding: 4px 8px;
   border-radius: 6px;
 }
-header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
+header.demo-bar a.active {
+  background: #f1f5f9;
+  color: var(--fg);
+}
 
 /* The chat surface — sized for clean video framing (16:10-ish). */
 .chat {
@@ -175,7 +191,9 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   font-size: 11px;
   transition: transform 220ms;
 }
-.block[data-open='true'] .block__chev { transform: rotate(180deg); }
+.block[data-open='true'] .block__chev {
+  transform: rotate(180deg);
+}
 .block__wrap {
   display: grid;
   grid-template-rows: 0fr;
@@ -198,15 +216,24 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   padding: 10px 12px 12px;
   border-top-color: var(--border);
 }
-.block--thinking .block__body { color: var(--muted); font-style: italic; }
+.block--thinking .block__body {
+  color: var(--muted);
+  font-style: italic;
+}
 .block__pre {
   margin: 0;
-  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
   color: var(--fg);
   white-space: pre;
   overflow-x: auto;
 }
-.msg__text { white-space: pre-wrap; }
+.msg__text {
+  white-space: pre-wrap;
+}
 
 /* Inline composer — autogrowing textarea + send button. Sits between
    .chat__scroll and .controls inside the chat's flex column. As the
@@ -254,7 +281,9 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   cursor: pointer;
   flex: 0 0 auto;
 }
-.composer__send:hover { filter: brightness(1.08); }
+.composer__send:hover {
+  filter: brightness(1.08);
+}
 
 .controls {
   flex: 0 0 auto;
@@ -273,7 +302,9 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   color: var(--fg);
   cursor: pointer;
 }
-.controls button:hover { background: #f1f5f9; }
+.controls button:hover {
+  background: #f1f5f9;
+}
 .controls button[data-test='auto-tick'][data-running='true'] {
   background: var(--user);
   color: var(--user-fg);
@@ -356,7 +387,11 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   cursor: pointer;
   font-size: 13px;
 }
-.threads button.active { background: var(--user); color: var(--user-fg); border-color: var(--user); }
+.threads button.active {
+  background: var(--user);
+  color: var(--user-fg);
+  border-color: var(--user);
+}
 
 .status {
   font-size: 12px;
@@ -389,7 +424,9 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   letter-spacing: 0.02em;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 200ms, transform 200ms;
+  transition:
+    opacity 200ms,
+    transform 200ms;
   pointer-events: none;
   z-index: 10;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
@@ -423,12 +460,14 @@ header.demo-bar a.active { background: #f1f5f9; color: var(--fg); }
   cursor: pointer;
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 200ms, transform 200ms;
+  transition:
+    opacity 200ms,
+    transform 200ms;
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 .fab--visible {
   opacity: 1;

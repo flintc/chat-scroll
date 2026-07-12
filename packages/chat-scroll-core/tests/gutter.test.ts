@@ -116,7 +116,9 @@ describe('gutter', () => {
       document.body.appendChild(c)
 
       expect(() => resolveGutter(c, g)).toThrow(/direct.*child/i)
-      expect(() => resolveGutter(c, document.createElement('div'))).toThrow()
+      expect(() => resolveGutter(c, document.createElement('div'))).toThrow(
+        /direct.*child/i,
+      )
     })
 
     it('adopts a tagged direct child when no element is provided', () => {
@@ -416,13 +418,22 @@ describe('gutter', () => {
       setContentHeight(300)
       setContainerPadding(16, 16)
 
-      setGutterHeight(gutter, calcGutterHeight({ container, gutter, pinnedY: 50 }))
+      setGutterHeight(
+        gutter,
+        calcGutterHeight({ container, gutter, pinnedY: 50 }),
+      )
       expect(maxScroll()).toBe(50)
 
-      setGutterHeight(gutter, calcGutterHeight({ container, gutter, pinnedY: 200 }))
+      setGutterHeight(
+        gutter,
+        calcGutterHeight({ container, gutter, pinnedY: 200 }),
+      )
       expect(maxScroll()).toBe(200)
 
-      setGutterHeight(gutter, calcGutterHeight({ container, gutter, pinnedY: 25 }))
+      setGutterHeight(
+        gutter,
+        calcGutterHeight({ container, gutter, pinnedY: 25 }),
+      )
       expect(maxScroll()).toBe(25)
     })
   })

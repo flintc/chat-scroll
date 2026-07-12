@@ -137,21 +137,23 @@ defineExpose({ scroll, nav, navTo, chatEl })
 
 <template>
   <div class="ld-pane">
-    <div v-if="label" class="ld-pane__label">{{ label }}</div>
+    <div v-if="label" class="ld-pane__label">
+      {{ label }}
+    </div>
     <div class="ld-pane__surface">
       <!-- tabindex makes the scroller keyboard-operable everywhere
            (Safari doesn't auto-focus scrollable regions); role="log"
            announces appended messages politely to screen readers. -->
       <div
+        :ref="setContainer"
         class="ld-chat"
         :class="{ 'ld-chat--show-gutter': showGutter }"
-        :ref="setContainer"
         tabindex="0"
         role="log"
         :aria-label="label ? `Conversation — ${label}` : 'Conversation'"
         @scroll.passive="onPaneScroll"
       >
-        <div class="ld-messages" :ref="contentRef">
+        <div :ref="contentRef" class="ld-messages">
           <slot name="top" />
           <div
             v-for="m in messages"
@@ -198,7 +200,9 @@ defineExpose({ scroll, nav, navTo, chatEl })
             <!-- Only the answer text is bubbled; the reasoning / tool
                  cards above sit outside it (the ChatGPT/Claude layout).
                  No bubble while the turn is still all-blocks. -->
-            <div v-if="m.text" class="ld-msg__text">{{ m.text }}</div>
+            <div v-if="m.text" class="ld-msg__text">
+              {{ m.text }}
+            </div>
           </div>
           <slot name="bottom" />
         </div>

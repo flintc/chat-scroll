@@ -14,9 +14,7 @@ test('stick-scrolls-mid-stream', async ({ page }) => {
 
   await hold(page, 2200) // opening still
 
-  await expect(page.locator('[data-test="status"]')).toContainText(
-    'locked=✓',
-  )
+  await expect(page.locator('[data-test="status"]')).toContainText('locked=✓')
 
   // Build a tall transcript first: one full turn streamed to completion, so
   // there is real room to scroll up. The demo's transcripts are short — a
@@ -43,9 +41,7 @@ test('stick-scrolls-mid-stream', async ({ page }) => {
   await userScrollSmooth(page, -250)
   await hold(page, 1500)
 
-  await expect(page.locator('[data-test="status"]')).toContainText(
-    'locked=·',
-  )
+  await expect(page.locator('[data-test="status"]')).toContainText('locked=·')
 
   const beforeTop = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')
@@ -62,10 +58,8 @@ test('stick-scrolls-mid-stream', async ({ page }) => {
   expect(Math.abs(afterTop - beforeTop)).toBeLessThan(50)
 
   await showCue(page, 'user clicks ↓ — snaps to bottom')
-  await page.click('[data-test="fab"]')
+  await page.locator('[data-test="fab"]').click()
   await hold(page, 1500)
 
-  await expect(page.locator('[data-test="status"]')).toContainText(
-    'locked=✓',
-  )
+  await expect(page.locator('[data-test="status"]')).toContainText('locked=✓')
 })

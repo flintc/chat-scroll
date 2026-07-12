@@ -60,7 +60,6 @@ test('pin-expandable: collapse-all then expand-all keeps the pin', async ({
     .boundingBox()
   if (!afterCollapse) throw new Error('missing box')
   const afterCollapseOffset = afterCollapse.y - sb.y
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-extreme] after collapse-all: baseline=${baselineOffset.toFixed(1)} after=${afterCollapseOffset.toFixed(1)}`,
   )
@@ -80,7 +79,6 @@ test('pin-expandable: collapse-all then expand-all keeps the pin', async ({
     .boundingBox()
   if (!afterExpand) throw new Error('missing box')
   const afterExpandOffset = afterExpand.y - sb.y
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-extreme] after expand-all: offset=${afterExpandOffset.toFixed(1)}`,
   )

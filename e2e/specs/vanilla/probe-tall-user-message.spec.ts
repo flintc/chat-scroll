@@ -72,7 +72,6 @@ test('probe: tall user message is clamped (holds cross-engine)', async ({
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[tall-clamp]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -91,7 +90,7 @@ test('probe: tall user message is clamped (holds cross-engine)', async ({
   await hold(page, 500)
 
   const after = await page.evaluate(geom)
-  // eslint-disable-next-line no-console
+
   await page.evaluate((g) => {
     console.log(
       `[tall-clamp] msgHeight=${g.msgHeight.toFixed(1)} ` +
@@ -134,7 +133,9 @@ test('probe: tall user message is clamped (holds cross-engine)', async ({
   const later = await page.evaluate(geom)
   const drift = later.visibleSlice - before.visibleSlice
   await page.evaluate((d) => {
-    console.log(`[tall-clamp] visible-slice drift after more streaming = ${d.toFixed(1)}px`)
+    console.log(
+      `[tall-clamp] visible-slice drift after more streaming = ${d.toFixed(1)}px`,
+    )
   }, drift)
   expect(Math.abs(drift)).toBeLessThan(8)
 

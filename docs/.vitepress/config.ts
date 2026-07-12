@@ -177,8 +177,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern:
-        'https://github.com/flintc/chat-scroll/edit/main/docs/:path',
+      pattern: 'https://github.com/flintc/chat-scroll/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
   },

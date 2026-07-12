@@ -49,7 +49,6 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
   page.on('console', (msg) => {
     const t = msg.text()
     if (t.startsWith('[probe-collapse]')) {
-      // eslint-disable-next-line no-console
       console.log(t)
     }
   })
@@ -80,9 +79,10 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
 
   const midStream = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
@@ -93,7 +93,6 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
       scrollHeight: c.scrollHeight,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-collapse] mid-stream BEFORE collapse: ` +
       `scrollTop=${midStream.scrollTop.toFixed(1)} ` +
@@ -113,9 +112,10 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
 
   const afterCollapse = await page.evaluate(() => {
     const c = document.querySelector<HTMLElement>('[data-test="scroll"]')!
-    const ub = document
-      .querySelectorAll<HTMLElement>('[data-test="user-msg"]')
-      [document.querySelectorAll('[data-test="user-msg"]').length - 1]!
+    const ubAll = document.querySelectorAll<HTMLElement>(
+      '[data-test="user-msg"]',
+    )
+    const ub = ubAll[ubAll.length - 1]!
     const u = ub.getBoundingClientRect()
     const s = c.getBoundingClientRect()
     const g = c.querySelector<HTMLElement>('[data-chat-scroll-gutter]')!
@@ -126,7 +126,6 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
       scrollHeight: c.scrollHeight,
     }
   })
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-collapse] AFTER collapse: ` +
       `scrollTop=${afterCollapse.scrollTop.toFixed(1)} ` +
@@ -140,7 +139,6 @@ test('probe: collapsing a prior block mid-stream drifts the pin', async ({
   // ASSERTION: the pin offset from viewport top should stay near
   // scrollMargin (12px). If the pin drifted, this delta exposes the bug.
   const driftFromIntended = Math.abs(afterCollapse.pinOffsetFromTop - 12)
-  // eslint-disable-next-line no-console
   console.log(
     `[probe-collapse] pin drift from intended (12px) = ` +
       `${driftFromIntended.toFixed(1)}px`,

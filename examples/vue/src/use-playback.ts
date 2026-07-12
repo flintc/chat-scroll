@@ -39,7 +39,9 @@ export function usePlayback(opts: UsePlaybackOptions): UsePlaybackReturn {
   const controller = createPlaybackController(opts)
   const running = ref(controller.state.running)
   const intervalMs = ref(controller.state.intervalMs)
-  const scrollBehavior = ref<ChatScrollBehavior>(controller.state.scrollBehavior)
+  const scrollBehavior = ref<ChatScrollBehavior>(
+    controller.state.scrollBehavior,
+  )
   const scrollDurationMs = ref(controller.state.scrollDurationMs)
   const showGutter = ref(controller.state.showGutter)
   const off = controller.subscribe((s) => {

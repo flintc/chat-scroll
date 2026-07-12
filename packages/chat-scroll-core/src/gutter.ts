@@ -276,7 +276,10 @@ function gutterTopWithin(container: HTMLElement, gutter: HTMLElement): number {
   return gRect.top - cRect.top - borderTop + container.scrollTop
 }
 
-function readPx(el: HTMLElement, prop: 'paddingBottom' | 'borderTopWidth'): number {
+function readPx(
+  el: HTMLElement,
+  prop: 'paddingBottom' | 'borderTopWidth',
+): number {
   const view = el.ownerDocument.defaultView
   if (!view) return 0
   const raw = view.getComputedStyle(el)[prop]

@@ -151,7 +151,10 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
     if (assistantId === null) {
       const id = nextId++
       assistantId = id
-      messages.value = [...messages.value, applyChunk(createAssistant(id), chunk)]
+      messages.value = [
+        ...messages.value,
+        applyChunk(createAssistant(id), chunk),
+      ]
     } else {
       const id = assistantId
       messages.value = messages.value.map((m) =>

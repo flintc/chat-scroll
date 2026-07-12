@@ -1,4 +1,11 @@
-import { test, expect, hold, showCue, streamUntilDone, userScrollSmooth } from '../../fixtures'
+import {
+  test,
+  expect,
+  hold,
+  showCue,
+  streamUntilDone,
+  userScrollSmooth,
+} from '../../fixtures'
 
 export function stickToBottomSpec(): void {
   test('stick-to-bottom', async ({ page }) => {
@@ -7,9 +14,7 @@ export function stickToBottomSpec(): void {
 
     await hold(page, 2200) // opening still — locked, prior chitchat visible
 
-    await expect(page.locator('[data-test="status"]')).toContainText(
-      'locked=✓',
-    )
+    await expect(page.locator('[data-test="status"]')).toContainText('locked=✓')
 
     // ─── Auto-follow ──────────────────────────────────────────
     await showCue(page, 'user sends a question')
@@ -32,9 +37,7 @@ export function stickToBottomSpec(): void {
     await showCue(page, 'user scrolls up — lock releases')
     await userScrollSmooth(page, -300)
     await hold(page, 1000)
-    await expect(page.locator('[data-test="status"]')).toContainText(
-      'locked=·',
-    )
+    await expect(page.locator('[data-test="status"]')).toContainText('locked=·')
 
     await hold(page, 800)
 
@@ -59,11 +62,9 @@ export function stickToBottomSpec(): void {
 
     // ─── Click the FAB — snap back to bottom ────────────────
     await showCue(page, 'user clicks ↓ to re-lock')
-    await page.click('[data-test="fab"]')
+    await page.locator('[data-test="fab"]').click()
     await hold(page, 600)
-    await expect(page.locator('[data-test="status"]')).toContainText(
-      'locked=✓',
-    )
+    await expect(page.locator('[data-test="status"]')).toContainText('locked=✓')
 
     await hold(page, 1500)
   })

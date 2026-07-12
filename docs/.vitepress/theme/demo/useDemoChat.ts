@@ -151,10 +151,7 @@ export function useDemoChat(opts: UseDemoChatOptions = {}): UseDemoChatReturn {
       : ASSISTANT_CHUNKS.map((t) => ({ type: 'text', text: t }))
     eventIdx = 0
     assistantId = null
-    messages.value = [
-      ...messages.value,
-      { id: nextId++, role: 'user', text },
-    ]
+    messages.value = [...messages.value, { id: nextId++, role: 'user', text }]
     streaming.value = true
     scheduleNextEvent()
   }

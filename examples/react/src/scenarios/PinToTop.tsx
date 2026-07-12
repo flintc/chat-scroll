@@ -10,13 +10,13 @@ import {
   formatState,
   setBlockOpen,
   showCue,
-  type BotStreamer,
   type DemoApi,
 } from '@chat-scroll/example-shared'
 import { PlaybackControls } from '../PlaybackControls'
 import { usePlayback } from '../use-playback'
 
 interface PriorTurn {
+  id: string
   role: 'user' | 'bot'
   text: string
 }
@@ -31,7 +31,7 @@ interface TurnEntry {
 // blocks, which need an imperative target element. For prior turns
 // we render plain text reactively; for the live bot bubble we render
 // an empty <div> and let the streamer write into it.
-const priors: PriorTurn[] = [...PRIOR_TURNS]
+const priors: PriorTurn[] = PRIOR_TURNS.map((t, i) => ({ ...t, id: `p${i}` }))
 
 export function PinToTop() {
   const [turns, setTurns] = useState<TurnEntry[]>([])
@@ -40,28 +40,29 @@ export function PinToTop() {
   const containerElRef = useRef<HTMLElement | null>(null)
   const listElRef = useRef<HTMLElement | null>(null)
   const currentBotElRef = useRef<HTMLElement | null>(null)
-  const streamerRef = useRef<BotStreamer | null>(null)
-  if (streamerRef.current === null) streamerRef.current = createBotStreamer()
-  const streamer = streamerRef.current
+  // Single streamer for the component's lifetime. Construction is inert
+  // (it only writes DOM once `reset` hands it a target element).
+  const [streamer] = useState(createBotStreamer)
 
   const nextPrompt = () =>
     TURN_PROMPTS[promptIdxRef.current++ % TURN_PROMPTS.length] ?? USER_PROMPT
 
   const scroll = useChatScroll({ strategy: 'pin-to-top' })
 
+  const { containerRef, contentRef } = scroll
   const captureContainer = useCallback(
     (el: HTMLElement | null) => {
       containerElRef.current = el
-      scroll.containerRef(el)
+      containerRef(el)
     },
-    [scroll.containerRef],
+    [containerRef],
   )
   const captureList = useCallback(
     (el: HTMLElement | null) => {
       listElRef.current = el
-      scroll.contentRef(el)
+      contentRef(el)
     },
-    [scroll.contentRef],
+    [contentRef],
   )
 
   const playback = usePlayback({
@@ -70,15 +71,18 @@ export function PinToTop() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => scroll.instance.state.streaming,
   })
 
   // Refresh the playback gate every time chat-scroll state changes so
   // the timer pauses when streaming flips off.
+  const { instance } = scroll
+  const { refresh: refreshPlayback } = playback
   useEffect(
-    () => scroll.instance.subscribe(() => playback.refresh()),
-    [scroll.instance, playback.refresh],
+    () => instance.subscribe(() => refreshPlayback()),
+    [instance, refreshPlayback],
   )
 
   const api: DemoApi = {
@@ -155,9 +159,7 @@ export function PinToTop() {
 
   return (
     <div
-      className={
-        playback.showGutter ? 'chat chat--show-gutter' : 'chat'
-      }
+      className={playback.showGutter ? 'chat chat--show-gutter' : 'chat'}
       data-scenario="pin-to-top"
       style={{ position: 'relative' }}
     >
@@ -166,9 +168,9 @@ export function PinToTop() {
       </div>
       <div className="chat__scroll" data-test="scroll" ref={captureContainer}>
         <div className="chat__list" data-test="list" ref={captureList}>
-          {priors.map((t, i) => (
+          {priors.map((t) => (
             <div
-              key={`p${i}`}
+              key={t.id}
               className={t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'}
               data-test={t.role === 'user' ? 'user-msg' : 'bot-msg'}
             >
@@ -214,14 +216,18 @@ export function PinToTop() {
         <button
           data-test="prev-user"
           aria-label="Previous user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', -1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', -1)
+          }
         >
           ▲ Prev
         </button>
         <button
           data-test="next-user"
           aria-label="Next user message"
-          onClick={() => scroll.instance.pinRelative('[data-test="user-msg"]', 1)}
+          onClick={() =>
+            scroll.instance.pinRelative('[data-test="user-msg"]', 1)
+          }
         >
           ▼ Next
         </button>

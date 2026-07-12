@@ -99,10 +99,10 @@ export interface StrategyContext {
    * Animated re-anchor callback. The controller wires this up at mount
    * time; strategies call it instead of writing `scrollTop` directly
    * when they want a smooth catch-up rather than a synchronous jump.
-   * Returns true if the controller scheduled an animation, false if it
-   * fell back to a synchronous write (no controller, no container).
+   * The catch-up tracks the live `pinnedY` itself, so there is no
+   * target argument — mid-flight content changes are followed.
    */
-  reAnchorPin?: (target: number) => void
+  reAnchorPin?: () => void
 }
 
 export interface Strategy {

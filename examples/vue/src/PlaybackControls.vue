@@ -65,9 +65,7 @@ function onDurationInput(e: Event) {
       :checked="props.playback.showGutter.value"
       @change="
         (e) =>
-          props.playback.setShowGutter(
-            (e.target as HTMLInputElement).checked,
-          )
+          props.playback.setShowGutter((e.target as HTMLInputElement).checked)
       "
     />
     show gutter

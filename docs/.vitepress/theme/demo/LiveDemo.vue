@@ -17,14 +17,18 @@ import { useDemoChat } from './useDemoChat'
 
 const props = withDefaults(
   defineProps<{
-    scenario: 'pin-to-top' | 'stick-to-bottom' | 'side-by-side' | 'thread-switch'
+    scenario:
+      | 'pin-to-top'
+      | 'stick-to-bottom'
+      | 'side-by-side'
+      | 'thread-switch'
     caption?: string
     /** Chat surface height in px. */
     height?: number
     /** Start with the gutter visualization on (pin scenarios). */
     gutter?: boolean
   }>(),
-  { height: 480, gutter: true },
+  { caption: '', height: 480, gutter: true },
 )
 
 type PaneHandle = InstanceType<typeof ChatPane> | null
@@ -165,15 +169,11 @@ async function switchThread(id: 'a' | 'b'): Promise<void> {
   // restorePosition handles the rest: releases the lock so the swap's
   // resize can't snap to bottom, re-applies after layout settles, and
   // a wasAtBottom snapshot (or a first visit) lands at the new bottom.
-  sc.restorePosition(
-    positions.get(id) ?? { scrollTop: 0, wasAtBottom: true },
-  )
+  sc.restorePosition(positions.get(id) ?? { scrollTop: 0, wasAtBottom: true })
 }
 
 // ── Actions ───────────────────────────────────────────────────────
-const streaming = computed(
-  () => chatA.streaming.value || chatB.streaming.value,
-)
+const streaming = computed(() => chatA.streaming.value || chatB.streaming.value)
 
 function send(): void {
   const list: readonly string[] =
@@ -411,7 +411,9 @@ async function reset(): Promise<void> {
       </button>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

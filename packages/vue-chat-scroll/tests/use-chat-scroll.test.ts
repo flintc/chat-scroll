@@ -24,8 +24,9 @@ beforeAll(() => {
       unobserve(): void {}
       disconnect(): void {}
     }
-    ;(window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-      FakeRO as unknown as typeof ResizeObserver
+    ;(
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = FakeRO as unknown as typeof ResizeObserver
   }
 })
 
@@ -41,18 +42,21 @@ describe('useChatScroll (Vue)', () => {
         return { scroll }
       },
       render() {
-        return h('div', {
-          ref: this.scroll.containerRef,
-          'data-test': 'container',
-        }, [
-          h('div', { ref: this.scroll.contentRef, 'data-test': 'content' }),
-        ])
+        return h(
+          'div',
+          {
+            ref: this.scroll.containerRef,
+            'data-test': 'container',
+          },
+          [h('div', { ref: this.scroll.contentRef, 'data-test': 'content' })],
+        )
       },
     })
 
     const wrapper = mount(Comp, { attachTo: document.body })
     await wrapper.vm.$nextTick()
-    const container = wrapper.get('[data-test="container"]').element as HTMLElement
+    const container = wrapper.get('[data-test="container"]')
+      .element as HTMLElement
     expect(container.querySelector('[data-chat-scroll-gutter]')).toBeTruthy()
     expect(container.style.display).toBe('flex')
     wrapper.unmount()

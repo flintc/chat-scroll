@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "unicorn/filename-case": "off",
+    "import/no-unassigned-import": "off"
+  },
+  "ignorePatterns": [
+    "**/dist",
+    "docs/.vitepress/cache",
+    "e2e/playwright-report",
+    "e2e/test-results",
+    "e2e/videos"
+  ],
+
+  "overrides": [
+    {
+      "files": [
+        "packages/react-chat-scroll/**/*.{ts,tsx}",
+        "examples/react/**/*.{ts,tsx}"
+      ],
+      "plugins": ["react"],
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "error",
+        "react/react-in-jsx-scope": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/vue-chat-scroll/**/*.{ts,vue}",
+        "examples/vue/**/*.{ts,vue}",
+        "docs/**/*.{ts,vue}"
+      ],
+      "plugins": ["vue"]
+    },
+    {
+      "files": ["packages/*/tests/**/*.{ts,tsx}"],
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/valid-expect": "off"
+      }
+    }
+  ]
+}

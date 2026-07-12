@@ -28,6 +28,7 @@ export function PinToTopSimple() {
     strategy: 'pin-to-top',
     streaming: chat.isStreaming,
   })
+  const { containerRef, contentRef } = scroll
 
   return (
     <div
@@ -35,8 +36,8 @@ export function PinToTopSimple() {
       data-scenario="pin-to-top-simple"
       style={{ position: 'relative' }}
     >
-      <div className="chat__scroll" data-test="scroll" ref={scroll.containerRef}>
-        <div className="chat__list" data-test="list" ref={scroll.contentRef}>
+      <div className="chat__scroll" data-test="scroll" ref={containerRef}>
+        <div className="chat__list" data-test="list" ref={contentRef}>
           {chat.messages.map((m) => (
             <MessageView key={m.id} msg={m} />
           ))}

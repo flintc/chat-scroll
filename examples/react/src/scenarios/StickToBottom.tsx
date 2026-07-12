@@ -9,7 +9,7 @@ import {
   type DemoApi,
 } from '@chat-scroll/example-shared'
 import { useFakeChat, type DefaultChatMessage } from '../use-fake-chat'
-import { scrollToBottomOnMount, useStickFollow } from '../scroll-helpers'
+import { useScrollToBottomOnMount, useStickFollow } from '../scroll-helpers'
 import { PlaybackControls } from '../PlaybackControls'
 import { usePlayback } from '../use-playback'
 
@@ -32,16 +32,17 @@ export function StickToBottom() {
     streaming: chat.isStreaming,
   })
 
-  scrollToBottomOnMount(scroll)
+  useScrollToBottomOnMount(scroll)
   const follow = useStickFollow(scroll, { maintainOn: chat.messages })
 
   const containerElRef = useRef<HTMLElement | null>(null)
+  const { containerRef, contentRef } = scroll
   const captureContainer = useCallback(
     (el: HTMLElement | null) => {
       containerElRef.current = el
-      scroll.containerRef(el)
+      containerRef(el)
     },
-    [scroll.containerRef],
+    [containerRef],
   )
 
   const playback = usePlayback({
@@ -49,15 +50,18 @@ export function StickToBottom() {
     initialBehavior: 'instant',
     tick: chat.tick,
     onBehaviorChange: (b) => scroll.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) => scroll.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) =>
+      scroll.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => chat.isStreaming,
   })
 
   // Refresh the playback gate every time chat-scroll state changes so
   // the timer pauses when streaming flips off.
+  const { instance, state } = scroll
+  const { refresh: refreshPlayback } = playback
   useEffect(
-    () => scroll.instance.subscribe(() => playback.refresh()),
-    [scroll.instance, playback.refresh],
+    () => instance.subscribe(() => refreshPlayback()),
+    [instance, refreshPlayback],
   )
 
   const api: DemoApi = {
@@ -94,10 +98,10 @@ export function StickToBottom() {
       style={{ position: 'relative' }}
     >
       <div className="status" data-test="status">
-        {formatState('stick-to-bottom', scroll.state)}
+        {formatState('stick-to-bottom', state)}
       </div>
       <div className="chat__scroll" data-test="scroll" ref={captureContainer}>
-        <div className="chat__list" data-test="list" ref={scroll.contentRef}>
+        <div className="chat__list" data-test="list" ref={contentRef}>
           {chat.messages.map((m) => (
             <div
               key={m.id}
@@ -111,7 +115,7 @@ export function StickToBottom() {
         <div data-chat-scroll-gutter="" />
       </div>
       <button
-        className={scroll.state.atBottom ? 'fab' : 'fab fab--visible'}
+        className={state.atBottom ? 'fab' : 'fab fab--visible'}
         data-test="fab"
         aria-label="Scroll to bottom"
         onClick={follow.resume}

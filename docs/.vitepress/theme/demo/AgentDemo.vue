@@ -12,7 +12,7 @@ const props = withDefaults(
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { strategy: 'pin-to-top', height: 420 },
+  { caption: '', strategy: 'pin-to-top', height: 420 },
 )
 const isPin = props.strategy === 'pin-to-top'
 
@@ -183,7 +183,9 @@ async function reset(): Promise<void> {
       </button>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

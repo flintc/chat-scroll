@@ -11,9 +11,7 @@ const open = ref(props.part.defaultOpen)
 const title = computed(() =>
   props.part.type === 'thinking' ? props.part.summary : props.part.name,
 )
-const args = computed(() =>
-  props.part.type === 'tool' ? props.part.args : '',
-)
+const args = computed(() => (props.part.type === 'tool' ? props.part.args : ''))
 const body = computed(() =>
   props.part.type === 'thinking' ? props.part.body : props.part.result,
 )
@@ -46,7 +44,9 @@ const body = computed(() =>
     <div class="block__wrap">
       <div class="block__body">
         <pre v-if="part.type === 'tool'" class="block__pre">{{ body }}</pre>
-        <template v-else>{{ body }}</template>
+        <template v-else>
+          {{ body }}
+        </template>
       </div>
     </div>
   </div>

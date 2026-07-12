@@ -90,8 +90,7 @@ export const REASONING_BODY =
   'notice your reading position (or the pin) stays put.'
 
 /** Arguments of the "tool call" block — streamed into its summary. */
-export const TOOL_CALL_ARGS =
-  '{ query: "scroll anchoring chat transcripts" }'
+export const TOOL_CALL_ARGS = '{ query: "scroll anchoring chat transcripts" }'
 
 /** Result body of the collapsible "tool call" block. */
 export const TOOL_CALL_BODY =

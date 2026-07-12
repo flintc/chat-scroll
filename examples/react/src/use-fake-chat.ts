@@ -89,10 +89,8 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
     opts.applyChunk ??
     (defaultApplyChunk as unknown as (m: TMessage, c: TChunk) => TMessage)
 
-  const [messages, setMessages] = useState<TMessage[]>(
-    () => opts.initial ?? [],
-  )
-  const [status, setStatusState] = useState<ChatStatus>('idle')
+  const [messages, setMessages] = useState<TMessage[]>(() => opts.initial ?? [])
+  const [status, setStatus] = useState<ChatStatus>('idle')
   const [lastUser, setLastUser] = useState<TMessage | null>(null)
 
   // Mutable internals — `tick` runs from interval callbacks, so the
@@ -107,9 +105,9 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
 
   const idOf = (m: TMessage) => (m as { id: number }).id
 
-  function setStatus(s: ChatStatus) {
+  function updateStatus(s: ChatStatus) {
     statusRef.current = s
-    setStatusState(s)
+    setStatus(s)
   }
 
   function stopAutoTimer() {
@@ -138,7 +136,7 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
       placeholder !== null ? [...ms, user, placeholder] : [...ms, user],
     )
     setLastUser(user)
-    setStatus('streaming')
+    updateStatus('streaming')
 
     if (opts.autoIntervalMs !== undefined) {
       stopAutoTimer()
@@ -181,7 +179,7 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
   }
 
   function finalize() {
-    setStatus('done')
+    updateStatus('done')
     assistantIdRef.current = null
   }
 

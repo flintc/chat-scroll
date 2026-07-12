@@ -79,7 +79,9 @@ export function mountThreadSwitch(root: HTMLElement): () => void {
   const list = root.querySelector<HTMLElement>('[data-test="list"]')!
   const status = root.querySelector<HTMLElement>('[data-test="status"]')!
   const threadsBar = root.querySelector<HTMLElement>('[data-test="threads"]')!
-  const upBtn = root.querySelector<HTMLButtonElement>('[data-test="scroll-up"]')!
+  const upBtn = root.querySelector<HTMLButtonElement>(
+    '[data-test="scroll-up"]',
+  )!
   const fab = root.querySelector<HTMLButtonElement>('[data-test="fab"]')!
   const controls = root.querySelector<HTMLElement>('.controls')!
 

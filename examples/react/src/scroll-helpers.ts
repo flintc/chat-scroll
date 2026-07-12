@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { UseChatScrollReturn } from '@chat-scroll/react'
 
 /**
@@ -6,7 +6,7 @@ import type { UseChatScrollReturn } from '@chat-scroll/react'
  * ResizeObserver hasn't measured the initial content yet — calling
  * `scrollToBottom` directly would read a stale `scrollHeight`.
  */
-export function scrollToBottomOnMount(scroll: UseChatScrollReturn): void {
+export function useScrollToBottomOnMount(scroll: UseChatScrollReturn): void {
   // `scrollToBottom` is the stable instance method, so this effect only
   // runs on mount.
   const { scrollToBottom } = scroll
@@ -46,29 +46,34 @@ export function useStickFollow(
   scroll: UseChatScrollReturn,
   opts: UseStickFollowOptions = {},
 ): UseStickFollowReturn {
-  const [following, setFollowingState] = useState(true)
+  const [followingState, setFollowingState] = useState(true)
   // Ref mirror so effects and callbacks read the current value without
   // re-binding per render.
   const followingRef = useRef(true)
-  function setFollowing(v: boolean) {
+  const setFollowing = useCallback((v: boolean) => {
     followingRef.current = v
     setFollowingState(v)
-  }
+  }, [])
 
   // Mirror the lock — anything that breaks it (user scroll, etc.) drops
-  // following so subsequent content changes don't fight the user.
-  const { lock } = scroll
-  const locked = scroll.state.locked
-  useEffect(() => {
-    if (!locked) setFollowing(false)
-  }, [locked])
+  // following so subsequent content changes don't fight the user. Lock
+  // breaks arrive as controller events, so subscribe to the instance
+  // directly instead of round-tripping `state.locked` through a render.
+  const { instance, lock } = scroll
+  useEffect(
+    () =>
+      instance.subscribe(() => {
+        if (!instance.state.locked) setFollowing(false)
+      }),
+    [instance, setFollowing],
+  )
 
   useEffect(() => {
     if (followingRef.current) lock()
   }, [opts.maintainOn, lock])
 
   return {
-    following,
+    following: followingState,
     maintain: () => {
       if (followingRef.current) scroll.lock()
     },

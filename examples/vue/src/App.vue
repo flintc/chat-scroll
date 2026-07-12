@@ -38,17 +38,21 @@ const current = computed(() => slug.value)
     </a>
   </header>
   <section
-    style="
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    "
+    style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0"
   >
     <PinToTop v-if="current === 'pin-to-top'" :key="'pin-to-top'" />
-    <PinToTopSimple v-else-if="current === 'pin-to-top-simple'" :key="'pin-to-top-simple'" />
-    <StickToBottom v-else-if="current === 'stick-to-bottom'" :key="'stick-to-bottom'" />
-    <ThreadSwitch v-else-if="current === 'thread-switch'" :key="'thread-switch'" />
+    <PinToTopSimple
+      v-else-if="current === 'pin-to-top-simple'"
+      :key="'pin-to-top-simple'"
+    />
+    <StickToBottom
+      v-else-if="current === 'stick-to-bottom'"
+      :key="'stick-to-bottom'"
+    />
+    <ThreadSwitch
+      v-else-if="current === 'thread-switch'"
+      :key="'thread-switch'"
+    />
     <SideBySide v-else-if="current === 'side-by-side'" :key="'side-by-side'" />
   </section>
 </template>

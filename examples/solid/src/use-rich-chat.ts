@@ -41,7 +41,7 @@ export function useRichChat(
     createUserMessage: (text, id) => ({
       id,
       role: 'user',
-      parts: [{ type: 'text', text }],
+      parts: [{ id: 0, type: 'text', text }],
     }),
     createAssistantMessage: (id) => ({ id, role: 'assistant', parts: [] }),
     applyChunk: applyMicroChunk,

@@ -14,9 +14,7 @@ import type { ControllerContext } from './context'
 export function measureAtBottom(cc: ControllerContext): boolean {
   const container = cc.ctx.container
   if (!container) return true
-  const slack = cc.ctx.gutter
-    ? parseFloat(cc.ctx.gutter.style.height) || 0
-    : 0
+  const slack = cc.ctx.gutter ? parseFloat(cc.ctx.gutter.style.height) || 0 : 0
   return isAtBottom(container, cc.options.bottomThreshold, slack)
 }
 

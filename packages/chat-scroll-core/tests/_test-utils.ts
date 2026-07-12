@@ -148,11 +148,7 @@ export function buildScrollDom(opts?: {
         top: paddingTop + contentH + contentMarginBottom - scrollTop,
         left: 0,
         bottom:
-          paddingTop +
-          contentH +
-          contentMarginBottom -
-          scrollTop +
-          gutterH(),
+          paddingTop + contentH + contentMarginBottom - scrollTop + gutterH(),
         right: 800,
         width: 800,
         height: gutterH(),
@@ -281,8 +277,9 @@ export function installFakeResizeObserver(): {
       )
     },
     uninstall() {
-      ;(globalThis as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
-        original
+      ;(
+        globalThis as { ResizeObserver: typeof ResizeObserver }
+      ).ResizeObserver = original
     },
     callbacks: () => callbacks,
     observations: () => observations,

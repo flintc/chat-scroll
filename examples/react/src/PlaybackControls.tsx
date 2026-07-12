@@ -7,7 +7,11 @@ import type { UsePlaybackReturn } from './use-playback'
  * smooth/instant select, Pause/Resume toggle. Every React scenario
  * uses this so the controls are visually identical across demos.
  */
-export function PlaybackControls({ playback }: { playback: UsePlaybackReturn }) {
+export function PlaybackControls({
+  playback,
+}: {
+  playback: UsePlaybackReturn
+}) {
   return (
     <>
       <label className="playback">

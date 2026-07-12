@@ -145,7 +145,9 @@ export function animateScrollTo(
  * `instant`) or animate. Used by `pinMessage` and `scrollToBottom` so the
  * native browser smooth-scroll path is never taken on a nested container.
  */
-export function shouldReduceMotion(behavior: 'auto' | 'smooth' | 'instant'): boolean {
+export function shouldReduceMotion(
+  behavior: 'auto' | 'smooth' | 'instant',
+): boolean {
   if (behavior === 'instant') return true
   if (behavior === 'smooth') return false
   if (typeof window === 'undefined') return false

@@ -9,14 +9,23 @@ import type { MicroChunk } from './segments'
  * into that framework's fake-chat hook.
  */
 
-export type TextPart = { type: 'text'; text: string }
+/**
+ * Every part carries a stable `id`, assigned once at creation (its slot
+ * index at the moment it is appended — parts are append-only, so the id
+ * never shifts). Renderers use it as the list key so the DOM node and
+ * any local UI state (e.g. a block's `open` toggle) survive the
+ * immutable per-chunk replacement of the part object.
+ */
+export type TextPart = { id: number; type: 'text'; text: string }
 export type ThinkingPart = {
+  id: number
   type: 'thinking'
   summary: string
   body: string
   defaultOpen: boolean
 }
 export type ToolPart = {
+  id: number
   type: 'tool'
   name: string
   args: string
@@ -42,7 +51,7 @@ export function seedFromPriorTurns(
   return turns.map((t) => ({
     id: --id,
     role: t.role === 'bot' ? 'assistant' : 'user',
-    parts: [{ type: 'text', text: t.text }],
+    parts: [{ id: 0, type: 'text', text: t.text }],
   }))
 }
 
@@ -59,18 +68,20 @@ export function applyMicroChunk(msg: RichMessage, c: MicroChunk): RichMessage {
     if (last?.type === 'text') {
       parts[i] = { ...last, text: last.text + c.text }
     } else {
-      parts.push({ type: 'text', text: c.text })
+      parts.push({ id: parts.length, type: 'text', text: c.text })
     }
   } else if (c.type === 'block-open') {
     parts.push(
       c.kind === 'thinking'
         ? {
+            id: parts.length,
             type: 'thinking',
             summary: c.summary,
             body: '',
             defaultOpen: c.defaultOpen,
           }
         : {
+            id: parts.length,
             type: 'tool',
             name: c.name,
             args: '',

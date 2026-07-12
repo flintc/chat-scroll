@@ -138,6 +138,36 @@ function writePrefs(key: string | null, prefs: PersistedPrefs): void {
   }
 }
 
+/**
+ * The state a controller created with these options starts with —
+ * initial values merged with any persisted prefs. Exposed so reactive
+ * adapters that construct the controller after their first render
+ * (e.g. in a React effect) can seed their state without one.
+ */
+export function initialPlaybackState(
+  opts: Pick<
+    PlaybackControllerOptions,
+    | 'initialIntervalMs'
+    | 'initialBehavior'
+    | 'initialDurationMs'
+    | 'initialShowGutter'
+    | 'storageKey'
+  >,
+): PlaybackState {
+  const storageKey =
+    opts.storageKey === null
+      ? null
+      : (opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY)
+  const stored = readPrefs(storageKey)
+  return {
+    running: false,
+    intervalMs: stored.intervalMs ?? opts.initialIntervalMs ?? 140,
+    scrollBehavior: stored.scrollBehavior ?? opts.initialBehavior ?? 'smooth',
+    scrollDurationMs: stored.scrollDurationMs ?? opts.initialDurationMs ?? 320,
+    showGutter: stored.showGutter ?? opts.initialShowGutter ?? false,
+  }
+}
+
 export function createPlaybackController(
   opts: PlaybackControllerOptions,
 ): PlaybackController {
@@ -145,18 +175,12 @@ export function createPlaybackController(
   let timer: ReturnType<typeof setInterval> | null = null
 
   const storageKey =
-    opts.storageKey === null ? null : opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY
+    opts.storageKey === null
+      ? null
+      : (opts.storageKey ?? DEFAULT_PLAYBACK_STORAGE_KEY)
   const stored = readPrefs(storageKey)
 
-  const state: PlaybackState = {
-    running: false,
-    intervalMs: stored.intervalMs ?? opts.initialIntervalMs ?? 140,
-    scrollBehavior:
-      stored.scrollBehavior ?? opts.initialBehavior ?? 'smooth',
-    scrollDurationMs:
-      stored.scrollDurationMs ?? opts.initialDurationMs ?? 320,
-    showGutter: stored.showGutter ?? opts.initialShowGutter ?? false,
-  }
+  const state: PlaybackState = initialPlaybackState(opts)
 
   // If we hydrated a behavior/duration from storage, push it into the
   // chat-scroll instance immediately so the very first scroll uses the

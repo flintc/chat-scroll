@@ -181,4 +181,3 @@ export function useFakeChat<TMessage = DefaultChatMessage, TChunk = string>(
     stop,
   }
 }
-

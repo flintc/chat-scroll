@@ -49,8 +49,8 @@ function nextUser() {
     data-scenario="pin-to-top-simple"
     style="position: relative"
   >
-    <div class="chat__scroll" data-test="scroll" :ref="scroll.containerRef">
-      <div class="chat__list" data-test="list" :ref="scroll.contentRef">
+    <div :ref="scroll.containerRef" class="chat__scroll" data-test="scroll">
+      <div :ref="scroll.contentRef" class="chat__list" data-test="list">
         <RichMessageView
           v-for="m in chat.messages.value"
           :key="m.id"

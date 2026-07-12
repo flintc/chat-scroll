@@ -8,13 +8,13 @@ import {
   createBotStreamer,
   formatState,
   showCue,
-  type BotStreamer,
   type DemoApi,
 } from '@chat-scroll/example-shared'
 import { PlaybackControls } from '../PlaybackControls'
 import { usePlayback } from '../use-playback'
 
 interface PriorTurn {
+  id: string
   role: 'user' | 'bot'
   text: string
 }
@@ -24,7 +24,7 @@ interface TurnEntry {
   prompt: string
 }
 
-const priors: PriorTurn[] = [...PRIOR_TURNS]
+const priors: PriorTurn[] = PRIOR_TURNS.map((t, i) => ({ ...t, id: `p${i}` }))
 
 /**
  * Side-by-side strategy comparison: pin-to-top (left) and
@@ -40,12 +40,10 @@ export function SideBySide() {
   const pinBotElRef = useRef<HTMLElement | null>(null)
   const stickBotElRef = useRef<HTMLElement | null>(null)
   const followingRef = useRef(true)
-  const pinStreamerRef = useRef<BotStreamer | null>(null)
-  if (pinStreamerRef.current === null) pinStreamerRef.current = createBotStreamer()
-  const pinStreamer = pinStreamerRef.current
-  const stickStreamerRef = useRef<BotStreamer | null>(null)
-  if (stickStreamerRef.current === null) stickStreamerRef.current = createBotStreamer()
-  const stickStreamer = stickStreamerRef.current
+  // One streamer per panel for the component's lifetime. Construction is
+  // inert (they only write DOM once `reset` hands them a target element).
+  const [pinStreamer] = useState(createBotStreamer)
+  const [stickStreamer] = useState(createBotStreamer)
 
   const pin = useChatScroll({ strategy: 'pin-to-top' })
   const stick = useChatScroll({
@@ -53,26 +51,28 @@ export function SideBySide() {
     scrollBehavior: 'instant',
   })
 
+  const { containerRef: pinContainerRef, contentRef: pinContentRef } = pin
+  const { containerRef: stickContainerRef, contentRef: stickContentRef } = stick
   const capturePinContainer = useCallback(
     (el: HTMLElement | null) => {
       pinContainerElRef.current = el
-      pin.containerRef(el)
+      pinContainerRef(el)
     },
-    [pin.containerRef],
+    [pinContainerRef],
   )
   const capturePinList = useCallback(
     (el: HTMLElement | null) => {
       pinListElRef.current = el
-      pin.contentRef(el)
+      pinContentRef(el)
     },
-    [pin.contentRef],
+    [pinContentRef],
   )
   const captureStickList = useCallback(
     (el: HTMLElement | null) => {
       stickListElRef.current = el
-      stick.contentRef(el)
+      stickContentRef(el)
     },
-    [stick.contentRef],
+    [stickContentRef],
   )
 
   const playback = usePlayback({
@@ -81,8 +81,7 @@ export function SideBySide() {
     supportsGutter: true,
     tick: () => api.tick(),
     onBehaviorChange: (b) => pin.instance.setOptions({ scrollBehavior: b }),
-    onDurationChange: (ms) =>
-      pin.instance.setOptions({ scrollDurationMs: ms }),
+    onDurationChange: (ms) => pin.instance.setOptions({ scrollDurationMs: ms }),
     isEnabled: () => pin.instance.state.streaming,
   })
 
@@ -103,12 +102,19 @@ export function SideBySide() {
     )
   }, [])
 
+  const { instance: pinInstance, state: pinState } = pin
+  const {
+    instance: stickInstance,
+    state: stickState,
+    scrollToBottom: stickScrollToBottom,
+  } = stick
+  const { refresh: refreshPlayback } = playback
   useEffect(() => {
-    const off1 = pin.instance.subscribe(() => playback.refresh())
-    const off2 = stick.instance.subscribe((s) => {
+    const off1 = pinInstance.subscribe(() => refreshPlayback())
+    const off2 = stickInstance.subscribe((s) => {
       if (!s.locked) followingRef.current = false
     })
-    const raf = requestAnimationFrame(() => stick.scrollToBottom())
+    const raf = requestAnimationFrame(() => stickScrollToBottom())
     const container = pinContainerElRef.current
     container?.addEventListener('scroll', updatePinFab, { passive: true })
     let ro: ResizeObserver | null = null
@@ -124,7 +130,13 @@ export function SideBySide() {
       container?.removeEventListener('scroll', updatePinFab)
       ro?.disconnect()
     }
-  }, [pin.instance, stick.instance, playback.refresh, stick.scrollToBottom, updatePinFab])
+  }, [
+    pinInstance,
+    stickInstance,
+    refreshPlayback,
+    stickScrollToBottom,
+    updatePinFab,
+  ])
 
   const api: DemoApi = {
     tick(): boolean {
@@ -200,14 +212,12 @@ export function SideBySide() {
   return (
     <div className="chat" data-scenario="side-by-side">
       <div
-        className={
-          playback.showGutter ? 'panel chat--show-gutter' : 'panel'
-        }
+        className={playback.showGutter ? 'panel chat--show-gutter' : 'panel'}
         data-test="panel-pin"
       >
         <div className="panel__title">Pin to top</div>
         <div className="status" data-test="status-pin">
-          {formatState('pin-to-top', pin.state)}
+          {formatState('pin-to-top', pinState)}
         </div>
         <div
           className="chat__scroll"
@@ -215,9 +225,9 @@ export function SideBySide() {
           ref={capturePinContainer}
         >
           <div className="chat__list" data-test="list-pin" ref={capturePinList}>
-            {priors.map((t, i) => (
+            {priors.map((t) => (
               <div
-                key={`p${i}`}
+                key={t.id}
                 className={t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'}
               >
                 {t.text}
@@ -250,21 +260,21 @@ export function SideBySide() {
       <div className="panel" data-test="panel-stick">
         <div className="panel__title">Stick to bottom</div>
         <div className="status" data-test="status-stick">
-          {formatState('stick-to-bottom', stick.state)}
+          {formatState('stick-to-bottom', stickState)}
         </div>
         <div
           className="chat__scroll"
           data-test="scroll-stick"
-          ref={stick.containerRef}
+          ref={stickContainerRef}
         >
           <div
             className="chat__list"
             data-test="list-stick"
             ref={captureStickList}
           >
-            {priors.map((t, i) => (
+            {priors.map((t) => (
               <div
-                key={`p${i}`}
+                key={t.id}
                 className={t.role === 'user' ? 'msg msg--user' : 'msg msg--bot'}
               >
                 {t.text}
@@ -286,7 +296,7 @@ export function SideBySide() {
           <div data-chat-scroll-gutter="" />
         </div>
         <button
-          className={stick.state.atBottom ? 'fab' : 'fab fab--visible'}
+          className={stickState.atBottom ? 'fab' : 'fab fab--visible'}
           data-test="fab"
           aria-label="Scroll to bottom"
           onClick={() => {

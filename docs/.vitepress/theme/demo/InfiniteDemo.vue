@@ -10,13 +10,13 @@ import {
 } from './data'
 import { useDemoChat } from './useDemoChat'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     caption?: string
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { height: 420 },
+  { caption: '', height: 420 },
 )
 
 // Open with the two newest pages loaded (enough to overflow the pane),
@@ -98,8 +98,8 @@ async function reset(): Promise<void> {
   <figure class="infinite-demo">
     <div class="infinite-demo__settings">
       <span class="infinite-demo__count">
-        {{ chat.messages.value.length }} of {{ totalCount }} history
-        messages loaded
+        {{ chat.messages.value.length }} of {{ totalCount }} history messages
+        loaded
       </span>
       <span class="infinite-demo__spacer" />
       <button type="button" class="infinite-demo__btn" @click="reset">
@@ -169,7 +169,9 @@ async function reset(): Promise<void> {
       </div>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

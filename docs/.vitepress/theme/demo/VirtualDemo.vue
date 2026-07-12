@@ -16,7 +16,7 @@ const props = withDefaults(
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { strategy: 'stick-to-bottom', count: 5000, height: 480 },
+  { caption: '', strategy: 'stick-to-bottom', count: 5000, height: 480 },
 )
 const isPin = props.strategy === 'pin-to-top'
 
@@ -34,9 +34,7 @@ const scroll = useChatScroll({
 const { state, containerRef, contentRef, scrollToBottom } = scroll
 
 const chatEl = shallowRef<HTMLElement | null>(null)
-const setContainer = (
-  el: Element | ComponentPublicInstance | null,
-): void => {
+const setContainer = (el: Element | ComponentPublicInstance | null): void => {
   chatEl.value = el instanceof HTMLElement ? el : null
   containerRef(el)
 }
@@ -86,9 +84,7 @@ const virtualizer = useVirtualizer(
 )
 const rows = computed(() => virtualizer.value.getVirtualItems())
 const totalSize = computed(() => virtualizer.value.getTotalSize())
-const measureElement = (
-  el: Element | ComponentPublicInstance | null,
-): void => {
+const measureElement = (el: Element | ComponentPublicInstance | null): void => {
   if (el instanceof Element) virtualizer.value.measureElement(el)
 }
 
@@ -283,24 +279,24 @@ const navState = computed(() => {
            "log": windowing mounts rows on scroll, and a live region
            would announce them as new messages. -->
       <div
+        :ref="setContainer"
         class="vd-chat"
         :class="{ 'vd-chat--show-gutter': showGutter }"
-        :ref="setContainer"
         tabindex="0"
         role="region"
         aria-label="Conversation (virtualized)"
         @scroll.passive="onPaneScroll"
       >
         <div
-          class="vd-total"
           :ref="contentRef"
+          class="vd-total"
           :style="{ height: `${totalSize}px` }"
         >
           <div
             v-for="row in rows"
             :key="row.key as number"
-            :data-index="row.index"
             :ref="measureElement"
+            :data-index="row.index"
             class="vd-row"
             :style="{ transform: `translateY(${row.start}px)` }"
           >
@@ -384,11 +380,7 @@ const navState = computed(() => {
       >
         pinAnchored
       </span>
-      <span
-        v-else
-        class="vd-chip"
-        :class="{ 'vd-chip--on': state.locked }"
-      >
+      <span v-else class="vd-chip" :class="{ 'vd-chip--on': state.locked }">
         locked
       </span>
       <span class="vd-chip" :class="{ 'vd-chip--on': state.streaming }">
@@ -396,7 +388,9 @@ const navState = computed(() => {
       </span>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

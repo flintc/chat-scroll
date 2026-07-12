@@ -17,7 +17,7 @@ withDefaults(
     /** Chat surface height in px. */
     height?: number
   }>(),
-  { height: 420 },
+  { caption: '', height: 420 },
 )
 
 interface Msg {
@@ -66,7 +66,9 @@ onMounted(() => {
   if (!composerEl.value) return
   ro = new ResizeObserver(([entry]) => {
     composerH.value =
-      entry?.borderBoxSize?.[0]?.blockSize ?? composerEl.value?.offsetHeight ?? 0
+      entry?.borderBoxSize?.[0]?.blockSize ??
+      composerEl.value?.offsetHeight ??
+      0
   })
   ro.observe(composerEl.value)
 })
@@ -219,13 +221,13 @@ onBeforeUnmount(clearTimer)
          padding — `bottomInset` reserves the space in the gutter. -->
     <div class="composer-demo__surface" :style="{ height: `${height}px` }">
       <div
-        class="composer-demo__chat"
         :ref="containerRef"
+        class="composer-demo__chat"
         tabindex="0"
         role="log"
         aria-label="Conversation"
       >
-        <div class="composer-demo__messages" :ref="contentRef">
+        <div :ref="contentRef" class="composer-demo__messages">
           <div
             v-for="m in messages"
             :key="m.id"
@@ -300,7 +302,9 @@ onBeforeUnmount(clearTimer)
       </button>
     </div>
 
-    <figcaption v-if="caption">{{ caption }}</figcaption>
+    <figcaption v-if="caption">
+      {{ caption }}
+    </figcaption>
   </figure>
 </template>
 

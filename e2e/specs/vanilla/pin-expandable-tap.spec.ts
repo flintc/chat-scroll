@@ -36,10 +36,7 @@ test('pin-expandable: tapping a block does not drift the pin', async ({
   await hold(page, 400)
   await streamN(page, 5, 80)
 
-  const ub1 = await page
-    .locator('[data-test="user-msg"]')
-    .last()
-    .boundingBox()
+  const ub1 = await page.locator('[data-test="user-msg"]').last().boundingBox()
   const sb1 = await page.locator('[data-test="scroll"]').boundingBox()
   if (!ub1 || !sb1) throw new Error('missing boxes')
   const offsetBefore = ub1.y - sb1.y
@@ -67,15 +64,11 @@ test('pin-expandable: tapping a block does not drift the pin', async ({
   // Wait for the 220ms transition to settle.
   await hold(page, 600)
 
-  const ub2 = await page
-    .locator('[data-test="user-msg"]')
-    .last()
-    .boundingBox()
+  const ub2 = await page.locator('[data-test="user-msg"]').last().boundingBox()
   const sb2 = await page.locator('[data-test="scroll"]').boundingBox()
   if (!ub2 || !sb2) throw new Error('missing boxes')
   const offsetAfter = ub2.y - sb2.y
   const drift = offsetAfter - offsetBefore
-  // eslint-disable-next-line no-console
   console.log(
     `[pin-tap] pin drift after tap-expand: ${drift.toFixed(1)}px ` +
       `(before=${offsetBefore.toFixed(1)}, after=${offsetAfter.toFixed(1)})`,

@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  hold,
-  sendUserMessage,
-  showCue,
-} from '../../fixtures'
+import { test, expect, hold, sendUserMessage, showCue } from '../../fixtures'
 import type { Page } from '@playwright/test'
 
 /**
@@ -61,8 +55,9 @@ async function setStyle(
  */
 async function pinnedOffsetAtMaxScroll(page: Page): Promise<number> {
   return await page.evaluate(() => {
-    const container =
-      document.querySelector<HTMLElement>('[data-test="scroll"]')
+    const container = document.querySelector<HTMLElement>(
+      '[data-test="scroll"]',
+    )
     if (!container) return Number.NaN
     container.scrollTop = container.scrollHeight + 9999
     // Find the most recent user message — the one that was just pinned.
@@ -127,7 +122,9 @@ export function scrollBoundTightSpec(): void {
       withContainerPad,
       `container padding must not loosen the pin; got ${withContainerPad}px`,
     ).toBeGreaterThanOrEqual(SCROLL_MARGIN_PX - TOLERANCE_PX)
-    expect(withContainerPad).toBeLessThanOrEqual(SCROLL_MARGIN_PX + TOLERANCE_PX)
+    expect(withContainerPad).toBeLessThanOrEqual(
+      SCROLL_MARGIN_PX + TOLERANCE_PX,
+    )
 
     // Revert content padding while keeping the inflated container
     // padding — make sure shrinking content padding also doesn't break
