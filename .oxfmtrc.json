@@ -10,6 +10,7 @@
     "**/dist",
     "**/node_modules",
     "**/*.md",
+    ".bsh",
     "docs/.vitepress/cache",
     "e2e/playwright-report",
     "e2e/test-results",

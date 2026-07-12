@@ -116,7 +116,9 @@ describe('gutter', () => {
       document.body.appendChild(c)
 
       expect(() => resolveGutter(c, g)).toThrow(/direct.*child/i)
-      expect(() => resolveGutter(c, document.createElement('div'))).toThrow()
+      expect(() => resolveGutter(c, document.createElement('div'))).toThrow(
+        /direct.*child/i,
+      )
     })
 
     it('adopts a tagged direct child when no element is provided', () => {
